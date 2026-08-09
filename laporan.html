@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan Revenue — Pung Pung Mahjong</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5F0E8; --green-dark: #1C3A2E; --green-mid: #2D5A45;
+    --green-light: #4A8C68; --gold: #C9A84C; --gold-light: #E8C97A;
+    --warm-white: #FDFAF4; --text-muted: #7A7060; --red: #C0392B;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--cream); font-family:'DM Sans',sans-serif; min-height:100vh; }
+
+  .header {
+    background:var(--green-dark); padding:20px 24px; display:flex;
+    align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .header h1 { font-family:'Playfair Display',serif; color:white; font-size:20px; }
+  .header p { color:rgba(255,255,255,0.5); font-size:12px; margin-top:2px; }
+  .header a { color:rgba(255,255,255,0.7); font-size:13px; text-decoration:none; }
+
+  .container { max-width:960px; margin:0 auto; padding:24px 20px 60px; }
+
+  /* PASSWORD GATE */
+  #passwordGate {
+    position:fixed; inset:0; background:var(--green-dark); z-index:999;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pw-box {
+    background:var(--warm-white); border-radius:20px; padding:32px 28px; width:300px; text-align:center;
+  }
+  .pw-box input {
+    width:100%; padding:12px 14px; border:1.5px solid rgba(28,58,46,0.15); border-radius:10px;
+    text-align:center; letter-spacing:4px; font-size:15px; margin-bottom:10px; background:var(--cream);
+  }
+  .pw-box button {
+    width:100%; padding:12px; background:var(--green-dark); color:var(--gold-light);
+    border:none; border-radius:10px; font-weight:600; cursor:pointer; font-size:14px;
+  }
+
+  /* TABS */
+  .tabs { display:flex; gap:8px; margin-bottom:20px; }
+  .tab-btn {
+    flex:1; padding:12px; border-radius:12px; border:1.5px solid rgba(28,58,46,0.12);
+    background:var(--warm-white); color:var(--green-dark); font-weight:600; font-size:13px;
+    cursor:pointer;
+  }
+  .tab-btn.active { background:var(--green-dark); color:var(--gold-light); border-color:var(--green-dark); }
+
+  /* DATE PICKER ROW */
+  .picker-row { display:flex; gap:10px; margin-bottom:20px; align-items:center; flex-wrap:wrap; }
+  .picker-row input, .picker-row select {
+    padding:10px 14px; border:1.5px solid rgba(28,58,46,0.15); border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:13px; background:var(--warm-white); color:var(--green-dark);
+  }
+  .picker-row button {
+    padding:10px 18px; background:var(--green-dark); color:var(--gold-light);
+    border:none; border-radius:10px; font-weight:600; cursor:pointer; font-size:13px;
+  }
+
+  /* STAT CARDS */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+  .stat-card {
+    background:var(--warm-white); border-radius:16px; padding:18px;
+    box-shadow:0 2px 10px rgba(28,58,46,0.06);
+  }
+  .stat-card .lbl { font-size:11px; color:var(--text-muted); font-weight:600; letter-spacing:0.6px; text-transform:uppercase; margin-bottom:6px; }
+  .stat-card .val { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--green-dark); }
+  .stat-card.highlight .val { color:var(--gold); }
+
+  /* SECTION */
+  .section { background:var(--warm-white); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 2px 10px rgba(28,58,46,0.06); }
+  .section-title { font-size:13px; font-weight:700; color:var(--green-dark); margin-bottom:14px; }
+
+  /* BAR CHART (simple css bars) */
+  .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .bar-label { width:90px; font-size:12px; color:var(--green-dark); flex-shrink:0; }
+  .bar-track { flex:1; background:var(--cream); border-radius:8px; height:24px; position:relative; overflow:hidden; }
+  .bar-fill { background:linear-gradient(90deg,var(--green-mid),var(--green-light)); height:100%; border-radius:8px; transition:width 0.4s; }
+  .bar-value { width:90px; text-align:right; font-size:12px; font-weight:600; color:var(--green-dark); flex-shrink:0; }
+
+  /* TABLE LIST RANK */
+  .rank-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(28,58,46,0.06); }
+  .rank-row:last-child { border-bottom:none; }
+  .rank-name { font-size:13px; font-weight:600; color:var(--green-dark); }
+  .rank-sub { font-size:11px; color:var(--text-muted); }
+  .rank-val { font-size:14px; font-weight:700; color:var(--gold); }
+
+  .loading-state { text-align:center; padding:40px; color:var(--text-muted); }
+  .empty-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px; }
+</style>
+</head>
+<body>
+
+  <div id="passwordGate">
+    <div class="pw-box">
+      <div style="font-size:32px;margin-bottom:8px;">📊</div>
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--green-dark);margin-bottom:4px;">Laporan Revenue</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Khusus Admin</div>
+      <input type="password" id="pwInput" placeholder="Password admin" onkeydown="if(event.key==='Enter')checkPw()">
+      <div id="pwError" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;"></div>
+      <button onclick="checkPw()">Masuk →</button>
+    </div>
+  </div>
+
+  <div class="header">
+    <div>
+      <h1>📊 Laporan Revenue</h1>
+      <p>Pung Pung Mahjong</p>
+    </div>
+    <a href="/admin.html">← Admin</a>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" id="tabHarian" onclick="switchView('harian')">📅 Harian</button>
+      <button class="tab-btn" id="tabBulanan" onclick="switchView('bulanan')">🗓️ Bulanan</button>
+    </div>
+
+    <!-- HARIAN -->
+    <div id="viewHarian">
+      <div class="picker-row">
+        <input type="date" id="hDate">
+        <button onclick="loadHarian()">Tampilkan</button>
+      </div>
+      <div id="harianContent" class="loading-state">Pilih tanggal lalu tap Tampilkan</div>
+    </div>
+
+    <!-- BULANAN -->
+    <div id="viewBulanan" style="display:none">
+      <div class="picker-row">
+        <select id="bMonth"></select>
+        <select id="bYear"></select>
+        <button onclick="loadBulanan()">Tampilkan</button>
+      </div>
+      <div id="bulananContent" class="loading-state">Pilih bulan lalu tap Tampilkan</div>
+    </div>
+  </div>
+
+<script>
+  function checkPw() {
+    const pw = document.getElementById('pwInput').value.trim();
+    if (pw === '808808') {
+      document.getElementById('passwordGate').style.display = 'none';
+      initDefaults();
+    } else {
+      document.getElementById('pwError').textContent = 'Password salah.';
+      document.getElementById('pwInput').value = '';
+    }
+  }
+  document.getElementById('pwInput').focus();
+
+  const TABLE_NAMES = {
+    '1': 'Bamboo Table', '2': 'Orchid Table', '3': 'Lotus Table',
+    '4': 'Sakura Table', '5': 'Dragon Table'
+  };
+
+  function switchView(v) {
+    document.getElementById('viewHarian').style.display = v === 'harian' ? 'block' : 'none';
+    document.getElementById('viewBulanan').style.display = v === 'bulanan' ? 'block' : 'none';
+    document.getElementById('tabHarian').classList.toggle('active', v === 'harian');
+    document.getElementById('tabBulanan').classList.toggle('active', v === 'bulanan');
+  }
+
+  function initDefaults() {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    document.getElementById('hDate').value = today;
+
+    const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const monthSel = document.getElementById('bMonth');
+    months.forEach((m,i) => monthSel.innerHTML += `<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${m}</option>`);
+
+    const yearSel = document.getElementById('bYear');
+    for (let y = now.getFullYear(); y >= now.getFullYear()-2; y--) {
+      yearSel.innerHTML += `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`;
+    }
+
+    loadHarian();
+  }
+
+  async function fetchAllBookings() {
+    const res = await fetch('/api/admin/bookings');
+    return await res.json();
+  }
+
+  function calcRevenue(bookings) {
+    // Hanya hitung yang completed (sudah checkout & bayar)
+    return bookings.filter(b => b.status === 'completed');
+  }
+
+  // ── HARIAN ────────────────────────────────────────────────
+  async function loadHarian() {
+    const date = document.getElementById('hDate').value;
+    if (!date) return;
+    document.getElementById('harianContent').innerHTML = '<div class="loading-state">Memuat…</div>';
+
+    const all = await fetchAllBookings();
+    const dayBookings = all.filter(b => b.date === date);
+    const completed = calcRevenue(dayBookings);
+
+    if (!completed.length) {
+      document.getElementById('harianContent').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp 0</div></div>
+          <div class="stat-card"><div class="lbl">Sesi Selesai</div><div class="val">0</div></div>
+        </div>
+        <div class="section"><div class="empty-state">Belum ada transaksi selesai pada tanggal ini.</div></div>
+      `;
+      return;
+    }
+
+    const totalRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
+    const totalSesi = completed.length;
+    const avgPerSesi = Math.round(totalRevenue / totalSesi);
+
+    // Per jam (jam mulai booking)
+    const perJam = {};
+    completed.forEach(b => {
+      const h = b.time ? b.time.substring(0,2) + ':00' : '?';
+      perJam[h] = (perJam[h] || 0) + (b.totalPaid || 0);
+    });
+    const maxJam = Math.max(...Object.values(perJam), 1);
+
+    // Per meja
+    const perMeja = {};
+    completed.forEach(b => {
+      const name = b.tableName || TABLE_NAMES[b.tableId] || b.tableId;
+      if (!perMeja[name]) perMeja[name] = { revenue: 0, sesi: 0 };
+      perMeja[name].revenue += (b.totalPaid || 0);
+      perMeja[name].sesi += 1;
+    });
+
+    // Per payment method
+    const perPayment = {};
+    completed.forEach(b => {
+      const m = b.paymentMethod || 'lainnya';
+      perPayment[m] = (perPayment[m] || 0) + (b.totalPaid || 0);
+    });
+
+    const jamRows = Object.entries(perJam).sort((a,b) => a[0].localeCompare(b[0]))
+      .map(([jam, rev]) => `
+        <div class="bar-row">
+          <div class="bar-label">${jam}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(rev/maxJam*100)}%"></div></div>
+          <div class="bar-value">Rp ${rev.toLocaleString('id-ID')}</div>
+        </div>
+      `).join('');
+
+    const mejaRows = Object.entries(perMeja).sort((a,b) => b[1].revenue - a[1].revenue)
+      .map(([name, d]) => `
+        <div class="rank-row">
+          <div><div class="rank-name">${name}</div><div class="rank-sub">${d.sesi} sesi</div></div>
+          <div class="rank-val">Rp ${d.revenue.toLocaleString('id-ID')}</div>
+        </div>
+      `).join('');
+
+    const payLabels = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit BCA', lainnya: '❓ Lainnya' };
+    const payRows = Object.entries(perPayment).sort((a,b) => b[1]-a[1])
+      .map(([m, rev]) => `
+        <div class="rank-row">
+          <div class="rank-name">${payLabels[m] || m}</div>
+          <div class="rank-val">Rp ${rev.toLocaleString('id-ID')}</div>
+        </div>
+      `).join('');
+
+    document.getElementById('harianContent').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp ${totalRevenue.toLocaleString('id-ID')}</div></div>
+        <div class="stat-card"><div class="lbl">Sesi Selesai</div><div class="val">${totalSesi}</div></div>
+        <div class="stat-card"><div class="lbl">Rata-rata/Sesi</div><div class="val">Rp ${avgPerSesi.toLocaleString('id-ID')}</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">⏰ Revenue per Jam Mulai</div>
+        ${jamRows || '<div class="empty-state">Tidak ada data</div>'}
+      </div>
+      <div class="section">
+        <div class="section-title">🀄 Revenue per Meja</div>
+        ${mejaRows || '<div class="empty-state">Tidak ada data</div>'}
+      </div>
+      <div class="section">
+        <div class="section-title">💳 Metode Pembayaran</div>
+        ${payRows || '<div class="empty-state">Tidak ada data</div>'}
+      </div>
+    `;
+  }
+
+  // ── BULANAN ───────────────────────────────────────────────
+  async function loadBulanan() {
+    const month = parseInt(document.getElementById('bMonth').value);
+    const year = parseInt(document.getElementById('bYear').value);
+    document.getElementById('bulananContent').innerHTML = '<div class="loading-state">Memuat…</div>';
+
+    const all = await fetchAllBookings();
+    const monthStr = String(month).padStart(2,'0');
+    const prefix = `${year}-${monthStr}`;
+    const monthBookings = all.filter(b => b.date && b.date.startsWith(prefix));
+    const completed = calcRevenue(monthBookings);
+
+    if (!completed.length) {
+      document.getElementById('bulananContent').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp 0</div></div>
+        </div>
+        <div class="section"><div class="empty-state">Belum ada transaksi selesai pada bulan ini.</div></div>
+      `;
+      return;
+    }
+
+    const totalRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
+    const totalSesi = completed.length;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const avgPerDay = Math.round(totalRevenue / daysInMonth);
+
+    // Per hari
+    const perHari = {};
+    completed.forEach(b => {
+      const day = b.date.split('-')[2];
+      perHari[day] = (perHari[day] || 0) + (b.totalPaid || 0);
+    });
+    const maxHari = Math.max(...Object.values(perHari), 1);
+    const sortedDays = Object.entries(perHari).sort((a,b) => parseInt(a[0]) - parseInt(b[0]));
+
+    // Hari tersibuk
+    const busiestDay = sortedDays.reduce((max, cur) => cur[1] > max[1] ? cur : max, sortedDays[0]);
+
+    // Per meja
+    const perMeja = {};
+    completed.forEach(b => {
+      const name = b.tableName || TABLE_NAMES[b.tableId] || b.tableId;
+      if (!perMeja[name]) perMeja[name] = { revenue: 0, sesi: 0 };
+      perMeja[name].revenue += (b.totalPaid || 0);
+      perMeja[name].sesi += 1;
+    });
+
+    const hariRows = sortedDays.map(([day, rev]) => `
+      <div class="bar-row">
+        <div class="bar-label">Tgl ${day}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(rev/maxHari*100)}%"></div></div>
+        <div class="bar-value">Rp ${(rev/1000).toFixed(0)}rb</div>
+      </div>
+    `).join('');
+
+    const mejaRows = Object.entries(perMeja).sort((a,b) => b[1].revenue - a[1].revenue)
+      .map(([name, d]) => `
+        <div class="rank-row">
+          <div><div class="rank-name">${name}</div><div class="rank-sub">${d.sesi} sesi</div></div>
+          <div class="rank-val">Rp ${d.revenue.toLocaleString('id-ID')}</div>
+        </div>
+      `).join('');
+
+    document.getElementById('bulananContent').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp ${totalRevenue.toLocaleString('id-ID')}</div></div>
+        <div class="stat-card"><div class="lbl">Total Sesi</div><div class="val">${totalSesi}</div></div>
+        <div class="stat-card"><div class="lbl">Rata-rata/Hari</div><div class="val">Rp ${avgPerDay.toLocaleString('id-ID')}</div></div>
+        <div class="stat-card"><div class="lbl">Hari Tersibuk</div><div class="val" style="font-size:18px">Tgl ${busiestDay[0]}</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📈 Revenue per Hari</div>
+        ${hariRows || '<div class="empty-state">Tidak ada data</div>'}
+      </div>
+      <div class="section">
+        <div class="section-title">🀄 Revenue per Meja (Bulanan)</div>
+        ${mejaRows || '<div class="empty-state">Tidak ada data</div>'}
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>

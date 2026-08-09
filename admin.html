@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Admin – Pung Pung Mahjong Bookings</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --cream: #F5F0E8;
+    --green-dark: #1C3A2E;
+    --green-mid: #2D5A45;
+    --green-light: #4A8C68;
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --warm-white: #FDFAF4;
+    --text-muted: #7A7060;
+    --red: #C0392B;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  body {
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: var(--green-dark);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    color: var(--gold-light);
+    font-size: 20px;
+  }
+
+  .header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .header a {
+    color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    font-size: 13px;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-bar label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green-dark);
+  }
+
+  .filter-bar input[type="date"] {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(28,58,46,0.15);
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--green-dark);
+    outline: none;
+  }
+
+  .filter-bar input[type="date"]:focus {
+    border-color: var(--green-mid);
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--green-dark); color: white; }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: 120px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(28,58,46,0.07);
+  }
+
+  .stat-card .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--green-dark);
+  }
+
+  .stat-card .lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .bookings-table {
+    background: white;
+    border-radius: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 2px 12px rgba(28,58,46,0.07);
+  }
+
+  table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+  }
+
+  th {
+    background: var(--green-dark);
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--green-dark);
+    border-bottom: 1px solid rgba(28,58,46,0.06);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(28,58,46,0.02); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .badge-confirmed { background: rgba(74,140,104,0.12); color: var(--green-mid); }
+  .badge-cancelled { background: rgba(192,57,43,0.1); color: var(--red); }
+  .badge-pending { background: rgba(201,168,76,0.15); color: #9A7520; }
+  .badge-checkin { background: rgba(46,139,87,0.15); color: #1a6635; }
+  .badge-completed { background: rgba(28,58,46,0.1); color: var(--green-dark); }
+  .badge-paylater { background: rgba(26,102,53,0.1); color: #1a6635; border: 1px solid rgba(26,102,53,0.3); }
+  .badge-checked_in { background: rgba(52,120,246,0.12); color: #1a5fc8; }
+  .badge-longplay { background: rgba(255,152,0,0.15); color: #c66900; border: 1.5px solid rgba(255,152,0,0.4); font-weight: 700; animation: pulseWarning 2s ease-in-out infinite; }
+  @keyframes pulseWarning { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .badge-completed { background: rgba(28,58,46,0.1); color: var(--green-dark); }
+  .badge-paylater { background: rgba(26,102,53,0.1); color: #1a6635; border: 1px solid rgba(26,102,53,0.3); }
+
+  .btn-warning { background: var(--gold); color: var(--green-dark); }
+  .btn-success { background: var(--green-mid); color: white; }
+
+  .edit-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  .edit-modal-overlay.open { display: flex; }
+  .edit-modal {
+    background: var(--cream); border-radius: 20px;
+    padding: 24px; width: 340px; max-width: 95vw;
+  }
+  .edit-modal h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px; color: var(--green-dark); margin-bottom: 16px;
+  }
+  .edit-modal .form-grid { grid-template-columns: 1fr 1fr; }
+  .code-badge {
+    display: inline-block; background: var(--green-dark); color: var(--gold-light);
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    padding: 3px 8px; border-radius: 6px; margin-left: 6px;
+  }
+
+  .name-cell { font-weight: 600; }
+
+  .empty-state {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .loading {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green-dark);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 99;
+  }
+
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    th, td { padding: 10px 10px; font-size: 12px; }
+    .hide-mobile { display: none; }
+  }
+
+  /* TIMELINE */
+  .tl-header {
+    display: grid;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .tl-row {
+    display: grid;
+    align-items: center;
+    margin-bottom: 8px;
+    min-height: 52px;
+  }
+
+  .tl-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green-dark);
+    padding-right: 10px;
+    line-height: 1.3;
+  }
+
+  .tl-label small {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .tl-slots {
+    display: flex;
+    position: relative;
+    height: 44px;
+    background: var(--cream);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .tl-slot-empty {
+    flex: 1;
+    border-right: 1px solid rgba(28,58,46,0.08);
+    height: 100%;
+  }
+  .tl-slot-empty:last-child { border-right: none; }
+
+  .tl-block {
+    position: absolute;
+    top: 4px; bottom: 4px;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    z-index: 1;
+  }
+  .tl-block:hover { opacity: 0.85; }
+  .tl-block.confirmed { background: #2D5A45; color: white; }
+  .tl-block.pending { background: #C9A84C; color: #1C3A2E; }
+  .tl-block.cancelled { background: rgba(192,57,43,0.15); color: var(--red); text-decoration: line-through; }
+  .tl-block.checkedin { background: #1a6635; color: white; }
+
+  .tl-block .bl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-block .bl-time { font-size: 10px; opacity: 0.75; font-weight: 400; }
+
+  .tl-hour-labels {
+    display: flex;
+  }
+  .tl-hour-lbl {
+    flex: 1;
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    padding-bottom: 4px;
+  }
+
+  .tl-now-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--red);
+    z-index: 2;
+    opacity: 0.7;
+  }
+
+  .tl-divider {
+    border: none;
+    border-top: 1px solid rgba(28,58,46,0.08);
+    margin: 10px 0;
+  }
+
+  /* WALK-IN FORM */
+  .walkin-section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px 16px;
+  }
+
+  .walkin-toggle {
+    background: var(--green-dark);
+    color: var(--gold-light);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .walkin-form {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    display: none;
+    box-shadow: 0 2px 12px rgba(28,58,46,0.1);
+    border: 1.5px solid rgba(28,58,46,0.1);
+  }
+
+  .walkin-form.open { display: block; }
+
+  .walkin-form h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--green-dark);
+    margin-bottom: 16px;
+  }
+
+  .paid-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .paid-toggle button {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid rgba(28,58,46,0.15);
+    background: var(--cream);
+    color: var(--green-dark);
+    transition: all 0.15s;
+  }
+
+  .paid-toggle button.active-unpaid {
+    background: rgba(201,168,76,0.18);
+    border-color: var(--gold);
+    color: #7a5c00;
+  }
+
+  .paid-toggle button.active-paid {
+    background: rgba(74,140,104,0.15);
+    border-color: var(--green-mid);
+    color: var(--green-mid);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(28,58,46,0.15);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--green-dark);
+    background: var(--cream);
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus { border-color: var(--green-mid); }
+</style>
+</head>
+<body>
+
+  <!-- PASSWORD GATE -->
+  <div id="passwordGate" style="
+    position:fixed;inset:0;background:#1C3A2E;z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+  ">
+    <div style="text-align:center;padding:40px 32px;background:#FDFAF4;border-radius:24px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
+      <div style="font-size:36px;margin-bottom:8px;">🀄</div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1C3A2E;margin-bottom:4px;">Management Panel</div>
+      <div style="font-size:12px;color:#7A7060;margin-bottom:24px;">Pung Pung Mahjong · Admin & Kasir</div>
+      <input id="pwInput" type="password" placeholder="Masukkan password"
+        onkeydown="if(event.key==='Enter')checkPassword()"
+        style="width:100%;padding:12px 16px;border:1.5px solid rgba(28,58,46,0.2);border-radius:12px;
+               font-family:'DM Sans',sans-serif;font-size:15px;color:#1C3A2E;outline:none;
+               text-align:center;letter-spacing:4px;background:#F5F0E8;margin-bottom:10px;">
+      <div id="pwError" style="font-size:12px;color:#C0392B;min-height:16px;margin-bottom:10px;"></div>
+      <button onclick="checkPassword()" style="
+        width:100%;padding:13px;background:#1C3A2E;border:none;border-radius:12px;
+        font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#E8C97A;
+        cursor:pointer;letter-spacing:0.5px;
+      ">Masuk →</button>
+    </div>
+  </div>
+
+
+<div class="header">
+  <div>
+    <h1>🀄 Pung Pung Mahjong</h1>
+    <p>Management Panel</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="roleBadge" style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span>
+    <a href="/laporan" id="laporanLink" style="display:none;background:var(--gold);color:var(--green-dark);padding:8px 14px;border-radius:10px;font-weight:600;text-decoration:none;font-size:13px;">📊 Laporan Lengkap</a>
+    <a href="/">← Booking</a>
+  </div>
+</div>
+
+<div class="walkin-section">
+  <button class="walkin-toggle" onclick="toggleWalkin()">➕ Walk-in / Input Manual</button>
+  <div class="walkin-form" id="walkinForm">
+    <!-- TABS -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button id="wiTabCheckin" class="btn btn-primary" onclick="switchWiTab('checkin')" style="flex:1;font-size:12px;">⚡ Walk-in Sekarang</button>
+      <button id="wiTabManual" class="btn" onclick="switchWiTab('manual')" style="flex:1;font-size:12px;background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Input Manual</button>
+    </div>
+
+    <!-- TAB WALK-IN LANGSUNG -->
+    <div id="wiCheckinTab">
+      <div style="background:rgba(74,140,104,0.08);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--green-mid);margin-bottom:12px;">
+        ⚡ Jam check-in dicatat otomatis saat ini
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nama Tamu</label>
+          <input type="text" id="ci_name" placeholder="Nama tamu">
+        </div>
+        <div class="form-group">
+          <label>Meja</label>
+          <select id="ci_table">
+            <option value="">Pilih meja</option>
+            <option value="1|Bamboo Table|Lantai 2">🎋 Bamboo — Lt.2</option>
+            <option value="2|Orchid Table|Lantai 2">🌸 Orchid — Lt.2</option>
+            <option value="3|Lotus Table|Lantai 2">🪷 Lotus — Lt.2</option>
+            <option value="4|Sakura Table|Lantai 2">🌺 Sakura — Lt.2</option>
+            <option value="5|Dragon Table|Lantai 1">🐉 Dragon — Lt.1</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>No. WhatsApp</label>
+          <input type="text" id="ci_contact" placeholder="Opsional">
+        </div>
+        <div class="form-group">
+          <label>Catatan</label>
+          <input type="text" id="ci_notes" placeholder="Opsional">
+        </div>
+      </div>
+      <div class="paid-toggle">
+        <button type="button" id="ci_paid_no" class="active-unpaid" onclick="setPaidStatus('ci', false)">🕐 Belum Bayar</button>
+        <button type="button" id="ci_paid_yes" onclick="setPaidStatus('ci', true)">💰 Sudah Bayar</button>
+      </div>
+      <button class="btn btn-success" onclick="submitCheckin()" style="width:100%;padding:13px;font-size:14px;">⚡ Check-in Sekarang</button>
+    </div>
+
+    <!-- TAB INPUT MANUAL -->
+    <div id="wiManualTab" style="display:none">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nama Tamu</label>
+          <input type="text" id="mi_name" placeholder="Nama pemesan">
+        </div>
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="mi_date" onchange="updateTableAvailability('mi')">
+        </div>
+        <div class="form-group">
+          <label>Jam Mulai</label>
+          <select id="mi_time" onchange="updateTableAvailability('mi')">
+            <option value="">Pilih jam</option>
+            <option>10:00</option><option>11:00</option><option>12:00</option>
+            <option>13:00</option><option>14:00</option><option>15:00</option>
+            <option>16:00</option><option>17:00</option><option>18:00</option>
+            <option>19:00</option><option>20:00</option><option>21:00</option>
+            <option>22:00</option><option>23:00</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Meja</label>
+          <select id="mi_table">
+            <option value="">Pilih meja</option>
+            <option value="1|Bamboo Table|Lantai 2">🎋 Bamboo — Lt.2</option>
+            <option value="2|Orchid Table|Lantai 2">🌸 Orchid — Lt.2</option>
+            <option value="3|Lotus Table|Lantai 2">🪷 Lotus — Lt.2</option>
+            <option value="4|Sakura Table|Lantai 2">🌺 Sakura — Lt.2</option>
+            <option value="5|Dragon Table|Lantai 1">🐉 Dragon — Lt.1</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Durasi Est.</label>
+          <select id="mi_duration" onchange="updateTableAvailability('mi')">
+            <option value="1">1 jam</option><option value="2" selected>2 jam</option>
+            <option value="3">3 jam</option><option value="4">4 jam</option>
+            <option value="5">5 jam</option><option value="6">6 jam</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Catatan</label>
+          <input type="text" id="mi_notes" placeholder="Opsional">
+        </div>
+      </div>
+      <div class="paid-toggle">
+        <button type="button" id="mi_paid_no" class="active-unpaid" onclick="setPaidStatus('mi', false)">🕐 Belum Bayar</button>
+        <button type="button" id="mi_paid_yes" onclick="setPaidStatus('mi', true)">💰 Sudah Bayar</button>
+      </div>
+      <button class="btn btn-primary" onclick="submitManual()" style="width:100%;padding:12px;font-size:14px;">Simpan Booking Manual</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="filter-bar">
+    <label>Filter tanggal:</label>
+    <input type="date" id="filterDate" onchange="loadBookings()">
+    <button class="btn btn-primary" onclick="loadBookings()">Tampilkan</button>
+    <button class="btn" style="background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.15)" onclick="clearFilter()">Semua</button>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card" style="background:linear-gradient(135deg,var(--green-dark),var(--green-mid));">
+      <div class="num" id="statRevenue" style="color:var(--gold-light);font-size:22px;">Rp 0</div>
+      <div class="lbl" style="color:rgba(255,255,255,0.7);">💰 Revenue Tanggal Ini</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statTotal">0</div>
+      <div class="lbl">Total Booking</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statPending" style="color:#9A7520">0</div>
+      <div class="lbl">⏳ Menunggu Bayar</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statCheckin" style="color:#1a5fc8">0</div>
+      <div class="lbl">🎮 Sedang Main</div>
+    </div>
+    <div class="stat-card" id="statLongPlayCard" style="display:none;background:rgba(255,152,0,0.12);border:2px solid #ff9800;">
+      <div class="num" id="statLongPlay" style="color:#c66900">0</div>
+      <div class="lbl" style="color:#c66900;font-weight:700;">⚠️ Lupa Checkout (&gt;5j)</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statConfirmed" style="color:var(--green-mid)">0</div>
+      <div class="lbl">✅ Confirmed</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statCancelled" style="color:var(--red)">0</div>
+      <div class="lbl">❌ Dibatalkan</div>
+    </div>
+  </div>
+
+  <!-- VIEW TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <button id="tabTimeline" class="btn btn-primary" onclick="switchTab('timeline')" style="flex:1">📅 Timeline</button>
+    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button>
+  </div>
+
+  <!-- TIMELINE VIEW -->
+  <div id="viewTimeline">
+    <div id="timelineWrap" style="background:var(--warm-white);border-radius:16px;overflow:auto;box-shadow:0 2px 12px rgba(28,58,46,0.07);padding:16px 0;">
+      <div id="timelineContent" style="min-width:700px;padding:0 16px 8px;">
+        <div class="loading" style="padding:48px 0;text-align:center;color:var(--text-muted);">Memuat timeline…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div id="viewList" style="display:none">
+    <div class="bookings-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Kode & Nama</th>
+            <th>Tanggal</th>
+            <th>Waktu & Durasi</th>
+            <th>Meja</th>
+            <th>Status</th>
+            <th>Keterangan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="bookingsBody">
+          <tr><td colspan="7" class="loading">Memuat data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let allBookings = [];
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const [y, m, d] = dateStr.split('-');
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return `${d} ${months[parseInt(m)-1]} ${y}`;
+  }
+
+  // Cache sederhana — hindari fetch berulang untuk tanggal/query yang sama dalam 60 detik
+  let _bookingsCache = {};
+  let _bookingsCacheTime = {};
+  const CACHE_TTL_MS = 60000; // 60 detik
+
+  async function loadBookings(forceFresh) {
+    const dateVal = document.getElementById('filterDate').value;
+    const cacheKey = dateVal || '__all__';
+    const url = dateVal ? `/api/admin/bookings?date=${dateVal}` : '/api/admin/bookings';
+
+    // Pakai cache kalau masih fresh dan tidak dipaksa refresh
+    const now = Date.now();
+    if (!forceFresh && _bookingsCache[cacheKey] && (now - _bookingsCacheTime[cacheKey] < CACHE_TTL_MS)) {
+      allBookings = _bookingsCache[cacheKey];
+      renderTable(allBookings);
+      return;
+    }
+
+    document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="loading">Memuat data…</td></tr>';
+
+    try {
+      const res = await fetch(url);
+      allBookings = await res.json();
+      _bookingsCache[cacheKey] = allBookings;
+      _bookingsCacheTime[cacheKey] = now;
+      renderTable(allBookings);
+    } catch (e) {
+      document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="empty-state">Gagal memuat data.</td></tr>';
+    }
+  }
+
+  function clearFilter() {
+    document.getElementById('filterDate').value = '';
+    loadBookings();
+  }
+
+  let currentView = 'timeline';
+
+  function switchTab(tab) {
+    currentView = tab;
+    document.getElementById('viewTimeline').style.display = tab === 'timeline' ? 'block' : 'none';
+    document.getElementById('viewList').style.display = tab === 'list' ? 'block' : 'none';
+    document.getElementById('tabTimeline').className = tab === 'timeline' ? 'btn btn-primary' : 'btn';
+    document.getElementById('tabTimeline').style = tab === 'timeline' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+    document.getElementById('tabList').className = tab === 'list' ? 'btn btn-primary' : 'btn';
+    document.getElementById('tabList').style = tab === 'list' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+  }
+
+  function renderTable(data) {
+    // Stats
+    const confirmed = data.filter(b => b.status === 'confirmed').length;
+    const pending = data.filter(b => b.status === 'pending').length;
+    const checkin = data.filter(b => b.status === 'checked_in').length;
+    const completed = data.filter(b => b.status === 'completed').length;
+    const cancelled = data.filter(b => b.status === 'cancelled').length;
+
+    // Hitung sesi yang sudah main >5 jam tapi belum checkout (lupa checkout)
+    const longPlaySessions = data.filter(b => {
+      if (b.status !== 'checked_in' || !b.checkinAt) return false;
+      const minsSinceCheckin = Math.floor((Date.now() - new Date(b.checkinAt).getTime()) / 60000);
+      return minsSinceCheckin >= 300;
+    });
+    const longPlayCard = document.getElementById('statLongPlayCard');
+    if (longPlaySessions.length > 0) {
+      longPlayCard.style.display = 'block';
+      document.getElementById('statLongPlay').textContent = longPlaySessions.length;
+    } else {
+      longPlayCard.style.display = 'none';
+    }
+
+    // Hitung revenue dari booking completed (sudah checkout & bayar)
+    const totalRevenue = data
+      .filter(b => b.status === 'completed')
+      .reduce((sum, b) => sum + (b.totalPaid || 0), 0);
+    document.getElementById('statRevenue').textContent = 'Rp ' + totalRevenue.toLocaleString('id-ID');
+
+    document.getElementById('statTotal').textContent = data.length;
+    document.getElementById('statConfirmed').textContent = confirmed;
+    document.getElementById('statPending').textContent = pending;
+    document.getElementById('statCheckin').textContent = checkin;
+    document.getElementById('statCancelled').textContent = cancelled;
+    document.getElementById('statsRow').style.display = data.length ? 'flex' : 'none';
+
+    renderTimeline(data);
+    renderList(data);
+    // Update occupied tables in walk-in form if open
+    if (document.getElementById('walkinForm').classList.contains('open')) {
+      updateOccupiedTables();
+    }
+  }
+
+  // ── TIMELINE ──────────────────────────────────────────────
+  const TABLES = [
+    { id:'1', name:'Bamboo Table', floor:'Lantai 2', emoji:'🎋' },
+    { id:'2', name:'Orchid Table',  floor:'Lantai 2', emoji:'🌸' },
+    { id:'3', name:'Lotus Table',  floor:'Lantai 2', emoji:'🪷' },
+    { id:'4', name:'Sakura Table', floor:'Lantai 2', emoji:'🌺' },
+    { id:'5', name:'Dragon Table', floor:'Lantai 1', emoji:'🐉' },
+  ];
+  const HOURS = [10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+  const COL_W = 56; // px per hour
+  const LABEL_W = 110; // px for table label
+
+  function renderTimeline(data) {
+    const wrap = document.getElementById('timelineContent');
+    const dateVal = document.getElementById('filterDate').value;
+    if (!dateVal) {
+      wrap.innerHTML = `<div style="padding:40px 16px;text-align:center;color:var(--text-muted);">
+        <div style="font-size:32px;margin-bottom:10px;">📅</div>
+        <div style="font-size:14px;font-weight:600;color:var(--green-dark);margin-bottom:6px;">Pilih tanggal untuk lihat timeline</div>
+        <div style="font-size:12px;">Gunakan filter di atas, atau lihat semua booking di tab Daftar</div>
+      </div>`;
+      return;
+    }
+    const active = data.filter(b => b.status !== 'cancelled');
+
+    // Current time line
+    const now = new Date();
+    const nowHour = now.getHours() + now.getMinutes()/60;
+    const nowPct = (nowHour - HOURS[0]) / HOURS.length;
+    const showNow = nowHour >= HOURS[0] && nowHour <= HOURS[HOURS.length-1]+1;
+
+    let html = '';
+
+    // Hour labels row
+    html += `<div style="display:flex;margin-left:${LABEL_W}px;margin-bottom:4px;">`;
+    HOURS.forEach(h => {
+      html += `<div style="width:${COL_W}px;flex-shrink:0;font-size:10px;color:var(--text-muted);text-align:center;">${h}:00</div>`;
+    });
+    html += '</div>';
+
+    // Divider line between floors
+    let prevFloor = null;
+
+    TABLES.forEach(tbl => {
+      if (prevFloor && tbl.floor !== prevFloor) {
+        html += `<div style="border-top:2px dashed rgba(28,58,46,0.15);margin:6px 0 10px;"></div>
+                 <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">— ${tbl.floor} —</div>`;
+      } else if (!prevFloor) {
+        html += `<div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">— ${tbl.floor} —</div>`;
+      }
+      prevFloor = tbl.floor;
+
+      const tblBookings = active.filter(b => b.tableId === tbl.id);
+      const totalWidth = COL_W * HOURS.length;
+
+      html += `<div style="display:flex;align-items:center;margin-bottom:8px;min-height:52px;">`;
+      // Label
+      html += `<div style="width:${LABEL_W}px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--green-dark);padding-right:10px;line-height:1.3;">
+        ${tbl.emoji} ${tbl.name}<small style="display:block;font-size:10px;font-weight:400;color:var(--text-muted);">${tbl.floor}</small>
+      </div>`;
+      // Slots container
+      html += `<div style="position:relative;width:${totalWidth}px;flex-shrink:0;height:44px;background:var(--cream);border-radius:8px;overflow:hidden;">`;
+
+      // Hour dividers
+      HOURS.forEach((h, i) => {
+        const x = i * COL_W;
+        html += `<div style="position:absolute;top:0;bottom:0;left:${x}px;width:${COL_W}px;border-right:1px solid rgba(28,58,46,0.08);"></div>`;
+      });
+
+      // Now line
+      if (showNow) {
+        const nx = (nowHour - HOURS[0]) * COL_W;
+        html += `<div style="position:absolute;top:0;bottom:0;left:${nx}px;width:2px;background:var(--red);z-index:2;opacity:0.7;"></div>`;
+      }
+
+      // Booking blocks
+      tblBookings.forEach(b => {
+        const startHour = parseInt(b.time);
+        const dur = b.duration || 1;
+        const left = (startHour - HOURS[0]) * COL_W;
+        const width = dur * COL_W - 3;
+        if (left < 0 || left >= totalWidth) return;
+        const cls = b.status === 'confirmed' ? 'confirmed'
+          : b.status === 'pending' ? 'pending'
+          : b.status === 'checked_in' || b.status === 'completed' ? 'checkedin'
+          : 'cancelled';
+        const name = b.customerName.replace(' (walk-in)','');
+        html += `<div class="tl-block ${cls}" style="left:${left}px;width:${Math.min(width, totalWidth-left-3)}px;"
+                    onclick="openEditModal(${b.id})" title="${escHtml(b.customerName)} · ${b.time}–${String(startHour+dur).padStart(2,'0')}:00 · ${dur} jam">
+                  <div class="bl-name">${escHtml(name)}</div>
+                  <div class="bl-time">${b.time}–${String(startHour+dur).padStart(2,'0')}:00</div>
+                </div>`;
+      });
+
+      html += '</div></div>';
+    });
+
+    // Legend
+    html += `<div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+        <div style="width:12px;height:12px;border-radius:3px;background:#2D5A45;"></div> Confirmed
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+        <div style="width:12px;height:12px;border-radius:3px;background:#C9A84C;"></div> Menunggu Bayar
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+        <div style="width:12px;height:12px;border-radius:3px;background:rgba(192,57,43,0.2);"></div> Dibatalkan
+      </div>
+      ${showNow ? '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><div style="width:2px;height:12px;background:var(--red);"></div> Sekarang</div>' : ''}
+    </div>`;
+
+    wrap.innerHTML = html;
+  }
+
+  // ── LIST ──────────────────────────────────────────────────
+  function renderList(data) {
+    if (!data.length) {
+      document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="empty-state">Belum ada booking.</td></tr>';
+      return;
+    }
+    // Sort by time
+    const sorted = [...data].sort((a,b) => a.time.localeCompare(b.time));
+    document.getElementById('bookingsBody').innerHTML = sorted.map(b => {
+      const badgeClass = b.status === 'confirmed' ? 'badge-confirmed'
+        : b.status === 'pending' ? 'badge-pending'
+        : b.status === 'checked_in' ? 'badge-checked_in'
+        : b.status === 'completed' ? 'badge-completed'
+        : 'badge-cancelled';
+      // Countdown warning untuk pending (auto-cancel 2 jam)
+      const isExcluded = b.status === 'pending' && b.notes && b.notes.includes('[SKIP_AUTO_CANCEL]');
+      let pendingLabel = '⏳ Menunggu Bayar';
+      if (b.status === 'pending' && b.createdAt) {
+        if (isExcluded) {
+          pendingLabel = '🔒 Dikecualikan (tidak auto-cancel)';
+        } else {
+          const minsLeft = Math.floor((new Date(b.createdAt).getTime() + 2*60*60*1000 - Date.now()) / 60000);
+          if (minsLeft <= 0) pendingLabel = '⏳ Akan di-cancel';
+          else if (minsLeft <= 30) pendingLabel = `⚠️ Bayar! ${minsLeft}m lagi`;
+        }
+      }
+      const isPayLater = (b.status === 'confirmed' || b.status === 'checked_in') && b.notes && b.notes.includes('[BAYAR NANTI]');
+
+      // Deteksi sudah main terlalu lama (>5 jam) tapi belum checkout
+      let longPlayWarning = '';
+      let isLongPlay = false;
+      if (b.status === 'checked_in' && b.checkinAt) {
+        const minsSinceCheckin = Math.floor((Date.now() - new Date(b.checkinAt).getTime()) / 60000);
+        if (minsSinceCheckin >= 300) { // 5 jam = 300 menit
+          isLongPlay = true;
+          const jamLama = Math.floor(minsSinceCheckin / 60);
+          longPlayWarning = ` (${jamLama}j!)`;
+        }
+      }
+
+      const badgeLabel = (isPayLater && b.status === 'confirmed') ? '🕐 Bayar Saat Checkout'
+        : (isPayLater && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main, Bayar Nanti${longPlayWarning}` : '🎮 Main (Bayar Nanti)')
+        : b.status === 'confirmed' ? '✅ Lunas'
+        : b.status === 'pending' ? pendingLabel
+        : b.status === 'checked_in' ? (isLongPlay ? `⚠️ Sedang Main${longPlayWarning}` : '🎮 Sedang Main')
+        : b.status === 'completed' ? '🏁 Selesai'
+        : '❌ Batal';
+      const badgeClassFinal = isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
+      const endHour = String(parseInt(b.time) + b.duration).padStart(2,'0');
+      const isAdmin = userRole === 'admin';
+      // Checkin time display
+      const checkinTime = fmtWIB(b.checkinAt);
+      const checkoutTime = fmtWIB(b.checkoutAt);
+      const excludeBtn = isAdmin
+        ? `<button class="btn btn-sm" onclick="toggleExcludeAutoCancel(${b.id}, ${isExcluded})" title="${isExcluded ? 'Aktifkan kembali auto-cancel' : 'Kecualikan dari auto-cancel (misal: teman/langganan, bayar nanti di tempat)'}"
+             style="background:${isExcluded ? '#fde8e8' : '#fff8e1'};color:${isExcluded ? '#a83232' : '#7a5c00'};border:1.5px solid ${isExcluded ? '#a83232' : '#f0d98c'};font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">
+             ${isExcluded ? '🔓 Batal Kecualikan' : '🔒 Kecualikan'}</button>`
+        : '';
+      const actions = b.status === 'confirmed'
+        ? `<button class="btn btn-primary btn-sm" onclick="checkinBooking(${b.id})" title="Check-in tamu">🎮 Check-in</button>
+           ${isAdmin ? `<button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
+           <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>` : ''}`
+        : b.status === 'checked_in'
+        ? `<button class="btn btn-success btn-sm" onclick="openPOS(${b.id})" title="Checkout & bayar">🧾 Checkout</button>`
+        : b.status === 'pending' && isAdmin
+        ? `<button class="btn btn-success btn-sm" onclick="confirmBooking(${b.id})" title="Sudah transfer">✓ Lunas</button>
+           <button class="btn btn-sm" onclick="confirmPayLater(${b.id})" title="Bayar saat checkout" style="background:#e8f4fd;color:#1a6635;border:1.5px solid #1a6635;font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">🕐 Bayar Nanti</button>
+           ${excludeBtn}
+           <button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
+           <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>`
+        : b.status === 'pending' && !isAdmin
+        ? '<span style="font-size:11px;color:var(--text-muted)">Menunggu admin</span>'
+        : b.status === 'completed'
+        ? `<button class="btn btn-sm" style="background:var(--cream);color:var(--green-dark);border:1px solid rgba(28,58,46,0.15)" onclick="openPOS(${b.id})">🧾 Lihat Struk</button>`
+        : isAdmin ? `<button class="btn btn-primary btn-sm" onclick="restoreBooking(${b.id})">Aktifkan</button>` : '—';
+      return `
+      <tr>
+        <td>
+          <span class="code-badge">${escHtml(b.bookingCode || '—')}</span><br>
+          <strong>${escHtml(b.customerName.replace(' (walk-in)',''))}</strong>
+          ${b.customerName.includes('walk-in') ? '<span style="font-size:10px;color:var(--text-muted)"> walk-in</span>' : ''}
+          ${b.customerContact ? `<br><span style="font-size:11px;color:var(--text-muted)">${escHtml(b.customerContact)}</span>` : ''}
+        </td>
+        <td>${formatDate(b.date)}</td>
+        <td>
+          <strong style="font-size:14px;">${b.time}–${endHour}:00</strong><br>
+          <span style="font-size:11px;color:var(--text-muted)">${b.duration} jam booking</span>
+          ${(b.status === 'checked_in' || b.status === 'completed')
+            ? `<br><span style="font-size:11px;color:#1a5fc8;font-weight:600;">
+                🎮 masuk ${checkinTime || b.time + ' (est.)'}
+               </span>`
+            : ''}
+          ${checkoutTime
+            ? `<br><span style="font-size:11px;color:var(--green-mid);font-weight:600;">
+                🏁 keluar ${checkoutTime}
+               </span>`
+            : ''}
+          ${b.actualDuration
+            ? `<br><span style="font-size:11px;font-weight:600;color:var(--green-dark);">
+                ⏱ ${Math.floor(b.actualDuration/60)}j${b.actualDuration%60 > 0 ? ' ' + b.actualDuration%60 + 'm' : ''} aktual
+               </span>`
+            : ''}
+        </td>
+        <td>
+          ${escHtml(b.tableName)}<br>
+          <span style="font-size:11px;color:var(--text-muted)">${escHtml(b.floor)}</span>
+        </td>
+        <td>
+          <span class="badge ${badgeClassFinal || badgeClass}">${badgeLabel}</span>
+        </td>
+        <td style="max-width:160px;">
+          ${(() => {
+            const cleanNotes = (b.notes || '')
+              .replace(/\[SKIP_AUTO_CANCEL\]/g, '')
+              .replace(/\[BAYAR NANTI\]/g, '')
+              .trim();
+            return cleanNotes
+              ? `<div style="background:#fff8e1;border:1px solid #f0d98c;border-radius:6px;padding:5px 8px;font-size:12px;color:#7a5c00;font-weight:600;word-break:break-word;">${escHtml(cleanNotes)}</div>`
+              : '<span style="font-size:11px;color:var(--text-muted);">—</span>';
+          })()}
+        </td>
+        <td style="white-space:nowrap">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">${actions}</div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtWIB(isoStr) {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    if (isNaN(d)) return null;
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+  }
+
+  function fmtDateWIB(isoStr) {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+  }
+
+  async function cancelBooking(id) {
+    if (!confirm('Batalkan booking ini?')) return;
+    try {
+      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'cancelled'}) });
+      showToast('Booking dibatalkan');
+      loadBookings(true);
+    } catch(e) { showToast('Gagal membatalkan'); }
+  }
+
+  function switchWiTab(tab) {
+    document.getElementById('wiCheckinTab').style.display = tab === 'checkin' ? 'block' : 'none';
+    document.getElementById('wiManualTab').style.display = tab === 'manual' ? 'block' : 'none';
+    const activeStyle = 'flex:1;font-size:12px';
+    const inactiveStyle = 'flex:1;font-size:12px;background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+    document.getElementById('wiTabCheckin').className = tab === 'checkin' ? 'btn btn-primary' : 'btn';
+    document.getElementById('wiTabCheckin').style = tab === 'checkin' ? activeStyle : inactiveStyle;
+    document.getElementById('wiTabManual').className = tab === 'manual' ? 'btn btn-primary' : 'btn';
+    document.getElementById('wiTabManual').style = tab === 'manual' ? activeStyle : inactiveStyle;
+    updateTableAvailability(tab === 'checkin' ? 'ci' : 'mi');
+  }
+
+  // === Status bayar (Walk-in / Input Manual) ===
+  // false = belum bayar (bayar nanti saat checkout), true = sudah bayar di muka
+  let _ciPaid = false;
+  let _miPaid = false;
+
+  function setPaidStatus(prefix, paid) {
+    if (prefix === 'ci') _ciPaid = paid; else _miPaid = paid;
+    const noBtn = document.getElementById(prefix + '_paid_no');
+    const yesBtn = document.getElementById(prefix + '_paid_yes');
+    noBtn.className = paid ? '' : 'active-unpaid';
+    yesBtn.className = paid ? 'active-paid' : '';
+  }
+
+  async function submitCheckin() {
+    const name = document.getElementById('ci_name').value.trim();
+    const tableVal = document.getElementById('ci_table').value;
+    const contact = document.getElementById('ci_contact').value.trim();
+    let notes = document.getElementById('ci_notes').value.trim();
+    if (!name || !tableVal) { showToast('Nama dan meja wajib diisi!'); return; }
+    if (!_ciPaid) notes = notes ? notes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
+    const [tableId, tableName, floor] = tableVal.split('|');
+    const now = new Date();
+    const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const timeKey = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: name, customerContact: contact,
+          date: dateKey, time: timeKey,
+          tableId, tableName, floor,
+          duration: 2, notes,
+          status: 'checked_in',
+          checkinAt: now.toISOString()
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error ? `⚠️ ${err.error}` : 'Gagal check-in. Coba lagi.');
+        return;
+      }
+      showToast(`⚡ ${name} check-in di ${tableName}!`);
+      document.getElementById('ci_name').value = '';
+      document.getElementById('ci_table').value = '';
+      document.getElementById('ci_contact').value = '';
+      document.getElementById('ci_notes').value = '';
+      setPaidStatus('ci', false);
+      document.getElementById('walkinForm').classList.remove('open');
+      document.getElementById('filterDate').value = dateKey;
+      switchTab('timeline');
+      loadBookings();
+    } catch(e) { showToast('Gagal check-in. Coba lagi.'); }
+  }
+
+  async function confirmPayLater(id) {
+    const b = allBookings.find(x => x.id === id);
+    const name = b ? b.customerName.replace(' (walk-in)','').replace(' (manual)','') : '';
+    if (!confirm(`Konfirmasi "${name}" bayar nanti (saat checkout)?\n\nBooking akan dikonfirmasi tanpa pembayaran di depan.`)) return;
+    const existingNotes = b?.notes || '';
+    const newNotes = existingNotes ? existingNotes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
+    try {
+      await fetch(`/api/bookings?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'confirmed', notes: newNotes })
+      });
+      showToast(`✅ ${name} dikonfirmasi — bayar saat checkout`);
+      loadBookings(true);
+    } catch(e) { showToast('Gagal. Coba lagi.'); }
+  }
+
+  // Kecualikan booking pending dari auto-cancel (misal: teman/langganan, bayar nanti di hari H)
+  async function toggleExcludeAutoCancel(id, isCurrentlyExcluded) {
+    const b = allBookings.find(x => x.id === id);
+    const name = b ? b.customerName.replace(' (walk-in)','').replace(' (manual)','') : '';
+    const existingNotes = b?.notes || '';
+
+    if (isCurrentlyExcluded) {
+      if (!confirm(`Aktifkan kembali auto-cancel untuk "${name}"?\n\nBooking akan kembali bisa di-cancel otomatis kalau belum dibayar dalam 2 jam.`)) return;
+      const newNotes = existingNotes.replace(' [SKIP_AUTO_CANCEL]', '').replace('[SKIP_AUTO_CANCEL]', '').trim();
+      try {
+        await fetch(`/api/bookings?id=${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: newNotes })
+        });
+        showToast(`🔓 Auto-cancel diaktifkan kembali untuk ${name}`);
+        loadBookings(true);
+      } catch(e) { showToast('Gagal. Coba lagi.'); }
+    } else {
+      if (!confirm(`Kecualikan "${name}" dari auto-cancel?\n\nGunakan ini untuk teman/langganan yang janji bayar nanti (misal di hari H booking), supaya tidak ke-cancel otomatis sebelum sempat bayar.`)) return;
+      const newNotes = existingNotes ? existingNotes + ' [SKIP_AUTO_CANCEL]' : '[SKIP_AUTO_CANCEL]';
+      try {
+        await fetch(`/api/bookings?id=${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: newNotes })
+        });
+        showToast(`🔒 ${name} dikecualikan dari auto-cancel`);
+        loadBookings(true);
+      } catch(e) { showToast('Gagal. Coba lagi.'); }
+    }
+  }
+
+  async function confirmBooking(id) {
+    if (!confirm('Konfirmasi booking ini (pembayaran sudah diterima)?')) return;
+    try {
+      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'confirmed'}) });
+      showToast('✅ Booking dikonfirmasi!');
+      loadBookings(true);
+    } catch(e) { showToast('Gagal mengkonfirmasi'); }
+  }
+
+  async function checkinBooking(id) {
+    const b = allBookings.find(x => x.id === id);
+    const name = b ? b.customerName.replace(' (walk-in)','').replace(' (manual)','') : '';
+    const now = new Date();
+    const nowStr = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    if (!confirm(`Check-in tamu "${name}" sekarang?\nJam mulai dicatat: ${nowStr} WIB`)) return;
+    try {
+      await fetch(`/api/bookings?id=${id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          status: 'checked_in',
+          checkinAt: now.toISOString()   // ← kirim timestamp aktual
+        })
+      });
+      showToast(`🎮 ${name} check-in jam ${nowStr}!`);
+      loadBookings(true);
+    } catch(e) { showToast('Gagal check-in'); }
+  }
+
+  function openPOS(id) {
+    // POS will be implemented next
+    const b = allBookings.find(x => x.id === id);
+    if (!b) return;
+    // Store selected booking for POS
+    window._posBookingId = id;
+    document.getElementById('posModal').style.display = 'flex';
+    initPOS(b);
+  }
+
+  async function restoreBooking(id) {
+    try {
+      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'confirmed'}) });
+      showToast('Booking diaktifkan kembali');
+      loadBookings(true);
+    } catch(e) { showToast('Gagal mengaktifkan'); }
+  }
+
+  function openEditModal(id) {
+    const b = allBookings.find(x => x.id === id);
+    if (!b) return;
+    document.getElementById('editId').value = id;
+    document.getElementById('editCode').textContent = b.bookingCode || '';
+    document.getElementById('editDate').value = b.date;
+    document.getElementById('editTime').value = b.time;
+    document.getElementById('editDuration').value = b.duration;
+    document.getElementById('editNotes').value = b.notes || '';
+    // Set table select
+    const tableSelect = document.getElementById('editTable');
+    for (let opt of tableSelect.options) {
+      if (opt.value.startsWith(b.tableId + '|')) { tableSelect.value = opt.value; break; }
+    }
+    document.getElementById('editModal').classList.add('open');
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('open');
+  }
+
+  // === POS ===
+  let _posBooking = null;
+  let _posPayment = null;
+  let _posCheckoutTime = null;
+
+  function initPOS(b) {
+    _posBooking = b;
+    _posPayment = null;
+
+    if (b.status === 'completed') {
+      // Booking sudah checkout — tampilkan struk yang SUDAH TERSIMPAN,
+      // jangan hitung ulang pakai waktu sekarang.
+      renderCompletedReceipt(b);
+      return;
+    }
+
+    setPOSMode('active');
+    _posCheckoutTime = new Date();
+    recalculatePOS();
+  }
+
+  // Tampilan read-only untuk booking yang sudah completed — pakai data
+  // yang tersimpan di DB (checkoutAt/actualDuration/totalPaid), tidak recalculate.
+  function renderCompletedReceipt(b) {
+    setPOSMode('readonly');
+
+    const checkin = b.checkinAt ? new Date(b.checkinAt) : null;
+    const checkout = b.checkoutAt ? new Date(b.checkoutAt) : null;
+    const mins = b.actualDuration || 0;
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const durStr = h > 0 ? `${h}j${m > 0 ? ' ' + m + 'm' : ''}` : `${m} mnt`;
+    // Jam yang ditagih diambil dari totalPaid (nilai otoritatif dari server),
+    // bukan dibulatkan ulang di sini, supaya konsisten dengan apa yang dibayar.
+    const billedH = Math.max(1, Math.round((b.totalPaid || 0) / 50000));
+
+    document.getElementById('posCheckinTime').textContent = checkin
+      ? checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}) + ' WIB' : '—';
+    document.getElementById('posCheckoutTime').textContent = checkout
+      ? checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})
+        + ' · ' + checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:'Asia/Jakarta'}) + ' WIB' : '—';
+    document.getElementById('posDuration').innerHTML = `${billedH} jam (aktual: ${durStr})`;
+    document.getElementById('posDuration').style.color = '#E8C97A';
+    document.getElementById('posTotal').textContent = 'Rp ' + (b.totalPaid || 0).toLocaleString('id-ID');
+    document.getElementById('posInfo').innerHTML =
+      `<b>👤</b> ${escHtml(b.customerName.replace(' (walk-in)',''))}<br>` +
+      `<b>🀄</b> ${escHtml(b.tableName)} (${escHtml(b.floor)})<br>` +
+      `<b>🎫</b> ${b.bookingCode || 'Walk-in'}<br>` +
+      `<b>💳</b> ${b.paymentMethod === 'tunai' ? 'Tunai' : b.paymentMethod === 'qris' ? 'QRIS' : b.paymentMethod === 'debit' ? 'Debit BCA' : '—'}`;
+
+    b._diffMins = mins;
+    b._actualMins = mins;
+    b._totalRp = b.totalPaid || 0;
+  }
+
+  // Toggle antara mode 'active' (checkout beneran, bisa bayar) dan
+  // 'readonly' (sekadar lihat struk booking yang sudah selesai).
+  function setPOSMode(mode) {
+    const readonly = mode === 'readonly';
+    const title = document.getElementById('posModalTitle');
+    if (title) title.textContent = readonly ? '🧾 Struk' : '🧾 Checkout';
+
+    const editBtn = document.getElementById('posEditCheckoutBtn');
+    if (editBtn) editBtn.style.display = readonly ? 'none' : (userRole === 'admin' ? 'inline-block' : 'none');
+    document.getElementById('posCheckoutEditRow').style.display = 'none';
+
+    const paymentSection = document.getElementById('posPaymentSection');
+    if (paymentSection) paymentSection.style.display = readonly ? 'none' : 'block';
+    document.getElementById('tunaiSection').style.display = 'none';
+
+    document.getElementById('posCompleteBtn').style.display = readonly ? 'none' : 'block';
+    document.getElementById('posSkipBtn').style.display = readonly ? 'none' : 'block';
+    const reprintBtn = document.getElementById('posReprintBtn');
+    if (reprintBtn) reprintBtn.style.display = readonly ? 'block' : 'none';
+  }
+
+  function recalculatePOS() {
+    const b = _posBooking;
+
+    // Calc actual duration in minutes
+    let checkin;
+    if (b.checkinAt) {
+      checkin = new Date(b.checkinAt);
+    } else if (b.time) {
+      const [h, m] = b.time.split(':').map(Number);
+      checkin = new Date(_posCheckoutTime);
+      checkin.setHours(h, m, 0, 0);
+    } else {
+      checkin = _posCheckoutTime;
+    }
+    const diffMs = Math.max(0, _posCheckoutTime - checkin);
+    const diffMins = Math.ceil(diffMs / (1000 * 60));
+
+    // Round up to nearest HOUR (minimum 1 jam)
+    // Toleransi 10 menit: 2j10m=2jam, 2j11m=3jam
+    const billableHours = Math.max(1, Math.ceil((diffMins - 10) / 60));
+    const roundedMins = billableHours * 60;
+    const totalRp = billableHours * 50000;
+
+    // Update UI
+    const checkinStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
+    const checkoutStr = _posCheckoutTime.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})
+      + ' · ' + _posCheckoutTime.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:'Asia/Jakarta'});
+    const durH = billableHours;
+
+    document.getElementById('posCheckinTime').textContent = checkinStr + ' WIB';
+    document.getElementById('posCheckoutTime').textContent = checkoutStr + ' WIB';
+
+    // Tombol edit jam checkout hanya untuk admin
+    const editBtn = document.getElementById('posEditCheckoutBtn');
+    if (editBtn) editBtn.style.display = (userRole === 'admin') ? 'inline-block' : 'none';
+
+    // Peringatan kalau durasi sangat panjang (kemungkinan lupa checkout)
+    const durLabel = document.getElementById('posDuration');
+    if (diffMins > 360) {
+      const hariBerapa = Math.floor(diffMins / 1440);
+      durLabel.innerHTML = `⚠️ ${durH} jam (${diffMins} menit — ${hariBerapa > 0 ? hariBerapa + ' hari lalu' : 'lama!'})`;
+      durLabel.style.color = '#ff8a80';
+    } else {
+      durLabel.innerHTML = `${durH} jam (aktual: ${diffMins} menit)`;
+      durLabel.style.color = '#E8C97A';
+    }
+
+    document.getElementById('posTotal').textContent = 'Rp ' + totalRp.toLocaleString('id-ID');
+
+    _posBooking._actualMins = roundedMins;
+    _posBooking._diffMins = diffMins;
+    _posBooking._totalRp = totalRp;
+
+    document.getElementById('posInfo').innerHTML =
+      `<b>👤</b> ${escHtml(b.customerName.replace(' (walk-in)',''))}<br>` +
+      `<b>🀄</b> ${escHtml(b.tableName)} (${escHtml(b.floor)})<br>` +
+      `<b>🎫</b> ${b.bookingCode || 'Walk-in'}`;
+
+    if (_posPayment === null) {
+      selectPayment(null);
+      document.getElementById('cashReceived').value = '';
+      document.getElementById('changeAmount').textContent = 'Rp 0';
+    }
+  }
+
+  // ── Edit jam checkout manual (untuk kasus lupa checkout) — KHUSUS ADMIN ──
+  function openEditCheckoutTime() {
+    if (userRole !== 'admin') {
+      showToast('Hanya admin yang bisa edit jam checkout');
+      return;
+    }
+    const d = _posCheckoutTime;
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('posCheckoutDateInput').value = dateStr;
+    document.getElementById('posCheckoutTimeInput').value = timeStr;
+    document.getElementById('posCheckoutEditRow').style.display = 'block';
+  }
+
+  function cancelEditCheckoutTime() {
+    document.getElementById('posCheckoutEditRow').style.display = 'none';
+  }
+
+  function applyManualCheckoutTime() {
+    if (userRole !== 'admin') {
+      showToast('Hanya admin yang bisa edit jam checkout');
+      return;
+    }
+    const dateVal = document.getElementById('posCheckoutDateInput').value;
+    const timeVal = document.getElementById('posCheckoutTimeInput').value;
+    if (!dateVal || !timeVal) {
+      showToast('Isi tanggal dan jam checkout dulu ya!');
+      return;
+    }
+    const newCheckout = new Date(`${dateVal}T${timeVal}:00`);
+    if (isNaN(newCheckout)) {
+      showToast('Format tanggal/jam tidak valid');
+      return;
+    }
+    _posCheckoutTime = newCheckout;
+    document.getElementById('posCheckoutEditRow').style.display = 'none';
+    recalculatePOS();
+    showToast('✅ Jam checkout diperbarui — total dihitung ulang');
+  }
+
+  function selectPayment(method) {
+    _posPayment = method;
+    ['tunai','qris','debit'].forEach(m => {
+      const btn = document.getElementById('pay' + m.charAt(0).toUpperCase() + m.slice(1));
+      if (btn) btn.style.background = m === method ? '#1C3A2E' : '#F5F0E8';
+      if (btn) btn.style.color = m === method ? '#E8C97A' : '#1C3A2E';
+      if (btn) btn.style.borderColor = m === method ? '#1C3A2E' : 'rgba(28,58,46,0.15)';
+    });
+    document.getElementById('tunaiSection').style.display = method === 'tunai' ? 'block' : 'none';
+    const btn = document.getElementById('posCompleteBtn');
+    const skipBtn = document.getElementById('posSkipBtn');
+    btn.disabled = !method;
+    btn.style.opacity = method ? '1' : '0.5';
+    btn.style.cursor = method ? 'pointer' : 'default';
+    if (skipBtn) {
+      skipBtn.disabled = !method;
+      skipBtn.style.opacity = method ? '1' : '0.5';
+      skipBtn.style.cursor = method ? 'pointer' : 'default';
+    }
+  }
+
+  function calcChange() {
+    const received = parseInt(document.getElementById('cashReceived').value) || 0;
+    const total = _posBooking?._totalRp || 0;
+    const change = received - total;
+    document.getElementById('changeAmount').textContent =
+      change >= 0 ? 'Rp ' + change.toLocaleString('id-ID') : '— (kurang Rp ' + Math.abs(change).toLocaleString('id-ID') + ')';
+  }
+
+  async function completePOS(shouldPrint) {
+    if (!_posBooking || !_posPayment) return;
+    const b = _posBooking;
+    try {
+      // Pakai _posCheckoutTime — bisa jam sekarang ATAU jam yang sudah diedit manual
+      // (untuk kasus kasir/admin lupa checkout di waktu yang benar)
+      _posBooking._checkoutAt = _posCheckoutTime;
+      await fetch('/api/bookings?id=' + b.id, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          status: 'completed',
+          checkoutAt: _posCheckoutTime.toISOString(),
+          actualDuration: b._actualMins,
+          paymentMethod: _posPayment,
+          totalPaid: b._totalRp
+        })
+      });
+      closePOS();
+      showToast(shouldPrint ? '🏁 Checkout berhasil!' : '🏁 Checkout selesai (tanpa struk)');
+      loadBookings();
+      if (shouldPrint) {
+        printReceipt(b, _posPayment, b._actualMins, b._totalRp);
+      }
+    } catch(e) { showToast('Gagal checkout'); }
+  }
+
+  function printReceipt(b, payMethod, actualMins, totalRp, receivedOverride) {
+    const checkin = b.checkinAt ? new Date(b.checkinAt) : (b._checkoutAt || new Date());
+    const checkout = b._checkoutAt || new Date();
+    const billedHours = Math.max(1, Math.ceil(((b._diffMins || actualMins) - 10) / 60));
+    const actualH = Math.floor(b._diffMins / 60);
+    const actualM = (b._diffMins || 0) % 60;
+    const actualStr = actualH > 0 ? `${actualH}j ${actualM}m` : `${actualM} mnt`;
+    const durStr = `${billedHours} jam (aktual ${actualStr})`;
+    const payLabel = payMethod === 'tunai' ? 'Tunai' : payMethod === 'qris' ? 'QRIS' : 'Debit BCA';
+    const cashIn = receivedOverride != null ? receivedOverride : (parseInt(document.getElementById('cashReceived').value) || 0);
+    const change = payMethod === 'tunai' ? cashIn - totalRp : 0;
+    const dateStr = checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric',timeZone:'Asia/Jakarta'});
+    const timeStr = checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
+    const checkinTimeStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
+
+    const w = window.open('', '_blank', 'width=400,height=600');
+    w.document.write(`<!DOCTYPE html><html><head><title>Struk Pung Pung</title>
+    <style>
+      @media print { body { margin: 0; } }
+      body { font-family: 'Courier New', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 10px; }
+      .center { text-align: center; }
+      .bold { font-weight: bold; }
+      .line { border-top: 1px dashed #000; margin: 8px 0; }
+      .row { display: flex; justify-content: space-between; margin: 3px 0; }
+      .logo { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+    </style></head><body>
+    <div class="logo">🀄 PUNG PUNG MAHJONG</div>
+    <div class="center" style="font-size:10px;">Lantai 2 Banana Leaf, Graha Famili</div>
+    <div class="center" style="font-size:10px;">Surabaya Barat</div>
+    <div class="line"></div>
+    <div class="center bold">${dateStr}</div>
+    <div class="center">${timeStr} WIB</div>
+    <div class="center" style="font-size:10px;">Kode: ${b.bookingCode || 'Walk-in'}</div>
+    <div class="line"></div>
+    <div class="row"><span>Nama</span><span>${b.customerName.replace(' (walk-in)','')}</span></div>
+    <div class="row"><span>Meja</span><span>${b.tableName}</span></div>
+    <div class="row"><span>Lantai</span><span>${b.floor}</span></div>
+    <div class="row"><span>Check-in</span><span>${checkinTimeStr} WIB</span></div>
+    <div class="row"><span>Checkout</span><span>${timeStr} WIB</span></div>
+    <div class="row"><span>Durasi</span><span>${durStr}</span></div>
+    <div class="line"></div>
+    <div class="row bold"><span>Total</span><span>Rp ${totalRp.toLocaleString('id-ID')}</span></div>
+    <div class="row"><span>Pembayaran</span><span>${payLabel}</span></div>
+    ${payMethod === 'tunai' ? `<div class="row"><span>Diterima</span><span>Rp ${cashIn.toLocaleString('id-ID')}</span></div>
+    <div class="row"><span>Kembalian</span><span>Rp ${change.toLocaleString('id-ID')}</span></div>` : ''}
+    <div class="line"></div>
+    <div class="center" style="margin-top:8px;">Terima kasih sudah main!</div>
+    <div class="center bold">Makan. Main. Santai. 🀄</div>
+    <div class="center" style="font-size:10px;margin-top:4px;">📞 0899-9880-707</div>
+    <div class="center" style="font-size:10px;">📸 @pungpung.mahjong</div>
+    <div class="center" style="font-size:10px;margin-top:2px;">pungrsvp.netlify.app</div>
+    <br><br>
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 500);
+  }
+
+  function reprintReceipt() {
+    const b = _posBooking;
+    if (!b) return;
+    b._checkoutAt = b.checkoutAt ? new Date(b.checkoutAt) : new Date();
+    // Kita tidak menyimpan jumlah uang tunai yang diterima aslinya, jadi
+    // tampilkan "diterima" = total (tidak ada kembalian) alih-alih menghitung ulang.
+    printReceipt(b, b.paymentMethod, b.actualDuration || 0, b.totalPaid || 0, b.totalPaid || 0);
+  }
+
+  function closePOS() {
+    document.getElementById('posModal').style.display = 'none';
+    _posBooking = null;
+    _posPayment = null;
+  }
+
+  async function saveEdit() {
+    const id = document.getElementById('editId').value;
+    const date = document.getElementById('editDate').value;
+    const time = document.getElementById('editTime').value;
+    const tableVal = document.getElementById('editTable').value;
+    const duration = parseInt(document.getElementById('editDuration').value);
+    const notes = document.getElementById('editNotes').value;
+    const [tableId, tableName, floor] = tableVal.split('|');
+    try {
+      await fetch(`/api/bookings?id=${id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ date, time, tableId, tableName, floor, duration, notes })
+      });
+      showToast('✅ Booking berhasil diupdate!');
+      closeEditModal();
+      loadBookings(true);
+    } catch(e) { showToast('Gagal mengupdate'); }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // Set default filter date to today
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth()+1).padStart(2,'0');
+  const d = String(today.getDate()).padStart(2,'0');
+  document.getElementById('filterDate').value = `${y}-${m}-${d}`;
+
+  // === WALK-IN FORM ===
+  function toggleWalkin() {
+    const form = document.getElementById('walkinForm');
+    form.classList.toggle('open');
+    if (form.classList.contains('open')) {
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      const miDate = document.getElementById('mi_date');
+      if (miDate && !miDate.value) miDate.value = today;
+      updateOccupiedTables();
+    }
+  }
+
+  function updateOccupiedTables() {
+    updateTableAvailability('ci');
+    updateTableAvailability('mi');
+  }
+
+  // Cek meja mana yang BENTROK untuk tanggal/jam/durasi yang sedang dipilih,
+  // bukan cuma yang lagi checked_in saat ini. Ini mencakup booking yang
+  // sudah confirmed/lunas tapi belum waktunya check-in juga.
+  async function updateTableAvailability(prefix) {
+    const sel = document.getElementById(prefix + '_table');
+    if (!sel) return;
+
+    let date, startHour, duration;
+    if (prefix === 'ci') {
+      // Walk-in sekarang: pakai tanggal & jam SAAT INI
+      const now = new Date();
+      date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      startHour = now.getHours();
+      duration = 2; // asumsi minimal, cukup buat deteksi bentrok jam berjalan
+    } else {
+      date = document.getElementById('mi_date').value;
+      const timeVal = document.getElementById('mi_time').value;
+      startHour = timeVal ? parseInt(timeVal) : null;
+      duration = parseInt(document.getElementById('mi_duration').value) || 2;
+    }
+
+    const resetAll = () => {
+      Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return;
+        opt.disabled = false;
+        opt.textContent = opt.textContent.replace(/ 🔴$/, '');
+        opt.style.color = '';
+      });
+    };
+
+    if (!date || startHour === null || isNaN(startHour)) { resetAll(); return; }
+
+    let dayBookings;
+    try {
+      const res = await fetch('/api/bookings?date=' + date);
+      dayBookings = await res.json();
+    } catch (e) { return; } // gagal fetch: jangan blokir semua meja, biarkan seperti semula
+
+    const endHour = startHour + duration;
+    const conflictIds = new Set(
+      dayBookings
+        .filter(b => b.status !== 'cancelled')
+        .filter(b => {
+          const bStart = parseInt(b.time);
+          // Kalau lagi checked_in dan belum checkout, anggap bisa sampai jam tutup
+          // (belum tahu kapan selesai — sama seperti logika di halaman booking customer)
+          const bEnd = b.status === 'checked_in' ? 23 : bStart + (b.duration || 1);
+          return startHour < bEnd && endHour > bStart;
+        })
+        .map(b => b.tableId)
+    );
+
+    Array.from(sel.options).forEach(opt => {
+      if (!opt.value) return;
+      const tableId = opt.value.split('|')[0];
+      const base = opt.textContent.replace(/ 🔴$/, '');
+      if (conflictIds.has(tableId)) {
+        opt.disabled = true;
+        opt.textContent = base + ' 🔴';
+        opt.style.color = '#aaa';
+      } else {
+        opt.disabled = false;
+        opt.textContent = base;
+        opt.style.color = '';
+      }
+    });
+
+    // Kalau meja yang sedang terpilih ternyata bentrok, reset pilihannya
+    if (sel.value) {
+      const curId = sel.value.split('|')[0];
+      if (conflictIds.has(curId)) {
+        sel.value = '';
+        showToast('⚠️ Meja yang dipilih sudah kepakai di jam itu, pilih meja lain ya.');
+      }
+    }
+  }
+
+  async function submitManual() {
+    const name     = document.getElementById('mi_name').value.trim();
+    const date     = document.getElementById('mi_date').value;
+    const time     = document.getElementById('mi_time').value;
+    const tableVal = document.getElementById('mi_table').value;
+    const duration = parseInt(document.getElementById('mi_duration').value);
+    let notes      = document.getElementById('mi_notes').value.trim();
+
+    if (!name || !date || !time || !tableVal) {
+      showToast('Lengkapi semua field dulu ya!'); return;
+    }
+    if (!_miPaid) notes = notes ? notes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
+
+    const [tableId, tableName, floor] = tableVal.split('|');
+
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: name, customerContact: '',
+          date, time, tableId, tableName, floor,
+          duration, notes, status: 'confirmed'
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error ? `⚠️ ${err.error}` : 'Gagal menyimpan. Coba lagi.');
+        return;
+      }
+      showToast('✅ Booking manual berhasil disimpan!');
+      document.getElementById('mi_name').value = '';
+      document.getElementById('mi_time').value = '';
+      document.getElementById('mi_table').value = '';
+      document.getElementById('mi_notes').value = '';
+      document.getElementById('mi_duration').value = '2';
+      setPaidStatus('mi', false);
+      document.getElementById('walkinForm').classList.remove('open');
+      document.getElementById('filterDate').value = date;
+      switchTab('timeline');
+      loadBookings();
+    } catch(e) {
+      showToast('Gagal menyimpan. Coba lagi.');
+    }
+  }
+
+  // === ROLE SYSTEM ===
+  let userRole = null;
+
+  function applyRole() {
+    const badge = document.getElementById('roleBadge');
+    if (badge) {
+      badge.textContent = userRole === 'admin' ? '👑 Admin' : '🧾 Kasir';
+      badge.style.background = userRole === 'admin' ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)';
+      badge.style.color = userRole === 'admin' ? '#E8C97A' : 'rgba(255,255,255,0.7)';
+    }
+    const laporanLink = document.getElementById('laporanLink');
+    if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
+  }
+
+  // === PASSWORD GATE ===
+  function checkPassword() {
+    const pw = document.getElementById('pwInput').value.trim();
+    if (pw === '808808') {
+      userRole = 'admin';
+      document.getElementById('passwordGate').style.display = 'none';
+      applyRole(); loadBookings();
+    } else if (pw === '223344') {
+      userRole = 'kasir';
+      document.getElementById('passwordGate').style.display = 'none';
+      applyRole(); loadBookings();
+    } else {
+      const err = document.getElementById('pwError');
+      err.textContent = 'Password salah. Coba lagi.';
+      document.getElementById('pwInput').value = '';
+      document.getElementById('pwInput').focus();
+      setTimeout(() => err.textContent = '', 2500);
+    }
+  }
+
+  // Focus password input on load
+  document.getElementById('pwInput').focus();
+  // DO NOT call loadBookings() here — only after password correct
+</script>
+
+  <!-- EDIT MODAL -->
+  <div class="edit-modal-overlay" id="editModal" onclick="closeEditModal()">
+    <div class="edit-modal" onclick="event.stopPropagation()">
+      <h3>✏️ Edit Booking <span class="code-badge" id="editCode"></span></h3>
+      <input type="hidden" id="editId">
+      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="editDate">
+        </div>
+        <div class="form-group">
+          <label>Jam Mulai</label>
+          <select id="editTime">
+            <option>10:00</option><option>11:00</option><option>12:00</option>
+            <option>13:00</option><option>14:00</option><option>15:00</option>
+            <option>16:00</option><option>17:00</option><option>18:00</option>
+            <option>19:00</option><option>20:00</option><option>21:00</option>
+            <option>22:00</option><option>23:00</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Meja</label>
+          <select id="editTable">
+            <option value="1|Bamboo Table|Lantai 2">Bamboo Table — Lt. 2</option>
+            <option value="2|Orchid Table|Lantai 2">Orchid Table — Lt. 2</option>
+            <option value="3|Lotus Table|Lantai 2">Lotus Table — Lt. 2</option>
+            <option value="4|Sakura Table|Lantai 2">Sakura Table — Lt. 2</option>
+            <option value="5|Dragon Table|Lantai 1">Dragon Table — Lt. 1</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Durasi (jam)</label>
+          <select id="editDuration">
+            <option value="1">1 jam</option><option value="2">2 jam</option>
+            <option value="3">3 jam</option><option value="4">4 jam</option>
+            <option value="5">5 jam</option><option value="6">6 jam</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Catatan</label>
+          <input type="text" id="editNotes" placeholder="Catatan opsional">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1" onclick="saveEdit()">Simpan</button>
+        <button class="btn" style="flex:1;background:#eee;color:#333" onclick="closeEditModal()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POS MODAL -->
+  <div id="posModal" onclick="event.target===this&&closePOS()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;align-items:center;justify-content:center;overflow-y:auto;">
+    <div style="background:#FDFAF4;border-radius:24px;padding:28px 24px;width:360px;max-width:95vw;margin:16px;" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div id="posModalTitle" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1C3A2E;">🧾 Checkout</div>
+        <button onclick="closePOS()" style="background:none;border:none;font-size:20px;color:#7A7060;cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Booking info -->
+      <div id="posInfo" style="background:#F5F0E8;border-radius:14px;padding:14px 16px;margin-bottom:16px;font-size:13px;line-height:2;color:#1C3A2E;"></div>
+
+      <!-- Duration & price -->
+      <div style="background:#1C3A2E;border-radius:16px;padding:16px 20px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">Check-in</span>
+          <span style="font-size:13px;font-weight:600;color:white;" id="posCheckinTime">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">Checkout</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;font-weight:600;color:white;" id="posCheckoutTime">—</span>
+            <button onclick="openEditCheckoutTime()" id="posEditCheckoutBtn" title="Lupa checkout? Edit jam disini"
+              style="display:none;background:rgba(201,168,76,0.25);border:none;border-radius:6px;padding:3px 7px;font-size:11px;color:#E8C97A;cursor:pointer;">✏️ Edit</button>
+          </span>
+        </div>
+        <div id="posCheckoutEditRow" style="display:none;margin-bottom:8px;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:6px;">📝 Lupa checkout? Set tanggal & jam checkout sebenarnya:</div>
+          <div style="display:flex;gap:6px;">
+            <input type="date" id="posCheckoutDateInput" style="flex:1;padding:7px 8px;border-radius:8px;border:none;font-size:12px;">
+            <input type="time" id="posCheckoutTimeInput" style="flex:1;padding:7px 8px;border-radius:8px;border:none;font-size:12px;">
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button onclick="applyManualCheckoutTime()" style="flex:1;background:#C9A84C;color:#1C3A2E;border:none;border-radius:8px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;">Terapkan</button>
+            <button onclick="cancelEditCheckoutTime()" style="flex:1;background:rgba(255,255,255,0.1);color:white;border:none;border-radius:8px;padding:7px;font-size:12px;cursor:pointer;">Batal</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.6);">Durasi aktual</span>
+          <span style="font-size:13px;font-weight:600;color:#E8C97A;" id="posDuration">—</span>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:rgba(255,255,255,0.7);">Total</span>
+          <span style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#E8C97A;" id="posTotal">Rp 0</span>
+        </div>
+      </div>
+
+      <!-- Payment method -->
+      <div id="posPaymentSection" style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:#7A7060;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Metode Pembayaran</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <button class="pay-btn" id="payTunai" onclick="selectPayment('tunai')"
+            style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
+            💵 Tunai
+          </button>
+          <button class="pay-btn" id="payQris" onclick="selectPayment('qris')"
+            style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
+            📱 QRIS
+          </button>
+          <button class="pay-btn" id="payDebit" onclick="selectPayment('debit')"
+            style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
+            💳 Debit BCA
+          </button>
+        </div>
+      </div>
+
+      <!-- Tunai change calculator -->
+      <div id="tunaiSection" style="display:none;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:#7A7060;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Uang Diterima</div>
+        <input id="cashReceived" type="number" placeholder="Masukkan nominal..." oninput="calcChange()"
+          style="width:100%;padding:11px 14px;border:1.5px solid rgba(28,58,46,0.15);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:#1C3A2E;background:var(--cream);outline:none;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;">
+          <span style="color:#7A7060;">Kembalian</span>
+          <span style="font-weight:700;color:#1C3A2E;" id="changeAmount">Rp 0</span>
+        </div>
+      </div>
+
+      <!-- Complete button -->
+      <button onclick="completePOS(true)" id="posCompleteBtn" disabled
+        style="width:100%;padding:14px;background:#C9A84C;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:#1C3A2E;cursor:pointer;opacity:0.5;transition:opacity 0.2s;margin-bottom:8px;">
+        Selesai & Cetak Struk
+      </button>
+      <button onclick="completePOS(false)" id="posSkipBtn" disabled
+        style="width:100%;padding:11px;background:transparent;border:1.5px solid rgba(28,58,46,0.15);border-radius:14px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;opacity:0.5;transition:opacity 0.2s;">
+        Selesai Tanpa Cetak Struk
+      </button>
+      <button onclick="reprintReceipt()" id="posReprintBtn" style="display:none;width:100%;padding:14px;background:#C9A84C;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:#1C3A2E;cursor:pointer;">
+        🖨️ Cetak Ulang Struk
+      </button>
+    </div>
+  </div>
+
+</body>
+</html>

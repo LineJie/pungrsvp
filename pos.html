@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>POS Checkout — Pung Pung Mahjong</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5F0E8; --green-dark: #1C3A2E; --green-mid: #2D5A45;
+    --green-light: #4A8C68; --gold: #C9A84C; --gold-light: #E8C97A;
+    --warm-white: #FDFAF4; --text-muted: #7A7060; --red: #C0392B;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:#1a1a1a; display:flex; justify-content:center; min-height:100vh; font-family:'DM Sans',sans-serif; }
+  .frame { width:390px; min-height:100vh; background:var(--cream); overflow-y:auto; }
+
+  .header { background:var(--green-dark); padding:18px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .header h1 { font-family:'Playfair Display',serif; color:white; font-size:18px; font-weight:700; }
+  .header a { color:rgba(255,255,255,0.6); font-size:13px; text-decoration:none; }
+
+  .content { padding:16px; }
+
+  .card { background:var(--warm-white); border-radius:18px; padding:18px; margin-bottom:12px; box-shadow:0 2px 10px rgba(28,58,46,0.07); }
+  .card-title { font-size:11px; font-weight:600; color:var(--text-muted); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:12px; }
+
+  .booking-info { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .info-item label { font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:3px; }
+  .info-item span { font-size:14px; font-weight:600; color:var(--green-dark); }
+
+  .timer-display {
+    background:var(--green-dark); border-radius:16px; padding:20px;
+    text-align:center; margin-bottom:12px;
+  }
+  .timer-label { font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+  .timer-value { font-family:'Playfair Display',serif; font-size:48px; font-weight:700; color:var(--gold-light); letter-spacing:2px; line-height:1; }
+  .timer-sub { font-size:12px; color:rgba(255,255,255,0.5); margin-top:6px; }
+
+  .price-display { background:rgba(201,168,76,0.1); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .price-label { font-size:12px; color:var(--text-muted); }
+  .price-value { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--gold); }
+
+  .payment-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+  .pay-btn { padding:14px 8px; border:2px solid rgba(28,58,46,0.12); border-radius:14px; background:white; cursor:pointer; text-align:center; transition:all 0.18s; }
+  .pay-btn .pay-icon { font-size:22px; display:block; margin-bottom:4px; }
+  .pay-btn .pay-label { font-size:11px; font-weight:600; color:var(--green-dark); }
+  .pay-btn.selected { border-color:var(--green-dark); background:var(--green-dark); }
+  .pay-btn.selected .pay-label { color:var(--gold-light); }
+
+  .checkout-btn {
+    width:100%; padding:16px; background:var(--gold); border:none; border-radius:16px;
+    font-family:'DM Sans',sans-serif; font-size:16px; font-weight:700; color:var(--green-dark);
+    cursor:pointer; box-shadow:0 4px 16px rgba(201,168,76,0.35); margin-bottom:8px;
+  }
+  .checkout-btn:disabled { background:#ccc; box-shadow:none; cursor:not-allowed; }
+
+  /* RECEIPT - print-friendly */
+  .receipt-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8);
+    z-index:999; align-items:center; justify-content:center;
+  }
+  .receipt-overlay.show { display:flex; }
+  .receipt-wrap { background:white; width:320px; border-radius:16px; overflow:hidden; max-height:90vh; overflow-y:auto; }
+  .receipt-actions { display:flex; gap:8px; padding:12px 16px; background:#f5f5f5; }
+  .receipt-actions button { flex:1; padding:10px; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-print { background:var(--green-dark); color:white; }
+  .btn-close-receipt { background:#ddd; color:#333; }
+
+  /* Receipt paper style */
+  #receiptContent {
+    padding:20px 16px;
+    font-family: 'Courier New', monospace;
+    font-size:13px;
+    line-height:1.6;
+  }
+  .r-center { text-align:center; }
+  .r-logo { font-size:20px; font-weight:700; text-align:center; margin-bottom:2px; }
+  .r-sub { font-size:11px; text-align:center; color:#666; margin-bottom:12px; }
+  .r-divider { border:none; border-top:1px dashed #ccc; margin:10px 0; }
+  .r-row { display:flex; justify-content:space-between; }
+  .r-row.bold { font-weight:700; font-size:14px; }
+  .r-total { background:#f5f5f5; padding:8px 10px; border-radius:6px; margin:8px 0; }
+  .r-footer { text-align:center; font-size:11px; color:#888; margin-top:10px; }
+
+  @media print {
+    body { background:white; }
+    .frame { width:100%; box-shadow:none; }
+    .header, .content { display:none; }
+    .receipt-overlay { position:static; background:none; display:block !important; }
+    .receipt-wrap { border-radius:0; box-shadow:none; width:100%; max-height:none; }
+    .receipt-actions { display:none !important; }
+    #receiptContent { padding:0; }
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="header">
+    <h1>🧾 POS Checkout</h1>
+    <a href="/admin.html">← Admin</a>
+  </div>
+
+  <div class="content">
+    <!-- Loading state -->
+    <div id="loadingState" class="card" style="text-align:center;padding:40px;">
+      <div style="font-size:32px;margin-bottom:10px;">⏳</div>
+      <div style="color:var(--text-muted);">Memuat data sesi…</div>
+    </div>
+
+    <!-- Main POS (hidden until loaded) -->
+    <div id="posMain" style="display:none;">
+
+      <!-- Booking Info -->
+      <div class="card">
+        <div class="card-title">Detail Sesi</div>
+        <div class="booking-info">
+          <div class="info-item"><label>Nama</label><span id="posName">—</span></div>
+          <div class="info-item"><label>Meja</label><span id="posTable">—</span></div>
+          <div class="info-item"><label>Check-in</label><span id="posCheckin">—</span></div>
+          <div class="info-item"><label>Kode</label><span id="posCode" style="font-size:12px;color:var(--text-muted)">—</span></div>
+        </div>
+      </div>
+
+      <!-- Live Timer -->
+      <div class="timer-display">
+        <div class="timer-label">Durasi Bermain</div>
+        <div class="timer-value" id="timerValue">00:00</div>
+        <div class="timer-sub" id="timerSub">jam : menit</div>
+      </div>
+
+      <!-- Price -->
+      <div class="price-display">
+        <div>
+          <div class="price-label">Total Tagihan</div>
+          <div style="font-size:11px;color:var(--text-muted)" id="priceFormula">— jam × Rp 50.000</div>
+        </div>
+        <div class="price-value" id="posTotal">Rp 0</div>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="card">
+        <div class="card-title">Metode Pembayaran</div>
+        <div class="payment-grid">
+          <div class="pay-btn" id="pay-tunai" onclick="selectPayment('tunai')">
+            <span class="pay-icon">💵</span>
+            <span class="pay-label">Tunai</span>
+          </div>
+          <div class="pay-btn" id="pay-qris" onclick="selectPayment('qris')">
+            <span class="pay-icon">📱</span>
+            <span class="pay-label">QRIS</span>
+          </div>
+          <div class="pay-btn" id="pay-debit" onclick="selectPayment('debit')">
+            <span class="pay-icon">💳</span>
+            <span class="pay-label">Debit BCA</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checkout Button -->
+      <button class="checkout-btn" id="checkoutBtn" onclick="doCheckout()" disabled>
+        Pilih metode pembayaran dulu
+      </button>
+
+      <div style="text-align:center;font-size:12px;color:var(--text-muted);padding-bottom:24px;">
+        Harga Rp 50.000 / jam / meja · dibulatkan ke jam terdekat
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- RECEIPT OVERLAY -->
+<div class="receipt-overlay" id="receiptOverlay">
+  <div class="receipt-wrap">
+    <div id="receiptContent"></div>
+    <div class="receipt-actions">
+      <button class="btn-print" onclick="window.print()">🖨️ Cetak Struk</button>
+      <button class="btn-close-receipt" onclick="doneCheckout()">✅ Selesai</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const bookingId = new URLSearchParams(window.location.search).get('id');
+  let booking = null;
+  let selectedPayment = null;
+  let timerInterval = null;
+
+  // ── LOAD BOOKING ──────────────────────────────────────────
+  async function loadBooking() {
+    if (!bookingId) { showError('ID sesi tidak ditemukan.'); return; }
+    try {
+      const res = await fetch(`/api/admin/bookings?id=${bookingId}`);
+      const data = await res.json();
+      booking = Array.isArray(data) ? data.find(b => b.id == bookingId) : data;
+      if (!booking) { showError('Data sesi tidak ditemukan.'); return; }
+      if (booking.status === 'completed') {
+        showReceipt(booking); // Already checked out - show receipt
+        document.getElementById('loadingState').style.display = 'none';
+        return;
+      }
+      renderPOS();
+    } catch(e) { showError('Gagal memuat data. Coba refresh.'); }
+  }
+
+  function showError(msg) {
+    document.getElementById('loadingState').innerHTML = `<div style="font-size:32px;margin-bottom:10px;">❌</div><div style="color:var(--red);">${msg}</div><br><a href="/admin.html" style="color:var(--green-mid)">← Kembali ke Admin</a>`;
+  }
+
+  // ── RENDER POS ────────────────────────────────────────────
+  function renderPOS() {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('posMain').style.display = 'block';
+
+    const checkinTime = booking.checkinAt ? new Date(booking.checkinAt) : new Date();
+    document.getElementById('posName').textContent = booking.customerName.replace(' (walk-in)','').replace(' (manual)','');
+    document.getElementById('posTable').textContent = booking.tableName;
+    document.getElementById('posCode').textContent = booking.bookingCode || '—';
+    document.getElementById('posCheckin').textContent = checkinTime.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) + ' WIB';
+
+    startTimer(checkinTime);
+  }
+
+  // ── LIVE TIMER ────────────────────────────────────────────
+  function startTimer(checkinTime) {
+    function tick() {
+      const now = new Date();
+      const diffMs = now - checkinTime;
+      const diffMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+
+      document.getElementById('timerValue').textContent =
+        String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
+
+      // Price: round up to nearest hour, min 1 hour
+      const billableHours = Math.max(1, Math.ceil(diffMins / 60));
+      const total = billableHours * 50000;
+      document.getElementById('posTotal').textContent = 'Rp ' + total.toLocaleString('id-ID');
+      document.getElementById('priceFormula').textContent = `${billableHours} jam × Rp 50.000`;
+
+      updateCheckoutBtn(total, diffMins);
+    }
+    tick();
+    timerInterval = setInterval(tick, 30000); // update every 30s
+  }
+
+  function updateCheckoutBtn(total, diffMins) {
+    const btn = document.getElementById('checkoutBtn');
+    if (!selectedPayment) {
+      btn.textContent = 'Pilih metode pembayaran dulu';
+      btn.disabled = true;
+    } else {
+      btn.textContent = `✅ Checkout — Bayar Rp ${total.toLocaleString('id-ID')}`;
+      btn.disabled = false;
+    }
+  }
+
+  // ── PAYMENT ───────────────────────────────────────────────
+  function selectPayment(method) {
+    selectedPayment = method;
+    ['tunai','qris','debit'].forEach(m => {
+      document.getElementById(`pay-${m}`).classList.toggle('selected', m === method);
+    });
+    // Re-trigger tick to update button
+    const checkinTime = booking.checkinAt ? new Date(booking.checkinAt) : new Date();
+    const diffMs = new Date() - checkinTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    const billableHours = Math.max(1, Math.ceil(diffMins / 60));
+    updateCheckoutBtn(billableHours * 50000, diffMins);
+  }
+
+  // ── CHECKOUT ──────────────────────────────────────────────
+  async function doCheckout() {
+    if (!selectedPayment) return;
+    clearInterval(timerInterval);
+
+    const now = new Date();
+    const checkinTime = booking.checkinAt ? new Date(booking.checkinAt) : now;
+    const diffMs = now - checkinTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    const billableHours = Math.max(1, Math.ceil(diffMins / 60));
+    const total = billableHours * 50000;
+
+    try {
+      const res = await fetch(`/api/bookings?id=${booking.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          checkoutAt: now.toISOString(),
+          actualDuration: diffMins,
+          paymentMethod: selectedPayment,
+          totalPaid: total,
+        })
+      });
+      const updated = await res.json();
+      booking = { ...booking, ...updated, checkoutAt: now, actualDuration: diffMins, totalPaid: total, paymentMethod: selectedPayment };
+      showReceipt(booking);
+    } catch(e) {
+      alert('Gagal menyimpan checkout. Coba lagi.');
+      startTimer(checkinTime);
+    }
+  }
+
+  // ── RECEIPT ───────────────────────────────────────────────
+  function showReceipt(b) {
+    const checkinTime = b.checkinAt ? new Date(b.checkinAt) : new Date();
+    const checkoutTime = b.checkoutAt ? new Date(b.checkoutAt) : new Date();
+    const diffMins = b.actualDuration || Math.floor((checkoutTime - checkinTime) / 60000);
+    const billableHours = Math.max(1, Math.ceil(diffMins / 60));
+    const total = b.totalPaid || billableHours * 50000;
+    const payLabel = b.paymentMethod === 'tunai' ? 'Tunai' : b.paymentMethod === 'qris' ? 'QRIS' : 'Debit BCA';
+
+    const fmtTime = (d) => new Date(d).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    const fmtDate = (d) => {
+      const dt = new Date(d);
+      const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      return `${days[dt.getDay()]}, ${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+    };
+
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    const durasiStr = hours > 0 ? `${hours} jam ${mins > 0 ? mins + ' mnt' : ''}` : `${mins} mnt`;
+
+    document.getElementById('receiptContent').innerHTML = `
+      <div class="r-logo">PUNG PUNG MAHJONG</div>
+      <div class="r-sub">Lantai 2 Banana Leaf, Graha Famili<br>Surabaya Barat</div>
+      <hr class="r-divider">
+      <div class="r-row"><span>${fmtDate(checkinTime)}</span><span>${b.bookingCode || '—'}</span></div>
+      <hr class="r-divider">
+      <div class="r-row"><span>Nama</span><span>${escHtml(b.customerName.replace(' (walk-in)','').replace(' (manual)',''))}</span></div>
+      <div class="r-row"><span>Meja</span><span>${escHtml(b.tableName)}</span></div>
+      <div class="r-row"><span>Lantai</span><span>${escHtml(b.floor)}</span></div>
+      <hr class="r-divider">
+      <div class="r-row"><span>Check-in</span><span>${fmtTime(checkinTime)} WIB</span></div>
+      <div class="r-row"><span>Check-out</span><span>${fmtTime(checkoutTime)} WIB</span></div>
+      <div class="r-row"><span>Durasi</span><span>${durasiStr}</span></div>
+      <div class="r-row"><span>Ditagih</span><span>${billableHours} jam</span></div>
+      <hr class="r-divider">
+      <div class="r-total">
+        <div class="r-row"><span>Rp 50.000 × ${billableHours} jam</span><span></span></div>
+        <div class="r-row bold"><span>TOTAL</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
+      </div>
+      <div class="r-row"><span>Pembayaran</span><span>${payLabel}</span></div>
+      <hr class="r-divider">
+      <div class="r-footer">
+        Terima kasih sudah main di Pung Pung!<br>
+        Makan · Main · Santai 🀄<br><br>
+        WA: 0899-9880-707
+      </div>
+    `;
+
+    document.getElementById('receiptOverlay').classList.add('show');
+  }
+
+  function doneCheckout() {
+    window.location.href = '/admin.html';
+  }
+
+  function escHtml(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadBooking();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+CREATE TABLE "bookings" (
+	"id" serial PRIMARY KEY,
+	"booking_code" text DEFAULT '' NOT NULL,
+	"customer_name" text NOT NULL,
+	"customer_contact" text DEFAULT '',
+	"date" text NOT NULL,
+	"time" text NOT NULL,
+	"table_id" text NOT NULL,
+	"table_name" text NOT NULL,
+	"floor" text NOT NULL,
+	"duration" integer NOT NULL,
+	"notes" text DEFAULT '',
+	"status" text DEFAULT 'pending' NOT NULL,
+	"checkin_at" timestamp,
+	"checkout_at" timestamp,
+	"actual_duration" integer,
+	"payment_method" text DEFAULT '',
+	"total_paid" integer DEFAULT 0,
+	"created_at" timestamp DEFAULT now()
+);
