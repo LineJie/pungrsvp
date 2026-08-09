@@ -20,3 +20,11 @@ export const bookings = pgTable("bookings", {
   totalPaid: integer("total_paid").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const members = pgTable("members", {
+    id: serial().primaryKey(),
+    waNumber: text("wa_number").notNull().unique(),
+    name: text().notNull().default(""),
+    notes: text().default(""),
+    createdAt: timestamp("created_at").defaultNow(),
+});
