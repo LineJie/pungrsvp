@@ -688,7 +688,7 @@
 <script>
   let allBookings = [];
 
-  function formatDate(dateStr) {
+  function waLink(contact) { if (!contact) return '#'; let num = String(contact).replace(/[^0-9]/g, ''); if (num.startsWith('0')) num = '62' + num.slice(1); else if (!num.startsWith('62')) num = '62' + num; return 'https://wa.me/' + num; } function formatDate(dateStr) {
     if (!dateStr) return '—';
     const [y, m, d] = dateStr.split('-');
     const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -981,7 +981,7 @@
           <span class="code-badge">${escHtml(b.bookingCode || '—')}</span><br>
           <strong>${escHtml(b.customerName.replace(' (walk-in)',''))}</strong>
           ${b.customerName.includes('walk-in') ? '<span style="font-size:10px;color:var(--text-muted)"> walk-in</span>' : ''}
-          ${b.customerContact ? `<br><span style="font-size:11px;color:var(--text-muted)">${escHtml(b.customerContact)}</span>` : ''}
+          ${b.customerContact ? `<br><a href="${waLink(b.customerContact)}" target="_blank" style="font-size:11px;color:#1a6635;text-decoration:none;font-weight:600;">📱 ${escHtml(b.customerContact)}</a>` : ''}
         </td>
         <td>${formatDate(b.date)}</td>
         <td>
