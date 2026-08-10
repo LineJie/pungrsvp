@@ -28,3 +28,13 @@ export const members = pgTable("members", {
     notes: text().default(""),
     createdAt: timestamp("created_at").defaultNow(),
 });
+
+
+export const staff = pgTable("staff", {
+    id: serial().primaryKey(),
+    name: text().notNull(),
+    username: text().notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    role: text().notNull().default("admin"), // admin | kasir
+    createdAt: timestamp("created_at").defaultNow(),
+});
