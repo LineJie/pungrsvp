@@ -476,6 +476,10 @@
       <div style="font-size:36px;margin-bottom:8px;">🀄</div>
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1C3A2E;margin-bottom:4px;">Management Panel</div>
       <div style="font-size:12px;color:#7A7060;margin-bottom:24px;">Pung Pung Mahjong · Admin & Kasir</div>
+      <input id="pwUser" type="text" placeholder="Username" onkeydown="if(event.key==='Enter')document.getElementById('pwInput').focus()"
+        style="width:100%;padding:12px 16px;border:1.5px solid rgba(28,58,46,0.2);border-radius:12px;
+        font-family:'DM Sans',sans-serif;font-size:15px;color:#1C3A2E;outline:none;
+        text-align:center;background:#F5F0E8;margin-bottom:10px;">
       <input id="pwInput" type="password" placeholder="Masukkan password"
         onkeydown="if(event.key==='Enter')checkPassword()"
         style="width:100%;padding:12px 16px;border:1.5px solid rgba(28,58,46,0.2);border-radius:12px;
@@ -647,7 +651,7 @@
   <!-- VIEW TABS -->
   <div style="display:flex;gap:8px;margin-bottom:14px;">
     <button id="tabTimeline" class="btn btn-primary" onclick="switchTab('timeline')" style="flex:1">📅 Timeline</button>
-    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button>
+    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button><button id="tabStaff" class="btn" onclick="switchTab('staff')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🛡️ Kelola Staff</button>button>
   </div>
 
   <!-- TIMELINE VIEW -->
@@ -683,7 +687,7 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3>h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div>div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div>div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div>div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">👑 Admin</option>option><option value="kasir">🧾 Kasir</option>option></select>select></div>div></div>div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button>button></div>div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="5" class="loading">Memuat data…</td>td></tr></tbody>tbody></table></div>div></div>div></tr></th></th></tr></thead></table></label></label><div class="toast" id="toast"></div>
 
 <script>
   let allBookings = [];
@@ -745,6 +749,10 @@
           document.getElementById('tabCustomers').className = tab === 'customers' ? 'btn btn-primary' : 'btn';
           document.getElementById('tabCustomers').style = tab === 'customers' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
           if (tab === 'customers') loadCustomers();
+      document.getElementById('viewStaff').style.display = tab === 'staff' ? 'block' : 'none';
+      document.getElementById('tabStaff').className = tab === 'staff' ? 'btn btn-primary' : 'btn';
+      document.getElementById('tabStaff').style = (tab === 'staff' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)') + (isSuperAdmin ? '' : ';display:none');
+      if (tab === 'staff') loadStaff();
   }
 
   function renderTable(data) {
@@ -1072,6 +1080,67 @@
                                                                       </tr>`).join('');
       }
 
+async function loadStaff() {
+    document.getElementById('staffBody').innerHTML = '<tr><td colspan="5" class="loading">Memuat data…</td></tr>';
+    try {
+          const res = await fetch('/api/staff', { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
+          const data = await res.json();
+          if (!res.ok) {
+                  document.getElementById('staffBody').innerHTML = `<tr><td colspan="5" class="empty-state">${escHtml(data.error || 'Gagal memuat data.')}</td></tr>`;
+                  return;
+          }
+          renderStaffList(data);
+    } catch (e) {
+          document.getElementById('staffBody').innerHTML = '<tr><td colspan="5" class="empty-state">Gagal memuat data.</td></tr>';
+    }
+}
+  
+  function renderStaffList(data) {
+      if (!data.length) {
+            document.getElementById('staffBody').innerHTML = '<tr><td colspan="5" class="empty-state">Belum ada staff.</td></tr>';
+            return;
+      }
+      document.getElementById('staffBody').innerHTML = data.map(s => `
+          <tr>
+                <td class="name-cell">${escHtml(s.name)}</td>
+                      <td>${escHtml(s.username)}</td>
+                            <td>${s.role === 'admin' ? '👑 Admin' : '🧾 Kasir'}</td>
+                                  <td>${s.createdAt ? formatDate(String(s.createdAt).slice(0,10)) : '—'}</td>
+                                        <td><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
+                                            </tr>`).join('');
+  }
+  
+  async function submitStaff() {
+      const name = document.getElementById('st_name').value.trim();
+      const username = document.getElementById('st_username').value.trim();
+      const password = document.getElementById('st_password').value;
+      const role = document.getElementById('st_role').value;
+      if (!name || !username || !password) { showToast('Lengkapi semua field dulu ya!'); return; }
+      try {
+            const res = await fetch('/api/staff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+                    body: JSON.stringify({ name, username, password, role })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { showToast(data.error || 'Gagal menyimpan staff'); return; }
+            showToast('✅ Staff berhasil ditambahkan!');
+            document.getElementById('st_name').value = '';
+            document.getElementById('st_username').value = '';
+            document.getElementById('st_password').value = '';
+            loadStaff();
+      } catch (e) { showToast('Gagal menyimpan staff'); }
+  }
+  
+  async function deleteStaff(id, name) {
+      if (!confirm(`Hapus staff "${name}"?`)) return;
+      try {
+            await fetch(`/api/staff?id=${id}`, { method: 'DELETE', headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
+            showToast('Staff dihapus');
+            loadStaff();
+      } catch (e) { showToast('Gagal menghapus'); }
+  }
+  
   function fmtWIB(isoStr) {
     if (!isoStr) return null;
     const d = new Date(isoStr);
@@ -1767,38 +1836,61 @@
 
   // === ROLE SYSTEM ===
   let userRole = null;
+  let isSuperAdmin = false;
+  let _authUser = '';
+  let _authPass = '';
 
   function applyRole() {
-    const badge = document.getElementById('roleBadge');
-    if (badge) {
-      badge.textContent = userRole === 'admin' ? '👑 Admin' : '🧾 Kasir';
-      badge.style.background = userRole === 'admin' ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)';
-      badge.style.color = userRole === 'admin' ? '#E8C97A' : 'rgba(255,255,255,0.7)';
-    }
-    const laporanLink = document.getElementById('laporanLink');
-    if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
+      const badge = document.getElementById('roleBadge');
+      if (badge) {
+            badge.textContent = isSuperAdmin ? '🛡️ Super Admin' : (userRole === 'admin' ? '👑 Admin' : '🧾 Kasir');
+            badge.style.background = userRole === 'admin' ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.1)';
+            badge.style.color = userRole === 'admin' ? '#E8C97A' : 'rgba(255,255,255,0.7)';
+      }
+      const laporanLink = document.getElementById('laporanLink');
+      if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
   }
-
   // === PASSWORD GATE ===
-  function checkPassword() {
-    const pw = document.getElementById('pwInput').value.trim();
-    if (pw === '808808') {
-      userRole = 'admin';
-      document.getElementById('passwordGate').style.display = 'none';
-      applyRole(); loadBookings();
-    } else if (pw === '223344') {
-      userRole = 'kasir';
-      document.getElementById('passwordGate').style.display = 'none';
-      applyRole(); loadBookings();
-    } else {
+  async function checkPassword() {
+      const user = document.getElementById('pwUser').value.trim();
+      const pw = document.getElementById('pwInput').value.trim();
       const err = document.getElementById('pwError');
-      err.textContent = 'Password salah. Coba lagi.';
-      document.getElementById('pwInput').value = '';
-      document.getElementById('pwInput').focus();
-      setTimeout(() => err.textContent = '', 2500);
-    }
+      if (!user || !pw) {
+            err.textContent = 'Isi username dan password.';
+            return;
+      }
+      err.textContent = 'Memeriksa...';
+      try {
+            const res = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pw })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                    err.textContent = data.error || 'Username atau password salah.';
+                    document.getElementById('pwInput').value = '';
+                    return;
+            }
+            _authUser = user;
+            _authPass = pw;
+            if (data.role === 'superadmin') {
+                    userRole = 'admin';
+                    isSuperAdmin = true;
+            } else {
+                    userRole = data.role;
+                    isSuperAdmin = false;
+            }
+            err.textContent = '';
+            document.getElementById('passwordGate').style.display = 'none';
+            applyRole();
+            switchTab('timeline');
+            loadBookings();
+      } catch (e) {
+            err.textContent = 'Gagal menghubungi server. Coba lagi.';
+      }
   }
-
+  
   // Focus password input on load
   document.getElementById('pwInput').focus();
   // DO NOT call loadBookings() here — only after password correct
