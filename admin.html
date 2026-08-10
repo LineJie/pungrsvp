@@ -501,7 +501,7 @@
     <p>Management Panel</p>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <span id="roleBadge" style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span>
+    <span id="roleBadge" style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span><select id="locationSwitcher" onchange="switchLocationView()" style="display:none;font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;"><option value="all">Semua Cabang</option><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select>
     <a href="/laporan" id="laporanLink" style="display:none;background:var(--gold);color:var(--green-dark);padding:8px 14px;border-radius:10px;font-weight:600;text-decoration:none;font-size:13px;">📊 Laporan Lengkap</a>
     <a href="/">← Booking</a>
   </div>
@@ -687,7 +687,7 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">👑 Admin</option><option value="kasir">🧾 Kasir</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="5" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
 
 <script>
   let allBookings = [];
@@ -706,8 +706,8 @@
 
   async function loadBookings(forceFresh) {
     const dateVal = document.getElementById('filterDate').value;
-    const cacheKey = dateVal || '__all__';
-    const url = dateVal ? `/api/admin/bookings?date=${dateVal}` : '/api/admin/bookings';
+    const cacheKey = (dateVal || '__all__') + '|' + _viewLocation;
+    const locParam = (_viewLocation && _viewLocation !== 'all') ? `location=${_viewLocation}` : ''; const url = dateVal ? `/api/admin/bookings?date=${dateVal}` + (locParam ? `&${locParam}` : '') : '/api/admin/bookings' + (locParam ? `?${locParam}` : '');
 
     // Pakai cache kalau masih fresh dan tidak dipaksa refresh
     const now = Date.now();
@@ -1047,7 +1047,7 @@
       async function loadCustomers() {
               document.getElementById('customersBody').innerHTML = '<tr><td colspan="4" class="loading">Memuat data…</td></tr>';
               try {
-                        const res = await fetch('/api/admin/bookings');
+                        const custLoc = (_viewLocation && _viewLocation !== 'all') ? `?location=${_viewLocation}` : ''; const res = await fetch('/api/admin/bookings' + custLoc);
                         const rows = await res.json();
                         renderCustomers(rows);
               } catch (e) {
@@ -1081,23 +1081,23 @@
       }
 
 async function loadStaff() {
-    document.getElementById('staffBody').innerHTML = '<tr><td colspan="5" class="loading">Memuat data…</td></tr>';
+    document.getElementById('staffBody').innerHTML = '<tr><td colspan="6" class="loading">Memuat data…</td></tr>';
     try {
           const res = await fetch('/api/staff', { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
           const data = await res.json();
           if (!res.ok) {
-                  document.getElementById('staffBody').innerHTML = `<tr><td colspan="5" class="empty-state">${escHtml(data.error || 'Gagal memuat data.')}</td></tr>`;
+                  document.getElementById('staffBody').innerHTML = `<tr><td colspan="6" class="empty-state">${escHtml(data.error || 'Gagal memuat data.')}</td></tr>`;
                   return;
           }
           renderStaffList(data);
     } catch (e) {
-          document.getElementById('staffBody').innerHTML = '<tr><td colspan="5" class="empty-state">Gagal memuat data.</td></tr>';
+          document.getElementById('staffBody').innerHTML = '<tr><td colspan="6" class="empty-state">Gagal memuat data.</td></tr>';
     }
 }
   
   function renderStaffList(data) {
       if (!data.length) {
-            document.getElementById('staffBody').innerHTML = '<tr><td colspan="5" class="empty-state">Belum ada staff.</td></tr>';
+            document.getElementById('staffBody').innerHTML = '<tr><td colspan="6" class="empty-state">Belum ada staff.</td></tr>';
             return;
       }
       document.getElementById('staffBody').innerHTML = data.map(s => `
@@ -1105,6 +1105,7 @@ async function loadStaff() {
                 <td class="name-cell">${escHtml(s.name)}</td>
                       <td>${escHtml(s.username)}</td>
                             <td>${s.role === 'admin' ? '👑 Admin' : '🧾 Kasir'}</td>
+                            <td>${s.location === 'denpasar' ? 'Denpasar' : 'Surabaya'}</td>
                                   <td>${s.createdAt ? formatDate(String(s.createdAt).slice(0,10)) : '—'}</td>
                                         <td><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
                                             </tr>`).join('');
@@ -1114,13 +1115,13 @@ async function loadStaff() {
       const name = document.getElementById('st_name').value.trim();
       const username = document.getElementById('st_username').value.trim();
       const password = document.getElementById('st_password').value;
-      const role = document.getElementById('st_role').value;
+      const role = document.getElementById('st_role').value; const location = document.getElementById('st_location').value;
       if (!name || !username || !password) { showToast('Lengkapi semua field dulu ya!'); return; }
       try {
             const res = await fetch('/api/staff', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
-                    body: JSON.stringify({ name, username, password, role })
+                    body: JSON.stringify({ name, username, password, role, location })
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) { showToast(data.error || 'Gagal menyimpan staff'); return; }
@@ -1839,6 +1840,8 @@ async function loadStaff() {
   let isSuperAdmin = false;
   let _authUser = '';
   let _authPass = '';
+  let _authLocation = 'surabaya';
+  let _viewLocation = 'surabaya';
 
   function applyRole() {
       const badge = document.getElementById('roleBadge');
@@ -1849,6 +1852,25 @@ async function loadStaff() {
       }
       const laporanLink = document.getElementById('laporanLink');
       if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
+    setupLocationSwitcher();
+  }
+
+  function setupLocationSwitcher() {
+    const sel = document.getElementById('locationSwitcher');
+    if (!sel) return;
+    if (isSuperAdmin) {
+      sel.style.display = 'inline-block';
+      sel.value = _viewLocation;
+    } else {
+      sel.style.display = 'none';
+    }
+  }
+
+  function switchLocationView() {
+    const sel = document.getElementById('locationSwitcher');
+    if (!sel) return;
+    _viewLocation = sel.value;
+    loadBookings(true);
   }
   // === PASSWORD GATE ===
   async function checkPassword() {
@@ -1881,6 +1903,8 @@ async function loadStaff() {
                     userRole = data.role;
                     isSuperAdmin = false;
             }
+        _authLocation = data.location || 'surabaya';
+        _viewLocation = isSuperAdmin ? 'all' : _authLocation;
             err.textContent = '';
             document.getElementById('passwordGate').style.display = 'none';
             applyRole();
