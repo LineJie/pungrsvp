@@ -27,3 +27,8 @@ export async function ensureStaffTable(db: any) {
                                                 )
                                                   `);
 }
+
+export async function ensureLocationColumns(db: any) {
+        await db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
+        await db.execute(sql`ALTER TABLE staff ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
+}
