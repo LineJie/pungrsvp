@@ -592,7 +592,7 @@
         </div>
         <div class="form-group">
           <label>Catatan</label>
-          <input type="text" id="mi_notes" placeholder="Opsional">
+          <input type="text" id="mi_notes" placeholder="Opsional"></div><div class="form-group"><label>No. WhatsApp (Opsional)</label><input type="text" id="mi_contact" placeholder="Opsional">
         </div>
       </div>
       <div class="paid-toggle">
@@ -647,7 +647,7 @@
   <!-- VIEW TABS -->
   <div style="display:flex;gap:8px;margin-bottom:14px;">
     <button id="tabTimeline" class="btn btn-primary" onclick="switchTab('timeline')" style="flex:1">📅 Timeline</button>
-    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button>
+    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button>
   </div>
 
   <!-- TIMELINE VIEW -->
@@ -683,7 +683,7 @@
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
 
 <script>
   let allBookings = [];
@@ -741,6 +741,10 @@
     document.getElementById('tabTimeline').style = tab === 'timeline' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
     document.getElementById('tabList').className = tab === 'list' ? 'btn btn-primary' : 'btn';
     document.getElementById('tabList').style = tab === 'list' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+          document.getElementById('viewCustomers').style.display = tab === 'customers' ? 'block' : 'none';
+          document.getElementById('tabCustomers').className = tab === 'customers' ? 'btn btn-primary' : 'btn';
+          document.getElementById('tabCustomers').style = tab === 'customers' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+          if (tab === 'customers') loadCustomers();
   }
 
   function renderTable(data) {
@@ -1031,6 +1035,42 @@
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+      async function loadCustomers() {
+              document.getElementById('customersBody').innerHTML = '<tr><td colspan="4" class="loading">Memuat data…</td></tr>';
+              try {
+                        const res = await fetch('/api/admin/bookings');
+                        const rows = await res.json();
+                        renderCustomers(rows);
+              } catch (e) {
+                        document.getElementById('customersBody').innerHTML = '<tr><td colspan="4" class="empty-state">Gagal memuat data.</td></tr>';
+              }
+      }
+
+      function renderCustomers(data) {
+              const map = {};
+              data.forEach(b => {
+                        const name = (b.customerName || '').replace(' (walk-in)','').replace(' (manual)','').trim();
+                        const contact = (b.customerContact || '').trim();
+                        const key = contact || ('noWA:' + name.toLowerCase());
+                        if (!map[key]) map[key] = { name, contact, count: 0, lastDate: b.date };
+                        map[key].count++;
+                        if (b.date > map[key].lastDate) map[key].lastDate = b.date;
+                        if (contact && !map[key].contact) map[key].contact = contact;
+              });
+              const list = Object.values(map).sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
+              if (!list.length) {
+                        document.getElementById('customersBody').innerHTML = '<tr><td colspan="4" class="empty-state">Belum ada data customer.</td></tr>';
+                        return;
+              }
+              document.getElementById('customersBody').innerHTML = list.map(c => `
+                      <tr>
+                                <td class="name-cell">${escHtml(c.name || '—')}</td>
+                                          <td>${c.contact ? `<a href="${waLink(c.contact)}" target="_blank" style="color:#1a6635;text-decoration:none;font-weight:600;">📱 ${escHtml(c.contact)}</a>` : '<span style="color:var(--text-muted);font-size:12px;">—</span>'}</td>
+                                                    <td>${c.count}</td>
+                                                              <td>${formatDate(c.lastDate)}</td>
+                                                                      </tr>`).join('');
+      }
 
   function fmtWIB(isoStr) {
     if (!isoStr) return null;
@@ -1683,7 +1723,8 @@
     const time     = document.getElementById('mi_time').value;
     const tableVal = document.getElementById('mi_table').value;
     const duration = parseInt(document.getElementById('mi_duration').value);
-    let notes      = document.getElementById('mi_notes').value.trim();
+    const contact = document.getElementById('mi_contact').value.trim();
+          let notes = document.getElementById('mi_notes').value.trim();
 
     if (!name || !date || !time || !tableVal) {
       showToast('Lengkapi semua field dulu ya!'); return;
@@ -1697,7 +1738,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerName: name, customerContact: '',
+          customerName: name, customerContact: contact,
           date, time, tableId, tableName, floor,
           duration, notes, status: 'confirmed'
         })
@@ -1711,6 +1752,7 @@
       document.getElementById('mi_name').value = '';
       document.getElementById('mi_time').value = '';
       document.getElementById('mi_table').value = '';
+            document.getElementById('mi_contact').value = '';
       document.getElementById('mi_notes').value = '';
       document.getElementById('mi_duration').value = '2';
       setPaidStatus('mi', false);
