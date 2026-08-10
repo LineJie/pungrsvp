@@ -100,6 +100,7 @@
       <div style="font-size:32px;margin-bottom:8px;">📊</div>
       <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--green-dark);margin-bottom:4px;">Laporan Revenue</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Khusus Admin</div>
+<input type="text" id="pwUser" placeholder="Username" style="margin-bottom:10px;" onkeydown="if(event.key==='Enter')document.getElementById('pwInput').focus()">
       <input type="password" id="pwInput" placeholder="Password admin" onkeydown="if(event.key==='Enter')checkPw()">
       <div id="pwError" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;"></div>
       <button onclick="checkPw()">Masuk →</button>
@@ -141,17 +142,32 @@
   </div>
 
 <script>
-  function checkPw() {
-    const pw = document.getElementById('pwInput').value.trim();
-    if (pw === '808808') {
+async function checkPw() {
+  const username = document.getElementById('pwUser').value.trim();
+  const pw = document.getElementById('pwInput').value.trim();
+  if (!username || !pw) {
+    document.getElementById('pwError').textContent = 'Isi username dan password.';
+    return;
+  }
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username, password: pw})
+    });
+    const data = await res.json();
+    if (res.ok) {
       document.getElementById('passwordGate').style.display = 'none';
       initDefaults();
     } else {
-      document.getElementById('pwError').textContent = 'Password salah.';
+      document.getElementById('pwError').textContent = data.error || 'Password salah.';
       document.getElementById('pwInput').value = '';
     }
+  } catch (e) {
+    document.getElementById('pwError').textContent = 'Gagal menghubungi server. Coba lagi.';
   }
-  document.getElementById('pwInput').focus();
+}
+  document.getElementById('pwUser').focus();
 
   const TABLE_NAMES = {
     '1': 'Bamboo Table', '2': 'Orchid Table', '3': 'Lotus Table',
