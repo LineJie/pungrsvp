@@ -19,6 +19,7 @@ export const bookings = pgTable("bookings", {
   paymentMethod: text("payment_method").default(""), // tunai | qris | debit
   totalPaid: integer("total_paid").default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  location: text().notNull().default("surabaya"), // surabaya | denpasar
 });
 
 export const members = pgTable("members", {
@@ -37,4 +38,5 @@ export const staff = pgTable("staff", {
     passwordHash: text("password_hash").notNull(),
     role: text().notNull().default("admin"), // admin | kasir
     createdAt: timestamp("created_at").defaultNow(),
+  location: text().notNull().default("surabaya"), // surabaya | denpasar | all (superadmin)
 });
