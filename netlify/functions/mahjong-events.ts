@@ -10,6 +10,20 @@ import {
   type KongType,
 } from "../../db/mahjongScoring.js";
 
+// Leaderboard display code: derived from the last 4 digits of the player's
+// WhatsApp number (kept partially masked for privacy on a public leaderboard).
+// Falls back to a deterministic code generated from the player's name when
+// no WhatsApp number is on file, so two players who share the same display
+// name can still be told apart.
+function leaderboardCode(name: string, waNumber: string): string {
+const digits = (waNumber || "").replace(/\D/g, "");
+if (digits.length >= 4) return digits.slice(-4);
+const s = (name || "").trim().toLowerCase();
+let hash = 0;
+for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+return String(hash % 10000).padStart(4, "0");
+}
+
 // All scoring math lives in db/mahjongScoring.ts (the single authoritative
 // engine). This function only: validates the request against the current
 // game/player state, calls the engine, and persists the resulting events.
@@ -131,7 +145,10 @@ export default async (req: Request) => {
         if (!totalsByKey[key]) totalsByKey[key] = { name: p.name, waNumber: p.waNumber || "", score: 0 };
         totalsByKey[key].score += playerTotal;
       });
-      const ranked = Object.values(totalsByKey).sort((a, b) => b.score - a.score).slice(0, 50);
+      const ranked = Object.values(totalsByKey)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 50)
+      .map((r) => ({ ...r, code: leaderboardCode(r.name, r.waNumber) }));
       return Response.json(ranked);
     }
 
