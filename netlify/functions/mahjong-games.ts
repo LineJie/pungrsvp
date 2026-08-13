@@ -136,7 +136,7 @@ export default async (req: Request) => {
                 return Response.json({ game, players: [player] }, { status: 201 });
         } catch (e: any) {
                 await db.delete(mahjongGames).where(eq(mahjongGames.id, game.id));
-                return Response.json({ error: "Could not create game, please try again" }, { status: 500 });
+return Response.json({ error: "Could not create game, please try again", debug: String(e && e.message || e) }, { status: 500 });
         }
   }
 
