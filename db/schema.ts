@@ -53,6 +53,7 @@ export const staff = pgTable("staff", {
 export const mahjongGames = pgTable("mahjong_games", {
   id: serial().primaryKey(),
   bookingId: integer("booking_id").notNull(), // FK -> bookings.id (the checked-in table/session this game belongs to)
+    sessionId: integer("session_id"), // groups consecutive games at the same table with the same 4 players ("same players" continuation flow) into one running point total; self-referencing (defaults to this game's own id when not continuing a previous session)
   tableId: text("table_id").notNull(),
   tableName: text("table_name").notNull(),
   location: text().notNull().default("surabaya"),
