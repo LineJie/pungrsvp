@@ -4,6 +4,17 @@ import { bookings } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ensureLocationColumns } from "../../db/authUtils.js";
 
+// Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
+// to gate the admin-correction and void-transaction paths in PATCH below,
+// which are the only ways to modify a booking after it has been checked out.
+const SUPERADMIN_USERNAME = "tere";
+function isSuperAdminReq(req: Request): boolean {
+    const u = req.headers.get("x-auth-username");
+    const p = req.headers.get("x-auth-password");
+    const superadminPw = process.env.SUPERADMIN_PASSWORD;
+    return !!superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw;
+}
+
 function generateCode(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "PP-";
@@ -108,6 +119,33 @@ export default async (req: Request) => {
           const id = parseInt(url.searchParams.get("id") || "");
           if (!id) return Response.json({ error: "id required" }, { status: 400 });
           const body = await req.json();
+
+        // Super Admin correction / void — the ONLY path allowed to touch a booking
+        // that has already been checked out (status === "completed"). Everything
+        // below this block is unreachable for these two request shapes.
+        if (body.adminCorrection === true || body.voidCorrection === true) {
+            if (!isSuperAdminReq(req)) {
+                return Response.json({ error: "Hanya Super Admin yang bisa mengoreksi data checkout" }, { status: 403 });
+            }
+            if (body.voidCorrection === true) {
+                const [voided] = await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, id)).returning();
+                if (!voided) return Response.json({ error: "Booking not found" }, { status: 404 });
+                return Response.json(voided);
+            }
+            const correctionData: any = {};
+            if (body.tableId) correctionData.tableId = body.tableId;
+            if (body.tableName) correctionData.tableName = body.tableName;
+            if (body.floor) correctionData.floor = body.floor;
+            if (body.notes !== undefined) correctionData.notes = body.notes;
+            if (body.paymentMethod !== undefined) correctionData.paymentMethod = body.paymentMethod;
+            if (body.checkinAt) correctionData.checkinAt = new Date(body.checkinAt);
+            if (body.checkoutAt) correctionData.checkoutAt = new Date(body.checkoutAt);
+            if (typeof body.totalPaid === "number") correctionData.totalPaid = Math.max(0, Math.round(body.totalPaid));
+            if (typeof body.actualDuration === "number") correctionData.actualDuration = Math.max(0, Math.round(body.actualDuration));
+            const [corrected] = await db.update(bookings).set(correctionData).where(eq(bookings.id, id)).returning();
+            if (!corrected) return Response.json({ error: "Booking not found" }, { status: 404 });
+            return Response.json(corrected);
+        }
 
       const isCheckoutAttempt = body.status === "completed" || body.checkoutAt || body.totalPaid !== undefined;
           const isReschedule = body.date || body.time || body.tableId;
