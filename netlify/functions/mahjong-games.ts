@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
 import { bookings, members, mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
 import { eq, and, inArray, ne } from "drizzle-orm";
-import { ensureMahjongTables } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureMemberColumns } from "../../db/mahjongUtils.js";
 
 // Game lifecycle for Pung Pung Mahjong Score.
 // A game is always anchored to an existing booking (the checked-in table
@@ -33,6 +33,7 @@ async function getGameWithPlayers(gameId: number) {
 
 export default async (req: Request) => {
   await ensureMahjongTables(db);
+  await ensureMemberColumns(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
