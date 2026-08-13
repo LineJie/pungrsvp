@@ -15,6 +15,7 @@
 // - Kong from wall: konger +6, other three players -2 each (nets to 0).
 
 export type BonusTileNumber = 1 | 2 | 3 | 4;
+export type NumberTileValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export type HonourTile =
   | "east"
@@ -63,6 +64,12 @@ function assertBonusTileNumber(n: unknown): asserts n is BonusTileNumber {
   }
 }
 
+function assertNumberTileValue(n: unknown): asserts n is NumberTileValue {
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > 9) {
+    throw new Error("Number tile value must be an integer from 1 to 9");
+  }
+}
+
 /** An existing Flower tile already owned at the moment of winning. */
 export function calculateFlowerScore(tileNumber: BonusTileNumber): ScoredEvent {
   assertBonusTileNumber(tileNumber);
@@ -88,13 +95,13 @@ export type BonusTileKind = "number" | "flower" | "season" | "honour";
 
 export interface LastCardDraw {
   kind: BonusTileKind;
-  tileNumber?: BonusTileNumber; // required for flower / season
+  tileNumber?: BonusTileNumber | NumberTileValue; // required for number / flower / season
   honourTile?: HonourTile; // required for honour (includes zhong)
 }
 
 /**
  * Score one Last Card Bonus draw.
- * - Number tile: 0 points.
+  * - Number tile N: +N points (N = the tile's printed number, 1-9).
  * - Flower N / Season N: +N points.
  * - Any Honour tile (East/South/West/North/Green/White) or Zhong drawn AS A
  *   LAST CARD: +5 points. This is distinct from Zhong used as a Joker
@@ -102,7 +109,8 @@ export interface LastCardDraw {
  */
 export function calculateLastCardScore(draw: LastCardDraw): ScoredEvent {
   if (draw.kind === "number") {
-    return { eventType: "LAST_CARD", points: 0, label: "Last Card — Number Tile", metadata: { kind: "number" } };
+            assertNumberTileValue(draw.tileNumber);
+      return { eventType: "LAST_CARD", points: draw.tileNumber, label: `Last Card — Number Tile ${draw.tileNumber}`, metadata: { kind: "number", tileNumber: draw.tileNumber } };
   }
   if (draw.kind === "flower") {
     assertBonusTileNumber(draw.tileNumber);
