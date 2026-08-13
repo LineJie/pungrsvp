@@ -160,7 +160,7 @@ function renderLobbyNoGame(){
   var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Start a Mahjong Game</div>";
   h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">No game yet at " + esc(S.booking.tableName) + ". Be the host and invite the other 3 players!</div>";
   h += "<div class=\"label\">Your Name</div><input class=\"field\" id=\"hostName\" value=\"" + esc(name) + "\" placeholder=\"Your name\">";
-  h += "<div class=\"label\">WhatsApp Number (optional)</div><input class=\"field\" id=\"hostWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
+  h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"hostWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
   h += "<button class=\"btn btn-gold\" onclick=\"createGame()\">Create Game</button>";
   h += "</div>";
   qs("content").innerHTML = h;
@@ -198,7 +198,7 @@ function renderLobbyGame(){
     var name = localStorage.getItem("mj_name") || ""; var wa = localStorage.getItem("mj_wa") || "";
     h += "<div class=\"card\"><div class=\"card-title\">Join This Table</div>";
     h += "<div class=\"label\">Your Name</div><input class=\"field\" id=\"joinName\" value=\"" + esc(name) + "\" placeholder=\"Your name\">";
-    h += "<div class=\"label\">WhatsApp Number (optional)</div><input class=\"field\" id=\"joinWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
+    h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"joinWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
     h += "<button class=\"btn btn-gold\" onclick=\"joinGame()\">Join Table</button></div>";
   } else {
     h += "<div class=\"muted\">Waiting for more players to join (" + S.players.length + "/4)...</div>";
