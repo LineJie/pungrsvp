@@ -63,3 +63,13 @@ export async function ensureMembersTable(db: any) {
                                           )
                                             `);
 }
+
+// Additive safety net: adds the session_id column used to group consecutive
+// games at the same table (same 4 players continuing without a break, via
+// the "same players?" prompt in mahjong.html) into one running point total.
+// Existing games/events are left untouched -- rows with session_id = NULL
+// are simply treated as their own single-game session by the API.
+export async function ensureSessionIdColumn(db: any) {
+    await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS session_id integer`);
+}
+
