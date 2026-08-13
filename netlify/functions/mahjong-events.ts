@@ -6,6 +6,8 @@ import { ensureMahjongTables, ensureSessionIdColumn } from "../../db/mahjongUtil
 import {
   calculateWinScore,
   calculateKongScore,
+    calculateAllLoserPayments,
+    type LoserDefenseInput,
   type LastCardDraw,
   type KongType,
 } from "../../db/mahjongScoring.js";
@@ -203,7 +205,7 @@ export default async (req: Request) => {
     // Only self-draw wins are supported — there is intentionally no
     // "Hu from discard" action anywhere in this API.
     if (action === "recordWin") {
-      const { winnerPlayerId, handContainsJoker, existingFlowers = [], existingSeasons = [], lastCardDraws = [] } = body;
+            const { winnerPlayerId, handContainsJoker, existingFlowers = [], existingSeasons = [], lastCardDraws = [], loserDefenses = [] } = body;
       if (!allPlayerIds.includes(winnerPlayerId)) {
         return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
       }
@@ -223,12 +225,30 @@ export default async (req: Request) => {
       for (const ev of result.events) {
         inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, ev.points, null, { label: ev.label, ...ev.metadata }));
       }
+
+            const losers = players.filter((p) => p.id !== winnerPlayerId);
+            const defenseByPlayer = new Map(loserDefenses.map((d) => [d.playerId, d]));
+            const { results: loserResults, winnerGain } = calculateAllLoserPayments(
+                      losers.map((l) => ({
+                                  playerId: l.id,
+                                  existingFlowers: defenseByPlayer.get(l.id)?.existingFlowers || [],
+                                  existingSeasons: defenseByPlayer.get(l.id)?.existingSeasons || [],
+                      }))
+                    );
+            for (const r of loserResults) {
+                      if (r.payment > 0 || r.defenseValue > 0) {
+                                  inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }));
+                      }
+            }
+            if (winnerGain > 0) {
+                      inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers` }));
+            }
       await db.update(mahjongGames)
         .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
         .where(eq(mahjongGames.id, game.id));
 
           const { scoreboard } = await loadSessionAccumulated(game, players);
-          return Response.json({ events: inserted, total: result.total, scoreboard }, { status: 201 });
+              return Response.json({ events: inserted, total: result.total + winnerGain, scoreboard }, { status: 201 });
     }
 
     // Record a Kong (from discard or from wall) during active play.
