@@ -224,7 +224,7 @@ function joinGame(){
     localStorage.setItem("mj_player_" + S.game.id, res.data.joined.id);
     renderLobbyGame();
   });
-}}
+}
   function addPlayerByHost(){
     var name = qs("addPlayerName").value.trim();
     var wa = qs("addPlayerWa").value.trim();
