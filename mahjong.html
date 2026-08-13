@@ -201,9 +201,16 @@ function renderLobbyGame(){
     h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"joinWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
     h += "<button class=\"btn btn-gold\" onclick=\"joinGame()\">Join Table</button></div>";
   } else {
-    h += "<div class=\"muted\">Waiting for more players to join (" + S.players.length + "/4)...</div>";
+        h += "<div class=\"muted\">Waiting for more players to join (" + S.players.length + "/4)...</div>";
   }
-  h += "<button class=\"btn btn-danger btn-sm\" onclick=\"cancelGame()\">Cancel This Game</button>";
+    if (S.players.length < 4) {
+          h += "<div class=\"card\"><div class=\"card-title\">Add a Player Without a Phone</div>";
+          h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">If a friend doesn't have their own phone, type their name here to add them yourself.</div>";
+          h += "<div class=\"label\">Player Name</div><input class=\"field\" id=\"addPlayerName\" placeholder=\"Friend's name\">";
+          h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"addPlayerWa\" placeholder=\"08xxxxxxxxxx\">";
+          h += "<button class=\"btn btn-outline\" onclick=\"addPlayerByHost()\">Add Player</button></div>";
+    }
+    h += "<button class=\"btn btn-danger btn-sm\" onclick=\"cancelGame()\">Cancel This Game</button>";
   qs("content").innerHTML = h;
 }
 function joinGame(){
@@ -217,7 +224,17 @@ function joinGame(){
     localStorage.setItem("mj_player_" + S.game.id, res.data.joined.id);
     renderLobbyGame();
   });
-}
+}}
+  function addPlayerByHost(){
+    var name = qs("addPlayerName").value.trim();
+    var wa = qs("addPlayerWa").value.trim();
+    if (!name) { alert("Please enter the player's name"); return; }
+    apiSend("/api/mahjong/games?id=" + S.game.id + "&action=join", "PATCH", {name:name, waNumber:wa}).then(function(res){
+      if (!res.ok) { alert(res.data.error || "Could not add player"); loadGameForBooking(); return; }
+      S.game = res.data.game; S.players = res.data.players;
+      renderLobbyGame();
+    });
+  }
 function startGame(){
   apiSend("/api/mahjong/games?id=" + S.game.id + "&action=start", "PATCH").then(function(res){
     if (!res.ok) { alert(res.data.error || "Could not start game"); return; }
