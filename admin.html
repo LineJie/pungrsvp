@@ -985,7 +985,7 @@
         : b.status === 'pending' && !isAdmin
         ? '<span style="font-size:11px;color:var(--text-muted)">Menunggu admin</span>'
         : b.status === 'completed'
-        ? `<button class="btn btn-sm" style="background:var(--cream);color:var(--green-dark);border:1px solid rgba(28,58,46,0.15)" onclick="openPOS(${b.id})">🧾 Lihat Struk</button>`
+        ? `<button class="btn btn-sm" style="background:var(--cream);color:var(--green-dark);border:1px solid rgba(28,58,46,0.15)" onclick="openPOS(${b.id})">🧾 Lihat Struk</button>${isSuperAdmin ? `<button class="btn btn-warning btn-sm" onclick="openCorrectionModal(${b.id})" title="Koreksi data checkout (Super Admin)">🛠️ Koreksi</button><button class="btn btn-danger btn-sm" onclick="voidBooking(${b.id})" title="Void transaksi ini (Super Admin)">🚫 Void</button>` : ''}`
         : isAdmin ? `<button class="btn btn-primary btn-sm" onclick="restoreBooking(${b.id})">Aktifkan</button>` : '—';
       return `
       <tr>
@@ -1350,6 +1350,129 @@ async function loadStaff() {
     document.getElementById('editModal').classList.remove('open');
   }
 
+    // === SUPER ADMIN: koreksi & void data checkout ===
+    function toLocalInputValue(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      if (isNaN(d)) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function openCorrectionModal(id) {
+      const b = allBookings.find(x => x.id === id);
+      if (!b) return;
+      document.getElementById('corrId').value = id;
+      document.getElementById('corrCode').textContent = b.bookingCode || '';
+      const tableSelect = document.getElementById('corrTable');
+      for (let opt of tableSelect.options) {
+        if (opt.value.startsWith(b.tableId + '|')) { tableSelect.value = opt.value; break; }
+      }
+      document.getElementById('corrPayment').value = b.paymentMethod || 'tunai';
+      document.getElementById('corrCheckin').value = toLocalInputValue(b.checkinAt);
+      document.getElementById('corrCheckout').value = toLocalInputValue(b.checkoutAt);
+      document.getElementById('corrTotal').value = b.totalPaid || 0;
+      document.getElementById('corrNotes').value = b.notes || '';
+      document.getElementById('correctionModal').classList.add('open');
+    }
+    function closeCorrectionModal() {
+      document.getElementById('correctionModal').classList.remove('open');
+    }
+    async function saveCorrection() {
+      const id = document.getElementById('corrId').value;
+      const tableVal = document.getElementById('corrTable').value;
+      const [tableId, tableName, floor] = tableVal.split('|');
+      const paymentMethod = document.getElementById('corrPayment').value;
+      const checkinVal = document.getElementById('corrCheckin').value;
+      const checkoutVal = document.getElementById('corrCheckout').value;
+      const totalPaid = parseInt(document.getElementById('corrTotal').value) || 0;
+      const notes = document.getElementById('corrNotes').value;
+      if (!checkinVal || !checkoutVal) { showToast('Isi jam check-in dan checkout dulu ya!'); return; }
+      const checkinAt = new Date(checkinVal).toISOString();
+      const checkoutAt = new Date(checkoutVal).toISOString();
+      const actualDuration = Math.max(0, Math.round((new Date(checkoutAt) - new Date(checkinAt)) / 60000));
+      if (!confirm('Simpan koreksi data checkout ini? Perubahan ini langsung mempengaruhi laporan revenue.')) return;
+      try {
+        const res = await fetch(`/api/bookings?id=${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+          body: JSON.stringify({ adminCorrection: true, tableId, tableName, floor, paymentMethod, checkinAt, checkoutAt, totalPaid, actualDuration, notes })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(data.error || 'Gagal menyimpan koreksi'); return; }
+        showToast('✅ Data checkout berhasil dikoreksi!');
+        closeCorrectionModal();
+        loadBookings(true);
+      } catch (e) { showToast('Gagal menyimpan koreksi'); }
+    }
+    async function voidBooking(id) {
+      const b = allBookings.find(x => x.id === id);
+      if (!b) return;
+      const name = b.customerName.replace(' (walk-in)', '');
+      if (!confirm(`Void transaksi "${name}" (${b.bookingCode})?\n\nBooking ini akan dibatalkan dan hilang dari total revenue, tapi datanya tetap tersimpan untuk riwayat/audit.`)) return;
+      try {
+        const res = await fetch(`/api/bookings?id=${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+          body: JSON.stringify({ voidCorrection: true })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(data.error || 'Gagal void transaksi'); return; }
+        showToast('🚫 Transaksi berhasil di-void');
+        loadBookings(true);
+      } catch (e) { showToast('Gagal void transaksi'); }
+    }
+
+  // === SUPER ADMIN: correction modal HTML (injected via JS to avoid editor auto-tag corruption) ===
+  document.body.insertAdjacentHTML('beforeend', `
+  <div class="edit-modal-overlay" id="correctionModal" onclick="closeCorrectionModal()">
+  <div class="edit-modal" onclick="event.stopPropagation()">
+  <h3>🛠️ Koreksi Checkout <span class="code-badge" id="corrCode"></span></h3>
+  <input type="hidden" id="corrId">
+  <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+  <div class="form-group">
+  <label>Meja</label>
+  <select id="corrTable">
+  <option value="1|Bamboo Table|Lantai 2">Bamboo Table — Lt. 2</option>
+  <option value="2|Orchid Table|Lantai 2">Orchid Table — Lt. 2</option>
+  <option value="3|Lotus Table|Lantai 2">Lotus Table — Lt. 2</option>
+  <option value="4|Sakura Table|Lantai 2">Sakura Table — Lt. 2</option>
+  <option value="5|Dragon Table|Lantai 1">Dragon Table — Lt. 1</option>
+  </select>
+  </div>
+  <div class="form-group">
+  <label>Metode Pembayaran</label>
+  <select id="corrPayment">
+  <option value="tunai">Tunai</option>
+  <option value="qris">QRIS</option>
+  <option value="debit">Debit</option>
+  </select>
+  </div>
+  <div class="form-group">
+  <label>Jam Check-in</label>
+  <input type="datetime-local" id="corrCheckin">
+  </div>
+  <div class="form-group">
+  <label>Jam Checkout</label>
+  <input type="datetime-local" id="corrCheckout">
+  </div>
+  <div class="form-group">
+  <label>Total Dibayar (Rp)</label>
+  <input type="number" id="corrTotal">
+  </div>
+  <div class="form-group" style="grid-column:1/-1">
+  <label>Catatan</label>
+  <input type="text" id="corrNotes" placeholder="Catatan opsional">
+  </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+  <button class="btn btn-warning" style="flex:1" onclick="saveCorrection()">Simpan Koreksi</button>
+  <button class="btn" style="flex:1;background:#eee;color:#333" onclick="closeCorrectionModal()">Batal</button>
+  </div>
+  </div>
+  </div>
+  `);
+  
+  
   // === POS ===
   let _posBooking = null;
   let _posPayment = null;
@@ -1969,6 +2092,8 @@ async function loadStaff() {
       </div>
     </div>
   </div>
+
+  
 
   <!-- POS MODAL -->
   <div id="posModal" onclick="event.target===this&&closePOS()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;align-items:center;justify-content:center;overflow-y:auto;">
