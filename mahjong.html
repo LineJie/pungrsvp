@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mahjong Score - Pung Pung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#F5F0E8;--green-dark:#1C3A2E;--green-mid:#2D5A45;--green-light:#4A8C68;--gold:#C9A84C;--gold-light:#E8C97A;--warm-white:#FDFAF4;--text-muted:#7A7060;--red:#C0392B;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;font-family:"DM Sans",sans-serif;}
+.phone-frame{width:390px;min-height:100vh;background:var(--cream);overflow-y:auto;padding-bottom:80px;position:relative;}
+.header{background:var(--green-dark);padding:26px 20px 30px;text-align:center;position:relative;}
+.back-link{position:absolute;left:16px;top:20px;color:rgba(255,255,255,0.6);text-decoration:none;font-size:13px;}
+.header-title{font-family:"Playfair Display",serif;color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.5);}
+.curve{height:22px;background:var(--green-dark);position:relative;}
+.curve:after{content:"";position:absolute;bottom:0;left:0;right:0;height:22px;background:var(--cream);border-radius:22px 22px 0 0;}
+.content{padding:8px 16px 24px;}
+.card{background:var(--warm-white);border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);}
+.card-title{font-family:"Playfair Display",serif;font-size:16px;color:var(--green-dark);font-weight:700;margin-bottom:12px;}
+.label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.field{width:100%;padding:12px 14px;border:1.5px solid rgba(28,58,46,0.12);border-radius:12px;font-family:"DM Sans",sans-serif;font-size:14px;color:var(--green-dark);background:var(--cream);outline:none;margin-bottom:12px;}
+.field:focus{border-color:var(--green-mid);}
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;text-align:center;}
+.btn-primary{background:var(--green-dark);color:var(--gold-light);}
+.btn-gold{background:var(--gold);color:var(--green-dark);}
+.btn-outline{background:transparent;border:1.5px solid rgba(28,58,46,0.2);color:var(--green-dark);}
+.btn-danger{background:rgba(192,57,43,0.1);color:var(--red);border:1.5px solid rgba(192,57,43,0.25);}
+.btn-sm{padding:10px;font-size:12px;}
+.btn:disabled{opacity:0.4;cursor:default;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.chip-btn{padding:12px 8px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:var(--cream);color:var(--green-dark);font-size:13px;font-weight:600;cursor:pointer;text-align:center;}
+.chip-btn.selected{background:var(--green-dark);color:var(--gold-light);border-color:var(--green-dark);}
+.player-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--cream);border-radius:12px;margin-bottom:8px;}
+.player-row .pname{font-weight:600;color:var(--green-dark);font-size:14px;}
+.player-row .pseat{font-size:11px;color:var(--text-muted);}
+.you-badge{font-size:10px;background:var(--gold);color:var(--green-dark);padding:2px 7px;border-radius:8px;margin-left:6px;font-weight:700;}
+.error-msg{text-align:center;color:var(--red);font-size:13px;padding:16px;}
+.muted{color:var(--text-muted);font-size:12px;text-align:center;padding:12px;}
+.scoreboard{position:sticky;top:0;background:var(--warm-white);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:0 2px 12px rgba(28,58,46,0.1);z-index:5;}
+.sb-title{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;text-align:center;}
+.sb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sb-cell{background:var(--cream);border-radius:12px;padding:10px;text-align:center;cursor:pointer;}
+.sb-cell .sbn{font-size:12px;font-weight:600;color:var(--green-dark);margin-bottom:2px;}
+.sb-cell .sbs{font-family:"Playfair Display",serif;font-size:22px;font-weight:700;color:var(--green-mid);}
+.sb-cell .sbs.neg{color:var(--red);}
+.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:390px;background:var(--green-dark);display:flex;z-index:50;box-shadow:0 -2px 12px rgba(0,0,0,0.2);}
+.nav-item{flex:1;text-align:center;padding:10px 4px 12px;color:rgba(255,255,255,0.55);cursor:pointer;font-size:10px;font-weight:600;}
+.nav-item .ic{font-size:18px;display:block;margin-bottom:2px;}
+.nav-item.active{color:var(--gold-light);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{position:relative;background:var(--cream);border-radius:20px;padding:22px;width:340px;max-width:92vw;max-height:85vh;overflow-y:auto;}
+.modal-title{font-family:"Playfair Display",serif;font-size:17px;color:var(--green-dark);font-weight:700;margin-bottom:4px;padding-right:20px;}
+.modal-step{font-size:11px;color:var(--text-muted);margin-bottom:16px;}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;}
+.event-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(28,58,46,0.06);font-size:13px;}
+.event-row:last-child{border-bottom:none;}
+.event-row .pt{font-weight:700;}
+.event-row .pt.pos{color:var(--green-mid);}
+.event-row .pt.neg{color:var(--red);}
+.filter-row{display:flex;gap:8px;margin-bottom:14px;}
+.filter-row button{flex:1;}
+</style>
+</head>
+<body>
+<div class="phone-frame" id="phoneFrame">
+<div class="header">
+<a href="/status.html" class="back-link">Back</a>
+<div style="font-size:26px;margin-bottom:6px;">&#x1F004;</div>
+<div class="header-title">Mahjong Score</div>
+<div class="header-sub" id="headerSub">Pung Pung Mahjong</div>
+</div>
+<div class="curve"></div>
+<div class="content" id="content"></div>
+</div>
+<div class="bottom-nav" id="bottomNav" style="display:none">
+<div class="nav-item active" id="navScore" onclick="navClick('score')"><span class="ic">&#x1F004;</span>Score</div>
+<div class="nav-item" id="navHistory" onclick="navClick('history')"><span class="ic">&#x1F4DC;</span>History</div>
+<div class="nav-item" id="navStats" onclick="navClick('stats')"><span class="ic">&#x1F4CA;</span>Stats</div>
+<div class="nav-item" id="navLeaderboard" onclick="navClick('leaderboard')"><span class="ic">&#x1F3C6;</span>Ranking</div>
+</div>
+<div class="modal-overlay" id="modalBreakdown"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalBreakdown')">&#x2715;</button><div class="modal-title" id="bdTitle">Score Breakdown</div><div id="bdBody"></div></div></div>
+<div class="modal-overlay" id="modalZimo"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalZimo')">&#x2715;</button><div class="modal-title">&#x1F004; Record Zimo Win</div><div class="modal-step" id="zimoStepLbl"></div><div id="zimoBody"></div></div></div>
+<div class="modal-overlay" id="modalKong"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalKong')">&#x2715;</button><div class="modal-title">Kong</div><div class="modal-step" id="kongStepLbl"></div><div id="kongBody"></div></div></div>
+<div class="modal-overlay" id="modalHistory"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalHistory')">&#x2715;</button><div class="modal-title">My Mahjong History</div><div id="histBody"></div></div></div>
+<div class="modal-overlay" id="modalStats"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStats')">&#x2715;</button><div class="modal-title">My Mahjong Stats</div><div id="statsBody"></div></div></div>
+<div class="modal-overlay" id="modalLeaderboard"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalLeaderboard')">&#x2715;</button><div class="modal-title">Pung Pung Leaderboard</div><div id="lbBody"></div></div></div>
+<script>
+var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score" };
+var HONOURS = [["east","East"],["south","South"],["west","West"],["north","North"],["green_dragon","Green Dragon"],["white_dragon","White Dragon"],["zhong","Zhong / Red Dragon"]];
+function qs(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function apiGet(url){ return fetch(url).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); }); }
+function apiSend(url, method, body){ var opts={method:method, headers:{"Content-Type":"application/json"}}; if(body) opts.body=JSON.stringify(body); return fetch(url, opts).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, data:d}; }); }); }
+function showModal(id){ qs(id).classList.add("open"); }
+function closeModal(id){ qs(id).classList.remove("open"); }
+function init(){
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code");
+  if (code) { qs("content").innerHTML = "<div class=\"muted\">Loading your booking...</div>"; loadBooking(code.toUpperCase()); }
+  else { renderCodeScreen(); }
+}
+function renderCodeScreen(err){
+  var h = "";
+  h += "<div class=\"card\"><div class=\"card-title\">Enter Your Booking Code</div>";
+  h += "<div class=\"label\">Booking Code</div>";
+  h += "<input class=\"field\" id=\"codeInput\" placeholder=\"PP-XXXXXX\" maxlength=\"9\" style=\"text-transform:uppercase;letter-spacing:1.5px;\">";
+  if (err) h += "<div class=\"error-msg\">" + esc(err) + "</div>";
+  h += "<button class=\"btn btn-primary\" onclick=\"submitCode()\">Continue &#8594;</button>";
+  h += "</div>";
+  qs("content").innerHTML = h;
+  qs("bottomNav").style.display = "none";
+}
+function submitCode(){
+  var v = qs("codeInput").value.trim().toUpperCase();
+  if (!v) { return; }
+  loadBooking(v);
+}
+function loadBooking(code){
+  apiGet("/api/bookings?code=" + encodeURIComponent(code)).then(function(res){
+    if (!res.ok || res.data.error) { renderCodeScreen("Booking code not found. Please check and try again."); return; }
+    S.booking = res.data; S.code = code;
+    qs("headerSub").textContent = S.booking.tableName + " - " + S.booking.floor;
+    if (S.booking.status !== "checked_in") { renderNotCheckedIn(); return; }
+    qs("bottomNav").style.display = "flex";
+    loadGameForBooking();
+  });
+}
+function renderNotCheckedIn(){
+  var h = "<div class=\"card\"><div class=\"card-title\">Not Checked In Yet</div>";
+  h += "<div class=\"muted\">Mahjong Score is available once your table has been checked in by our staff. Please check in first, then come back here.</div>";
+  h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Check Booking Status</a>";
+  h += "</div>";
+  qs("content").innerHTML = h;
+  qs("bottomNav").style.display = "none";
+}
+function loadGameForBooking(){
+  apiGet("/api/mahjong/games?bookingId=" + S.booking.id).then(function(res){
+    if (!res.ok) { S.game = null; S.players = []; renderLobbyNoGame(); return; }
+    S.game = res.data.game; S.players = res.data.players;
+    routeByStatus();
+  });
+}
+function routeByStatus(){
+  if (!S.game) { renderLobbyNoGame(); return; }
+  var st = S.game.status;
+  if (st === "waiting_for_players" || st === "ready") { renderLobbyGame(); }
+  else if (st === "active") { loadActiveFull(); }
+  else { loadFinishedFull(); }
+}
+function myPlayerId(){ return parseInt(localStorage.getItem("mj_player_" + S.game.id) || "0"); }
+function renderLobbyNoGame(){
+  setNavScore();
+  var name = localStorage.getItem("mj_name") || "";
+  var wa = localStorage.getItem("mj_wa") || "";
+  var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Start a Mahjong Game</div>";
+  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">No game yet at " + esc(S.booking.tableName) + ". Be the host and invite the other 3 players!</div>";
+  h += "<div class=\"label\">Your Name</div><input class=\"field\" id=\"hostName\" value=\"" + esc(name) + "\" placeholder=\"Your name\">";
+  h += "<div class=\"label\">WhatsApp Number (optional)</div><input class=\"field\" id=\"hostWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
+  h += "<button class=\"btn btn-gold\" onclick=\"createGame()\">Create Game</button>";
+  h += "</div>";
+  qs("content").innerHTML = h;
+}
+function createGame(){
+  var name = qs("hostName").value.trim();
+  var wa = qs("hostWa").value.trim();
+  if (!name) { alert("Please enter your name"); return; }
+  apiSend("/api/mahjong/games", "POST", {bookingId:S.booking.id, hostName:name, hostWaNumber:wa}).then(function(res){
+    if (!res.ok) {
+      alert(res.data.error || "Could not create game");
+      loadGameForBooking();
+      return;
+    }
+    localStorage.setItem("mj_name", name);
+    if (wa) localStorage.setItem("mj_wa", wa);
+    S.game = res.data.game; S.players = res.data.players;
+    localStorage.setItem("mj_player_" + S.game.id, res.data.players[0].id);
+    routeByStatus();
+  });
+}
+function renderLobbyGame(){
+  setNavScore();
+  var mine = myPlayerId();
+  var iJoined = S.players.some(function(p){ return p.id === mine; });
+  var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; " + esc(S.booking.tableName) + "</div>";
+  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">" + S.players.length + " of 4 players joined</div>";
+  S.players.forEach(function(p){
+    h += "<div class=\"player-row\"><div><div class=\"pname\">" + esc(p.name) + (p.id===mine ? "<span class=\"you-badge\">YOU</span>" : "") + "</div><div class=\"pseat\">Seat " + p.seatNumber + "</div></div></div>";
+  });
+  h += "</div>";
+  if (S.players.length >= 4) {
+    h += "<button class=\"btn btn-gold\" onclick=\"startGame()\">Start Game</button>";
+  } else if (!iJoined) {
+    var name = localStorage.getItem("mj_name") || ""; var wa = localStorage.getItem("mj_wa") || "";
+    h += "<div class=\"card\"><div class=\"card-title\">Join This Table</div>";
+    h += "<div class=\"label\">Your Name</div><input class=\"field\" id=\"joinName\" value=\"" + esc(name) + "\" placeholder=\"Your name\">";
+    h += "<div class=\"label\">WhatsApp Number (optional)</div><input class=\"field\" id=\"joinWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
+    h += "<button class=\"btn btn-gold\" onclick=\"joinGame()\">Join Table</button></div>";
+  } else {
+    h += "<div class=\"muted\">Waiting for more players to join (" + S.players.length + "/4)...</div>";
+  }
+  h += "<button class=\"btn btn-danger btn-sm\" onclick=\"cancelGame()\">Cancel This Game</button>";
+  qs("content").innerHTML = h;
+}
+function joinGame(){
+  var name = qs("joinName").value.trim();
+  var wa = qs("joinWa").value.trim();
+  if (!name) { alert("Please enter your name"); return; }
+  apiSend("/api/mahjong/games?id=" + S.game.id + "&action=join", "PATCH", {name:name, waNumber:wa}).then(function(res){
+    if (!res.ok) { alert(res.data.error || "Could not join"); loadGameForBooking(); return; }
+    localStorage.setItem("mj_name", name); if (wa) localStorage.setItem("mj_wa", wa);
+    S.game = res.data.game; S.players = res.data.players;
+    localStorage.setItem("mj_player_" + S.game.id, res.data.joined.id);
+    renderLobbyGame();
+  });
+}
+function startGame(){
+  apiSend("/api/mahjong/games?id=" + S.game.id + "&action=start", "PATCH").then(function(res){
+    if (!res.ok) { alert(res.data.error || "Could not start game"); return; }
+    loadActiveFull();
+  });
+}
+function cancelGame(){
+  if (!confirm("Cancel this Mahjong game? This cannot be undone.")) return;
+  apiSend("/api/mahjong/games?id=" + S.game.id + "&action=cancel", "PATCH").then(function(){ loadGameForBooking(); });
+}
+function loadActiveFull(){
+  apiGet("/api/mahjong/events?gameId=" + S.game.id).then(function(res){
+    if (!res.ok) return;
+    S.game = res.data.game; S.players = res.data.players; S.events = res.data.events;
+    if (S.game.status !== "active") { routeByStatus(); return; }
+    renderActive();
+  });
+}
+function scoreboardHtml(){
+  var h = "<div class=\"scoreboard\"><div class=\"sb-title\">Live Scoreboard - tap a score to see why</div><div class=\"sb-grid\">";
+  var sorted = S.players.slice().sort(function(a,b){ return a.seatNumber-b.seatNumber; });
+  sorted.forEach(function(p){
+    var t = (typeof p.total === "number") ? p.total : 0;
+    h += "<div class=\"sb-cell\" onclick=\"openBreakdown(" + p.id + ")\"><div class=\"sbn\">" + esc(p.name) + "</div><div class=\"sbs" + (t<0?" neg":"") + "\">" + (t>0?"+":"") + t + "</div></div>";
+  });
+  h += "</div></div>";
+  return h;
+}
+function renderActive(){
+  setNavScore();
+  var h = scoreboardHtml();
+  h += "<button class=\"btn btn-gold\" onclick=\"openZimo()\">&#x1F004; ZIMO! Someone Won</button>";
+  h += "<button class=\"btn btn-outline\" onclick=\"openKong()\">+ KONG</button>";
+  h += "<button class=\"btn btn-danger btn-sm\" onclick=\"markDraw()\">Wall Finished - Mark as Draw</button>";
+  qs("content").innerHTML = h;
+}
+function markDraw(){
+  if (!confirm("Mark this game as a DRAW? Use this only when the wall is exhausted and nobody won by Zimo. Any Kong points already recorded will remain valid.")) return;
+  apiSend("/api/mahjong/games?id=" + S.game.id + "&action=draw", "PATCH").then(function(){ loadFinishedFull(); });
+}
+function loadFinishedFull(){
+  apiGet("/api/mahjong/events?gameId=" + S.game.id).then(function(res){
+    if (!res.ok) return;
+    S.game = res.data.game; S.players = res.data.players; S.events = res.data.events;
+    renderFinished();
+  });
+}
+function renderFinished(){
+  setNavScore();
+  var st = S.game.status;
+  var label = st === "draw" ? "Draw Game - No Winner" : st === "cancelled" ? "Game Cancelled" : "Game Finished";
+  if (st === "finished_win") {
+    var w = S.players.find(function(p){ return p.id === S.game.winnerPlayerId; });
+    if (w) label = "&#x1F3C6; " + esc(w.name) + " Won by Zimo!";
+  }
+  var h = "<div class=\"card\"><div class=\"card-title\">" + label + "</div></div>";
+  h += scoreboardHtml();
+  h += "<button class=\"btn btn-gold\" onclick=\"resetForNewGame()\">Start New Game at This Table</button>";
+  qs("content").innerHTML = h;
+}
+function resetForNewGame(){ S.game = null; S.players = []; S.events = []; renderLobbyNoGame(); }
+function openBreakdown(pid){
+  var p = S.players.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  var evs = S.events.filter(function(e){ return e.playerId === pid; });
+  var h = "";
+  if (!evs.length) { h += "<div class=\"muted\">No scoring events yet.</div>"; }
+  evs.forEach(function(e){
+    var meta = {}; try { meta = e.metadata ? JSON.parse(e.metadata) : {}; } catch(ex){}
+    var lbl = meta.label || e.eventType;
+    h += "<div class=\"event-row\"><span>" + esc(lbl) + "</span><span class=\"pt " + (e.points<0?"neg":"pos") + "\">" + (e.points>0?"+":"") + e.points + "</span></div>";
+  });
+  var total = (typeof p.total === "number") ? p.total : evs.reduce(function(s,e){ return s+e.points; }, 0);
+  h += "<div class=\"event-row\" style=\"border-top:2px solid rgba(28,58,46,0.15);margin-top:6px;padding-top:10px;\"><span style=\"font-weight:700;\">TOTAL</span><span class=\"pt " + (total<0?"neg":"pos") + "\">" + (total>0?"+":"") + total + "</span></div>";
+  qs("bdTitle").textContent = p.name + " - Score Breakdown";
+  qs("bdBody").innerHTML = h;
+  showModal("modalBreakdown");
+}
+var Z = null;
+function openZimo(){
+  Z = { step:1, winnerPlayerId:null, handContainsJoker:null, existingFlowers:[], existingSeasons:[], lastCardDraws:[], lcIndex:0 };
+  renderZimo();
+  showModal("modalZimo");
+}
+function playerButtonsHtml(list, onClickFn){
+  var h = "";
+  list.forEach(function(p){ h += "<button class=\"btn btn-outline\" onclick=\"" + onClickFn + "(" + p.id + ")\">" + esc(p.name) + " (Seat " + p.seatNumber + ")</button>"; });
+  return h;
+}
+function renderZimo(){
+  var h = "";
+  if (Z.step === 1) {
+    qs("zimoStepLbl").textContent = "Step 1 of 5 - Who won?";
+    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Only self-draw (Zimo) wins are allowed. Select the player who drew the winning tile.</div>";
+    h += playerButtonsHtml(S.players, "zimoPickWinner");
+  } else if (Z.step === 2) {
+    qs("zimoStepLbl").textContent = "Step 2 of 5 - Joker check";
+    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Does the winning hand contain a Zhong / Red Dragon used as a Joker substitute? (This does NOT add +5 by itself)</div>";
+    h += "<button class=\"btn btn-outline\" onclick=\"zimoPickJoker(true)\">Yes, hand has a Joker</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"zimoPickJoker(false)\">No Joker in hand</button>";
+  } else if (Z.step === 3) {
+    qs("zimoStepLbl").textContent = "Step 3 of 5 - Existing Flower / Season tiles";
+    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Select every Flower and Season tile the winner already owned at the moment of winning. Tap to toggle.</div>";
+    h += "<div class=\"label\">Flower</div><div class=\"grid2\" id=\"flowerGrid\">";
+    for (var i=1;i<=4;i++){ h += "<button type=\"button\" class=\"chip-btn" + (Z.existingFlowers.indexOf(i)>-1?" selected":"") + "\" onclick=\"zimoToggleFlower(" + i + ")\">Flower " + i + "</button>"; }
+    h += "</div><div class=\"label\" style=\"margin-top:10px;\">Season</div><div class=\"grid2\" id=\"seasonGrid\">";
+    for (var s=1;s<=4;s++){ h += "<button type=\"button\" class=\"chip-btn" + (Z.existingSeasons.indexOf(s)>-1?" selected":"") + "\" onclick=\"zimoToggleSeason(" + s + ")\">Season " + s + "</button>"; }
+    h += "</div><button class=\"btn btn-gold\" style=\"margin-top:14px;\" onclick=\"zimoStep3Continue()\">Continue</button>";
+  } else if (Z.step === 4) {
+    var need = Z.handContainsJoker ? 1 : 2;
+    qs("zimoStepLbl").textContent = "Step 4 of 5 - Last Card Bonus (" + (Z.lcIndex+1) + " of " + need + ")";
+    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Draw Last Card #" + (Z.lcIndex+1) + " from the end of the wall. What tile is it?</div>";
+    h += "<div class=\"grid2\">";
+    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('number')\">Number Tile</button>";
+    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('flower')\">Flower</button>";
+    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('season')\">Season</button>";
+    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('honour')\">Honour Tile</button>";
+    h += "</div><div id=\"lcSub\" style=\"margin-top:12px;\"></div>";
+  } else if (Z.step === 5) {
+    qs("zimoStepLbl").textContent = "Step 5 of 5 - Confirm";
+    var w = S.players.find(function(p){ return p.id === Z.winnerPlayerId; });
+    h += "<div class=\"muted\" style=\"text-align:left;\"><b>Winner:</b> " + esc(w?w.name:"") + "<br><b>Joker in hand:</b> " + (Z.handContainsJoker?"Yes":"No") + "<br><b>Existing Flowers:</b> " + (Z.existingFlowers.join(", ")||"none") + "<br><b>Existing Seasons:</b> " + (Z.existingSeasons.join(", ")||"none") + "<br><b>Last Card draws:</b> " + Z.lastCardDraws.length + " recorded</div>";
+    h += "<div class=\"muted\" style=\"text-align:left;\">Points will be calculated automatically by the server using the official Pung Pung scoring rules.</div>";
+    h += "<button class=\"btn btn-gold\" onclick=\"zimoSubmit()\">Confirm & Record Win</button>";
+  }
+  qs("zimoBody").innerHTML = h;
+}
+function zimoPickWinner(pid){ Z.winnerPlayerId = pid; Z.step = 2; renderZimo(); }
+function zimoPickJoker(val){ Z.handContainsJoker = val; Z.step = 3; renderZimo(); }
+function zimoToggleFlower(n){ var i = Z.existingFlowers.indexOf(n); if (i>-1) Z.existingFlowers.splice(i,1); else Z.existingFlowers.push(n); renderZimo(); }
+function zimoToggleSeason(n){ var i = Z.existingSeasons.indexOf(n); if (i>-1) Z.existingSeasons.splice(i,1); else Z.existingSeasons.push(n); renderZimo(); }
+function zimoStep3Continue(){ Z.step = 4; Z.lcIndex = 0; Z.lastCardDraws = []; renderZimo(); }
+function zimoLastCardKind(kind){
+  if (kind === "number") { Z.lastCardDraws.push({kind:"number"}); zimoAdvanceLastCard(); return; }
+  var h = "";
+  if (kind === "flower" || kind === "season") {
+    h += "<div class=\"label\">Which number?</div><div class=\"grid2\">";
+    for (var i=1;i<=4;i++){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardValue('" + kind + "'," + i + ")\">" + (kind==="flower"?"Flower ":"Season ") + i + "</button>"; }
+    h += "</div>";
+  } else if (kind === "honour") {
+    h += "<div class=\"label\">Which honour tile?</div><div class=\"grid2\">";
+    HONOURS.forEach(function(t){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardHonour('" + t[0] + "')\">" + t[1] + "</button>"; });
+    h += "</div>";
+  }
+  qs("lcSub").innerHTML = h;
+}
+function zimoLastCardValue(kind, n){ var d = {kind:kind}; d.tileNumber = n; Z.lastCardDraws.push(d); zimoAdvanceLastCard(); }
+function zimoLastCardHonour(tile){ Z.lastCardDraws.push({kind:"honour", honourTile:tile}); zimoAdvanceLastCard(); }
+function zimoAdvanceLastCard(){
+  var need = Z.handContainsJoker ? 1 : 2;
+  Z.lcIndex++;
+  if (Z.lcIndex >= need) { Z.step = 5; }
+  renderZimo();
+}
+function zimoSubmit(){
+  apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, handContainsJoker:Z.handContainsJoker, existingFlowers:Z.existingFlowers, existingSeasons:Z.existingSeasons, lastCardDraws:Z.lastCardDraws}).then(function(res){
+    if (!res.ok) { alert(res.data.error || "Could not record win"); return; }
+    closeModal("modalZimo");
+    loadFinishedFull();
+  });
+}
+var K = null;
+function openKong(){ K = { step:1, type:null, kongerId:null, discardedByPlayerId:null }; renderKong(); showModal("modalKong"); }
+function renderKong(){
+  var h = "";
+  if (K.step === 1) {
+    qs("kongStepLbl").textContent = "Step 1 - Kong type";
+    h += "<button class=\"btn btn-outline\" onclick=\"kongPickType('KONG_FROM_DISCARD')\">Kong from Discard</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"kongPickType('KONG_FROM_WALL')\">Kong from Wall</button>";
+  } else if (K.step === 2) {
+    qs("kongStepLbl").textContent = "Step 2 - Who declared Kong?";
+    h += playerButtonsHtml(S.players, "kongPickKonger");
+  } else if (K.step === 3) {
+    qs("kongStepLbl").textContent = "Step 3 - Whose tile was taken?";
+    var others = S.players.filter(function(p){ return p.id !== K.kongerId; });
+    h += playerButtonsHtml(others, "kongPickDiscarder");
+  } else if (K.step === 4) {
+    qs("kongStepLbl").textContent = "Step 4 - Confirm";
+    var konger = S.players.find(function(p){ return p.id === K.kongerId; });
+    if (K.type === "KONG_FROM_DISCARD") {
+      var disc = S.players.find(function(p){ return p.id === K.discardedByPlayerId; });
+      h += "<div class=\"muted\" style=\"text-align:left;\">Kong from Discard<br><b>" + esc(konger.name) + "</b> gets +5<br><b>" + esc(disc.name) + "</b> (discarder) gets -5</div>";
+    } else {
+      h += "<div class=\"muted\" style=\"text-align:left;\">Kong from Wall<br><b>" + esc(konger.name) + "</b> gets +6<br>The other three players each get -2</div>";
+    }
+    h += "<button class=\"btn btn-gold\" onclick=\"kongSubmit()\">Confirm & Apply Score</button>";
+  }
+  qs("kongBody").innerHTML = h;
+}
+function kongPickType(t){ K.type = t; K.step = 2; renderKong(); }
+function kongPickKonger(pid){ K.kongerId = pid; K.step = (K.type === "KONG_FROM_DISCARD") ? 3 : 4; renderKong(); }
+function kongPickDiscarder(pid){ K.discardedByPlayerId = pid; K.step = 4; renderKong(); }
+function kongSubmit(){
+  apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordKong", type:K.type, kongerId:K.kongerId, discardedByPlayerId:K.discardedByPlayerId}).then(function(res){
+    if (!res.ok) { alert(res.data.error || "Could not record Kong"); return; }
+    closeModal("modalKong");
+    loadActiveFull();
+  });
+}
+function setNavScore(){
+  document.querySelectorAll(".nav-item").forEach(function(n){ n.classList.remove("active"); });
+  qs("navScore").classList.add("active");
+}
+function navClick(which){
+  document.querySelectorAll(".nav-item").forEach(function(n){ n.classList.remove("active"); });
+  qs("nav" + which.charAt(0).toUpperCase() + which.slice(1)).classList.add("active");
+  if (which === "score") { routeByStatus(); }
+  else if (which === "history") { openHistory(); }
+  else if (which === "stats") { openStats(); }
+  else if (which === "leaderboard") { openLeaderboard(); }
+}
+function openHistory(){
+  var wa = localStorage.getItem("mj_wa") || "";
+  var h = "<div class=\"label\">Your WhatsApp Number</div><input class=\"field\" id=\"histWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadHistory()\">Show My History</button><div id=\"histList\"></div>";
+  qs("histBody").innerHTML = h;
+  showModal("modalHistory");
+  if (wa) loadHistory();
+}
+function loadHistory(){
+  var wa = qs("histWa").value.trim();
+  if (!wa) return;
+  localStorage.setItem("mj_wa", wa);
+  apiGet("/api/mahjong/events?historyWa=" + encodeURIComponent(wa)).then(function(res){
+    var list = res.data || [];
+    var h = "";
+    if (!list.length) { h = "<div class=\"muted\">No games found yet for this number.</div>"; }
+    list.forEach(function(g){
+      var d = new Date(g.date); var dateStr = isNaN(d) ? "" : d.toLocaleDateString();
+      var resultColor = g.result === "WIN" ? "var(--green-mid)" : g.result === "DRAW" ? "var(--text-muted)" : "var(--red)";
+      h += "<div class=\"player-row\"><div><div class=\"pname\">" + esc(g.tableName) + " - " + dateStr + "</div><div class=\"pseat\">Score: " + g.score + "</div></div><div style=\"font-weight:700;color:" + resultColor + ";\">" + g.result + "</div></div>";
+    });
+    qs("histList").innerHTML = h;
+  });
+}
+function openStats(){
+  var wa = localStorage.getItem("mj_wa") || "";
+  var h = "<div class=\"label\">Your WhatsApp Number</div><input class=\"field\" id=\"statsWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadStats()\">Show My Stats</button><div id=\"statsList\"></div>";
+  qs("statsBody").innerHTML = h;
+  showModal("modalStats");
+  if (wa) loadStats();
+}
+function loadStats(){
+  var wa = qs("statsWa").value.trim();
+  if (!wa) return;
+  localStorage.setItem("mj_wa", wa);
+  apiGet("/api/mahjong/events?statsWa=" + encodeURIComponent(wa)).then(function(res){
+    var s = res.data || {};
+    var rows = [["Games Played", s.gamesPlayed], ["Zimo Count", s.zimoCount], ["Kong Count", s.kongCount], ["Wins", s.wins], ["Draws", s.draws], ["Highest Score", s.highestScore], ["Total Mahjong Score", s.totalScore]];
+    var h = "";
+    rows.forEach(function(r){ h += "<div class=\"event-row\"><span>" + r[0] + "</span><span class=\"pt pos\">" + r[1] + "</span></div>"; });
+    qs("statsList").innerHTML = h;
+  });
+}
+function openLeaderboard(){
+  var h = "<div class=\"filter-row\"><button class=\"chip-btn selected\" id=\"lbWeek\" onclick=\"loadLeaderboard('week')\">This Week</button><button class=\"chip-btn\" id=\"lbMonth\" onclick=\"loadLeaderboard('month')\">This Month</button><button class=\"chip-btn\" id=\"lbAll\" onclick=\"loadLeaderboard('all')\">All Time</button></div><div id=\"lbList\"></div>";
+  qs("lbBody").innerHTML = h;
+  showModal("modalLeaderboard");
+  loadLeaderboard("week");
+}
+function loadLeaderboard(period){
+  ["Week","Month","All"].forEach(function(k){ var el = qs("lb"+k); if (el) el.classList.remove("selected"); });
+  var idMap = {week:"lbWeek", month:"lbMonth", all:"lbAll"};
+  if (qs(idMap[period])) qs(idMap[period]).classList.add("selected");
+  var loc = (S.booking && S.booking.location) ? ("&location=" + S.booking.location) : "";
+  apiGet("/api/mahjong/events?leaderboard=1&period=" + period + loc).then(function(res){
+    var list = res.data || [];
+    var h = "";
+    if (!list.length) { h = "<div class=\"muted\">No ranked games yet for this period.</div>"; }
+    list.forEach(function(p, i){
+      h += "<div class=\"player-row\"><div><div class=\"pname\">#" + (i+1) + " " + esc(p.name) + "</div><div class=\"pseat\">Code " + esc(p.code) + "</div></div><div style=\"font-weight:700;color:var(--green-mid);\">" + p.score + "</div></div>";
+    });
+    qs("lbList").innerHTML = h;
+  });
+}
+init();
+</script>
+</body>
+</html>

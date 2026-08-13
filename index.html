@@ -87,6 +87,11 @@
   }
 
   .dot { width: 4px; height: 4px; background: white; border-radius: 50%; }
+  .more-menu { position:absolute; top:56px; right:20px; background:var(--warm-white); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.25); padding:6px; min-width:190px; z-index:30; display:none; }
+  .more-menu.open { display: block; }
+  .more-menu-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:600; color:var(--green-dark); cursor:pointer; }
+  .more-menu-item:hover { background: var(--cream); }
+  .more-menu-item .mi-ic { font-size: 16px; }
 
   .brand-section {
     text-align: center;
@@ -688,7 +693,7 @@
       <a href="/status.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:20px;padding:8px 14px;color:white;font-size:12px;font-weight:600;">
         🎫 Cek Booking
       </a>
-      <div class="more-btn">
+      <div class="more-btn" onclick="toggleMoreMenu()">
         <div class="dot"></div>
         <div class="dot"></div>
         <div class="dot"></div>
@@ -705,6 +710,9 @@
         <div class="stat"><span class="stat-icon">⭐</span> 5</div>
       </div>
     </div>
+  </div>
+  <div class="more-menu" id="moreMenu">
+    <div class="more-menu-item" onclick="openLeaderboardHome()"><span class="mi-ic">&#x1F3C6;</span> Leaderboard Mahjong</div>
   </div>
 
   <!-- CURVE TRANSITION -->
@@ -736,6 +744,20 @@
           </a>
         </div>
         <button onclick="closeCommunity()" style="margin-top:12px;background:none;border:none;font-size:12px;color:#7A7060;cursor:pointer;">Tutup</button>
+      </div>
+    </div>
+    <!-- LEADERBOARD MODAL -->
+    <div id="lbModal" onclick="closeLeaderboardHome()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;">
+      <div onclick="event.stopPropagation()" style="background:#FDFAF4;border-radius:24px;padding:24px 20px;width:320px;margin:16px;max-height:80vh;overflow-y:auto;">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1C3A2E;text-align:center;margin-bottom:4px;">&#x1F3C6; Leaderboard Mahjong</div>
+        <div style="font-size:12px;color:#7A7060;text-align:center;margin-bottom:16px;">Top pemain Pung Pung Mahjong</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button id="lbfWeek" onclick="loadLeaderboardHome('week')" style="flex:1;padding:9px 4px;border-radius:12px;border:none;background:#1C3A2E;color:#E8C97A;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Minggu</button>
+          <button id="lbfMonth" onclick="loadLeaderboardHome('month')" style="flex:1;padding:9px 4px;border-radius:12px;border:none;background:#F5F0E8;color:#1C3A2E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Bulan</button>
+          <button id="lbfAll" onclick="loadLeaderboardHome('all')" style="flex:1;padding:9px 4px;border-radius:12px;border:none;background:#F5F0E8;color:#1C3A2E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Semua</button>
+        </div>
+        <div id="lbHomeList"></div>
+        <button onclick="closeLeaderboardHome()" style="width:100%;margin-top:14px;padding:11px;background:#F5F0E8;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#7A7060;cursor:pointer;">Tutup</button>
       </div>
     </div>
 
@@ -1373,6 +1395,52 @@ function closeCommunity() {
 
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function toggleMoreMenu() {
+    document.getElementById('moreMenu').classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('moreMenu');
+    const btn = document.querySelector('.more-btn');
+    if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove('open');
+    }
+  });
+
+  function openLeaderboardHome() {
+    document.getElementById('moreMenu').classList.remove('open');
+    document.getElementById('lbModal').style.display = 'flex';
+    loadLeaderboardHome('week');
+  }
+  function closeLeaderboardHome() {
+    document.getElementById('lbModal').style.display = 'none';
+  }
+  function loadLeaderboardHome(period) {
+    const idMap = { week: 'lbfWeek', month: 'lbfMonth', all: 'lbfAll' };
+    Object.keys(idMap).forEach((k) => {
+      const btn = document.getElementById(idMap[k]);
+      if (!btn) return;
+      const active = k === period;
+      btn.style.background = active ? '#1C3A2E' : '#F5F0E8';
+      btn.style.color = active ? '#E8C97A' : '#1C3A2E';
+    });
+    document.getElementById('lbHomeList').innerHTML = 'Memuat...';
+    fetch('/api/mahjong/events?leaderboard=1&period=' + period + '&location=surabaya')
+    .then((r) => r.json())
+    .then((list) => {
+      if (!list || !list.length) {
+        document.getElementById('lbHomeList').innerHTML = 'Belum ada pemain untuk periode ini.';
+        return;
+      }
+      let h = '';
+      list.forEach((p, i) => {
+        h += '#' + (i + 1) + ' ' + escHtml(p.name) + ' - Code ' + escHtml(p.code) + ' - ' + p.score + '<br>';
+      });
+      document.getElementById('lbHomeList').innerHTML = h;
+    })
+    .catch((e) => {
+      document.getElementById('lbHomeList').innerHTML = 'Gagal memuat leaderboard.';
+    });
   }
 
   // === INIT ===

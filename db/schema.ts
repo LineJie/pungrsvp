@@ -40,3 +40,48 @@ export const staff = pgTable("staff", {
     createdAt: timestamp("created_at").defaultNow(),
   location: text().notNull().default("surabaya"), // surabaya | denpasar | all (superadmin)
 });
+
+
+// ─── Mahjong Score module (additive) ──────────────────────────────────────
+// These tables are new and do not modify bookings/members/staff in any way.
+// A mahjong_games row is anchored to an existing booking (booking_id), so we
+// reuse the existing table/session/customer concepts instead of duplicating
+// them. Scores are event-sourced: mahjong_events stores every individual
+// scoring event (never just a running total), so totals can always be
+// reconstructed and audited.
+
+export const mahjongGames = pgTable("mahjong_games", {
+  id: serial().primaryKey(),
+  bookingId: integer("booking_id").notNull(), // FK -> bookings.id (the checked-in table/session this game belongs to)
+  tableId: text("table_id").notNull(),
+  tableName: text("table_name").notNull(),
+  location: text().notNull().default("surabaya"),
+  status: text().notNull().default("waiting_for_players"),
+  // waiting_for_players | ready | active | finished_win | draw | cancelled
+  winnerPlayerId: integer("winner_player_id"), // FK -> mahjong_players.id, set only when status = finished_win
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mahjongPlayers = pgTable("mahjong_players", {
+  id: serial().primaryKey(),
+  gameId: integer("game_id").notNull(), // FK -> mahjong_games.id
+  seatNumber: integer("seat_number").notNull(), // 1-4, exactly 4 players per game
+  name: text().notNull(),
+  waNumber: text("wa_number").default(""), // optional — when present, used to match/upsert the existing members table
+  memberId: integer("member_id"), // FK -> members.id when matched by wa_number (reuses existing customer record, never duplicates)
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const mahjongEvents = pgTable("mahjong_events", {
+  id: serial().primaryKey(),
+  gameId: integer("game_id").notNull(), // FK -> mahjong_games.id
+  playerId: integer("player_id").notNull(), // FK -> mahjong_players.id
+  eventType: text("event_type").notNull(),
+  // ZIMO | FLOWER | SEASON | LAST_CARD | KONG_FROM_DISCARD | KONG_FROM_WALL | DRAW_GAME | CORRECTION
+  points: integer().notNull(),
+  relatedPlayerId: integer("related_player_id"), // e.g. the discarder in a KONG_FROM_DISCARD event
+  metadata: text(), // JSON-encoded string with event-specific details (tile numbers, honour tile, notes, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+});
