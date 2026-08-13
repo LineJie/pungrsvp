@@ -50,11 +50,17 @@ export default async (req: Request) => {
     }
 
     if (bookingId) {
-      const rows = await db.select().from(mahjongGames)
-        .where(and(eq(mahjongGames.bookingId, parseInt(bookingId)), inArray(mahjongGames.status, OPEN_STATUSES)));
-      if (!rows.length) return Response.json({ error: "No active game for this booking" }, { status: 404 });
-      const data = await getGameWithPlayers(rows[0].id);
-      return Response.json(data);
+            const rows = await db.select().from(mahjongGames)
+              .where(and(eq(mahjongGames.bookingId, parseInt(bookingId)), inArray(mahjongGames.status, OPEN_STATUSES)));
+            if (!rows.length) return Response.json({ error: "No active game for this booking" }, { status: 404 });
+            const data = await getGameWithPlayers(rows[0].id);
+            // Defensive cleanup: a "ghost" game (host row insert failed after the
+            // game row was created) should never block a fresh Create Game attempt.
+            if (data && data.players.length === 0 && data.game.status === "waiting_for_players") {
+                      await db.update(mahjongGames).set({ status: "cancelled", endedAt: new Date() }).where(eq(mahjongGames.id, data.game.id));
+                      return Response.json({ error: "No active game for this booking" }, { status: 404 });
+            }
+            return Response.json(data);
     }
 
     if (tableId) {
@@ -113,16 +119,25 @@ export default async (req: Request) => {
       status: "waiting_for_players",
     }).returning();
 
-    const memberId = await upsertMemberByWa(hostName, hostWaNumber);
-    const [player] = await db.insert(mahjongPlayers).values({
-      gameId: game.id,
-      seatNumber: 1,
-      name: hostName,
-      waNumber: hostWaNumber || "",
-      memberId,
-    }).returning();
+    // The host's player row is created in a second statement after the
+        // game row above — if it fails partway (e.g. a transient DB hiccup),
+        // roll back the just-created game row so we never leave an orphaned
+        // "ghost" game with 0 players stuck in waiting_for_players.
+        try {
+                const memberId = await upsertMemberByWa(hostName, hostWaNumber);
+                const [player] = await db.insert(mahjongPlayers).values({
+                          gameId: game.id,
+                          seatNumber: 1,
+                          name: hostName,
+                          waNumber: hostWaNumber || "",
+                          memberId,
+                }).returning();
 
-    return Response.json({ game, players: [player] }, { status: 201 });
+                return Response.json({ game, players: [player] }, { status: 201 });
+        } catch (e: any) {
+                await db.delete(mahjongGames).where(eq(mahjongGames.id, game.id));
+                return Response.json({ error: "Could not create game, please try again" }, { status: 500 });
+        }
   }
 
   // ── PATCH: join / start / finish / cancel ───────────────────────────
