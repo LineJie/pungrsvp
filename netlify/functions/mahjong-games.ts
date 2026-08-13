@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
 import { bookings, members, mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
 import { eq, and, inArray, ne } from "drizzle-orm";
-import { ensureMahjongTables , ensureMembersTable} from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureMembersTable, ensureSessionIdColumn } from "../../db/mahjongUtils.js";
 
 // Game lifecycle for Pung Pung Mahjong Score.
 // A game is always anchored to an existing booking (the checked-in table
@@ -34,6 +34,7 @@ async function getGameWithPlayers(gameId: number) {
 export default async (req: Request) => {
   await ensureMahjongTables(db);
   await ensureMembersTable(db);
+    await ensureSessionIdColumn(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ export default async (req: Request) => {
   // ── POST: create a new game ─────────────────────────────────────────
   if (req.method === "POST") {
     const body = await req.json();
-    const { bookingId, hostName, hostWaNumber } = body;
+    const { bookingId, hostName, hostWaNumber, sessionId } = body;
     if (!bookingId || !hostName) {
       return Response.json({ error: "bookingId and hostName are required" }, { status: 400 });
     }
@@ -118,7 +119,12 @@ export default async (req: Request) => {
       tableName: booking.tableName,
       location: booking.location || "surabaya",
       status: "waiting_for_players",
+        sessionId: sessionId || null,
     }).returning();
+    if (!game.sessionId) {
+        await db.update(mahjongGames).set({ sessionId: game.id }).where(eq(mahjongGames.id, game.id));
+        game.sessionId = game.id;
+    }
 
     // The host's player row is created in a second statement after the
         // game row above — if it fails partway (e.g. a transient DB hiccup),
