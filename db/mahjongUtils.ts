@@ -46,3 +46,12 @@ export async function ensureMahjongTables(db: any) {
     )
   `);
 }
+
+// Additive safety net for schema drift: the `notes` column on the
+// pre-existing `members` table was added to schema.ts after that table
+// was first created in production, so some environments are still
+// missing it. This never touches existing member data, just ensures
+// the column exists so upsertMemberByWa() can select/insert safely.
+export async function ensureMemberColumns(db: any) {
+  await db.execute(sql`ALTER TABLE members ADD COLUMN IF NOT EXISTS notes text DEFAULT ''`);
+}
