@@ -90,7 +90,7 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 <div class="modal-overlay" id="modalStats"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStats')">&#x2715;</button><div class="modal-title">My Mahjong Stats</div><div id="statsBody"></div></div></div>
 <div class="modal-overlay" id="modalLeaderboard"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalLeaderboard')">&#x2715;</button><div class="modal-title">Pung Pung Leaderboard</div><div id="lbBody"></div></div></div>
 <script>
-var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score" };
+var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score", lastPlayers:[], lastMyIndex:-1 };
 var HONOURS = [["east","East"],["south","South"],["west","West"],["north","North"],["green_dragon","Green Dragon"],["white_dragon","White Dragon"],["zhong","Zhong / Red Dragon"]];
 function qs(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -155,6 +155,7 @@ function routeByStatus(){
 function myPlayerId(){ return parseInt(localStorage.getItem("mj_player_" + S.game.id) || "0"); }
 function renderLobbyNoGame(){
   setNavScore();
+  if (S.lastPlayers && S.lastPlayers.length === 4) { renderSamePlayersPrompt(); return; }
   var name = localStorage.getItem("mj_name") || "";
   var wa = localStorage.getItem("mj_wa") || "";
   var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Start a Mahjong Game</div>";
@@ -182,6 +183,42 @@ function createGame(){
     routeByStatus();
   });
 }
+  function renderSamePlayersPrompt(){
+    setNavScore();
+    var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Same 4 Players as Last Game?</div>";
+    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Start a new game at " + esc(S.booking.tableName) + " with the same players as before:</div>";
+    S.lastPlayers.forEach(function(p){
+      h += "<div class=\"player-row\"><div><div class=\"pname\">" + esc(p.name) + "</div></div></div>";
+    });
+    h += "<button class=\"btn btn-gold\" onclick=\"continueWithSamePlayers()\">Yes, Same 4 Players</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"startWithNewPlayers()\">No, Different Players</button>";
+    h += "</div>";
+    qs("content").innerHTML = h;
+  }
+  function startWithNewPlayers(){
+    S.lastPlayers = []; S.lastMyIndex = -1;
+    renderLobbyNoGame();
+  }
+  function continueWithSamePlayers(){
+    var list = S.lastPlayers;
+    var hostIdx = (S.lastMyIndex >= 0 && S.lastMyIndex < list.length) ? S.lastMyIndex : 0;
+    var host = list[hostIdx];
+    apiSend("/api/mahjong/games", "POST", {bookingId:S.booking.id, hostName:host.name, hostWaNumber:host.waNumber}).then(function(res){
+      if (!res.ok) { alert(res.data.error || "Could not create game"); S.lastPlayers = []; loadGameForBooking(); return; }
+      S.game = res.data.game; S.players = res.data.players;
+      localStorage.setItem("mj_player_" + S.game.id, res.data.players[0].id);
+      var others = list.filter(function(_, i){ return i !== hostIdx; });
+      addRemainingPlayers(others, 0);
+    });
+  }
+  function addRemainingPlayers(others, idx){
+    if (idx >= others.length) { S.lastPlayers = []; S.lastMyIndex = -1; routeByStatus(); return; }
+    var p = others[idx];
+    apiSend("/api/mahjong/games?id=" + S.game.id + "&action=join", "PATCH", {name:p.name, waNumber:p.waNumber}).then(function(res){
+      if (res.ok) { S.game = res.data.game; S.players = res.data.players; }
+      addRemainingPlayers(others, idx + 1);
+    });
+  }
 function renderLobbyGame(){
   setNavScore();
   var mine = myPlayerId();
@@ -295,7 +332,7 @@ function renderFinished(){
   h += "<button class=\"btn btn-gold\" onclick=\"resetForNewGame()\">Start New Game at This Table</button>";
   qs("content").innerHTML = h;
 }
-function resetForNewGame(){ S.game = null; S.players = []; S.events = []; renderLobbyNoGame(); }
+function resetForNewGame(){ var mine = myPlayerId(); var idx = S.players.findIndex(function(p){ return p.id === mine; }); S.lastPlayers = (S.players.length === 4) ? S.players.slice() : []; S.lastMyIndex = idx; S.game = null; S.players = []; S.events = []; renderLobbyNoGame(); }
 function openBreakdown(pid){
   var p = S.players.find(function(x){ return x.id === pid; });
   if (!p) return;
