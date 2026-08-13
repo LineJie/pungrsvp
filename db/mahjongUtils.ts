@@ -47,11 +47,19 @@ export async function ensureMahjongTables(db: any) {
   `);
 }
 
-// Additive safety net for schema drift: the `notes` column on the
-// pre-existing `members` table was added to schema.ts after that table
-// was first created in production, so some environments are still
-// missing it. This never touches existing member data, just ensures
-// the column exists so upsertMemberByWa() can select/insert safely.
-export async function ensureMemberColumns(db: any) {
-  await db.execute(sql`ALTER TABLE members ADD COLUMN IF NOT EXISTS notes text DEFAULT ''`);
+// Additive safety net: the pre-existing `members` table referenced by
+// schema.ts (and by the Mahjong host/join flow's WhatsApp-number lookup)
+// was never actually provisioned in some environments. This mirrors the
+// CREATE TABLE IF NOT EXISTS pattern above -- it never touches or drops
+// any existing member data, it only creates the table if missing.
+export async function ensureMembersTable(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS members (
+              id serial PRIMARY KEY,
+                    wa_number text NOT NULL UNIQUE,
+                          name text NOT NULL DEFAULT '',
+                                notes text DEFAULT '',
+                                      created_at timestamp DEFAULT now()
+                                          )
+                                            `);
 }
