@@ -63,11 +63,15 @@
   .status-banner.pending { background:rgba(201,168,76,0.15); }
   .status-banner.confirmed { background:rgba(74,140,104,0.12); }
   .status-banner.cancelled { background:rgba(192,57,43,0.08); }
+  .status-banner.checked_in { background:rgba(74,140,104,0.12); }
+  .status-banner.completed { background:rgba(122,112,96,0.12); }
   .status-icon { font-size:32px; margin-bottom:6px; }
   .status-text { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
   .status-text.pending { color:#9A7520; }
   .status-text.confirmed { color:var(--green-mid); }
   .status-text.cancelled { color:var(--red); }
+  .status-text.checked_in { color:var(--green-mid); }
+  .status-text.completed { color:var(--text-muted); }
   .status-sub { font-size:12px; color:var(--text-muted); margin-top:4px; }
 
   .detail-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(28,58,46,0.06); font-size:13px; }
@@ -81,6 +85,14 @@
   }
   .code-display .lbl { font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
   .code-display .code { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--gold-light); letter-spacing:3px; }
+
+  .mahjong-btn {
+    display:none; width:100%; padding:14px; background:var(--green-dark); border:none; border-radius:14px;
+    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:var(--gold-light);
+    cursor:pointer; margin-top:14px;
+  }
+  .mahjong-btn.show { display:block; }
+  .mahjong-hint { font-size:11px; color:var(--text-muted); text-align:center; margin-top:8px; }
 
   .wa-btn {
     width:100%; padding:14px; background:var(--gold); border:none; border-radius:14px;
@@ -129,6 +141,9 @@
 
       <div id="detailRows"></div>
 
+      <button class="mahjong-btn" id="mahjongBtn">&#x1F004; Buka Mahjong Score</button>
+      <div class="mahjong-hint" id="mahjongHint" style="display:none">Sudah check-in? Catat skor Mahjong kamu di sini!</div>
+
       <button class="wa-btn" id="waBtn">💬 Hubungi Pung Pung via WA</button>
     </div>
   </div>
@@ -153,6 +168,13 @@
     }
   }
 
+  const STATUS_META = {
+    confirmed: { icon: '✅', text: 'Booking Confirmed!', sub: 'Meja kamu sudah terkonfirmasi. Sampai jumpa!' },
+    pending: { icon: '⏳', text: 'Menunggu Pembayaran', sub: 'Silakan transfer ke BCA 8630038775 dan kirim bukti ke WA kami' },
+    checked_in: { icon: '\u{1F004}', text: 'Sudah Check-in!', sub: 'Selamat bermain! Yuk catat skor Mahjong kamu di bawah.' },
+    completed: { icon: '\u{1F3C1}', text: 'Sesi Selesai', sub: 'Terima kasih sudah bermain di Pung Pung. Sampai jumpa lagi!' },
+    cancelled: { icon: '❌', text: 'Booking Dibatalkan', sub: 'Booking ini telah dibatalkan. Hubungi kami untuk info lebih lanjut.' },
+  };
   function showResult(b) {
     document.getElementById('resCode').textContent = b.bookingCode;
 
@@ -162,14 +184,11 @@
     const sub = document.getElementById('statusSub');
 
     banner.className = `status-banner ${b.status}`;
-    icon.textContent = b.status === 'confirmed' ? '✅' : b.status === 'pending' ? '⏳' : '❌';
+  const meta = STATUS_META[b.status] || STATUS_META.cancelled;
+    icon.textContent = meta.icon;
     text.className = `status-text ${b.status}`;
-    text.textContent = b.status === 'confirmed' ? 'Booking Confirmed!'
-      : b.status === 'pending' ? 'Menunggu Pembayaran'
-      : 'Booking Dibatalkan';
-    sub.textContent = b.status === 'confirmed' ? 'Meja kamu sudah terkonfirmasi. Sampai jumpa!'
-      : b.status === 'pending' ? 'Silakan transfer ke BCA 8630038775 dan kirim bukti ke WA kami'
-      : 'Booking ini telah dibatalkan. Hubungi kami untuk info lebih lanjut.';
+    text.textContent = meta.text;
+    sub.textContent = meta.sub;
 
     // Format date
     const [y,m,d] = b.date.split('-');
@@ -185,6 +204,17 @@
       <div class="detail-row"><span class="detail-key">Total</span><span class="detail-val" style="color:var(--gold)">Rp ${(50000*b.duration).toLocaleString('id-ID')}</span></div>
       ${b.notes ? `<div class="detail-row"><span class="detail-key">Catatan</span><span class="detail-val">${escHtml(b.notes)}</span></div>` : ''}
     `;
+
+    const mahjongBtn = document.getElementById('mahjongBtn');
+    const mahjongHint = document.getElementById('mahjongHint');
+    if (b.status === 'checked_in') {
+      mahjongBtn.classList.add('show');
+      mahjongHint.style.display = 'none';
+      mahjongBtn.onclick = () => { window.location.href = `/mahjong.html?code=${encodeURIComponent(b.bookingCode)}`; };
+    } else {
+      mahjongBtn.classList.remove('show');
+      mahjongHint.style.display = (b.status === 'confirmed' || b.status === 'pending') ? 'block' : 'none';
+    }
 
     const waMsg = `Halo Pung Pung! Saya mau tanya status booking saya.\\nKode: ${b.bookingCode}\\nNama: ${b.customerName}`;
     document.getElementById('waBtn').onclick = () => window.open(`https://wa.me/628999880707?text=${encodeURIComponent(waMsg)}`, '_blank');
