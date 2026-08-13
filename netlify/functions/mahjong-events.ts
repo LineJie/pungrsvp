@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
 import { mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
-import { ensureMahjongTables } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureSessionIdColumn } from "../../db/mahjongUtils.js";
 import {
   calculateWinScore,
   calculateKongScore,
@@ -46,6 +46,35 @@ async function insertEvent(gameId: number, playerId: number, eventType: string, 
   return row;
 }
 
+function identityKey(p: any) {
+    return p.waNumber ? `wa:${p.waNumber}` : `name:${(p.name || "").trim().toLowerCase()}`;
+}
+
+// Live "still playing at this table" totals accumulate across every game
+// that shares the same session_id (every consecutive game started via the
+// "same 4 players?" continuation flow in mahjong.html), matched per-player
+// by WhatsApp number (or name when no phone was given). This is purely a
+// display-layer aggregation -- individual mahjong_events rows are never
+// rewritten, so per-game history/stats/leaderboard queries below are
+// completely unaffected by this.
+async function loadSessionAccumulated(game: any, currentPlayers: any[]) {
+    const sessionId = game.sessionId || game.id;
+    const sessionGames = await db.select().from(mahjongGames).where(eq(mahjongGames.sessionId, sessionId));
+    const gameIds = sessionGames.length ? sessionGames.map((g: any) => g.id) : [game.id];
+    const sessionPlayers = await db.select().from(mahjongPlayers).where(inArray(mahjongPlayers.gameId, gameIds));
+    const sessionEvents = await db.select().from(mahjongEvents).where(inArray(mahjongEvents.gameId, gameIds));
+    sessionEvents.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    const scoreboard = currentPlayers.map((p: any) => {
+          const myKey = identityKey(p);
+          const matchIds = sessionPlayers.filter((sp: any) => identityKey(sp) === myKey).map((sp: any) => sp.id);
+          const total = sessionEvents.filter((e: any) => matchIds.includes(e.playerId)).reduce((s: number, e: any) => s + e.points, 0);
+          return { ...p, total };
+    });
+
+    return { scoreboard, sessionEvents, sessionGamesCount: gameIds.length };
+}
+
 function scoreboardFromEvents(players: any[], events: any[]) {
   return players.map((p) => ({
     ...p,
@@ -55,6 +84,7 @@ function scoreboardFromEvents(players: any[], events: any[]) {
 
 export default async (req: Request) => {
   await ensureMahjongTables(db);
+    await ensureSessionIdColumn(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
@@ -67,9 +97,8 @@ export default async (req: Request) => {
     if (gameId) {
       const data = await loadGame(parseInt(gameId));
       if (!data) return Response.json({ error: "Game not found" }, { status: 404 });
-      const events = await db.select().from(mahjongEvents).where(eq(mahjongEvents.gameId, data.game.id));
-      const scoreboard = scoreboardFromEvents(data.players, events);
-      return Response.json({ game: data.game, players: scoreboard, events });
+          const { scoreboard, sessionEvents, sessionGamesCount } = await loadSessionAccumulated(data.game, data.players);
+          return Response.json({ game: data.game, players: scoreboard, events: sessionEvents, sessionGamesCount });
     }
 
     if (historyWa) {
@@ -198,8 +227,8 @@ export default async (req: Request) => {
         .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
         .where(eq(mahjongGames.id, game.id));
 
-      const events = await db.select().from(mahjongEvents).where(eq(mahjongEvents.gameId, game.id));
-      return Response.json({ events: inserted, total: result.total, scoreboard: scoreboardFromEvents(players, events) }, { status: 201 });
+          const { scoreboard } = await loadSessionAccumulated(game, players);
+          return Response.json({ events: inserted, total: result.total, scoreboard }, { status: 201 });
     }
 
     // Record a Kong (from discard or from wall) during active play.
@@ -218,8 +247,8 @@ export default async (req: Request) => {
       for (const d of deltas) {
         inserted.push(await insertEvent(game.id, d.playerId, d.eventType, d.points, d.relatedPlayerId, { label: d.label }));
       }
-      const events = await db.select().from(mahjongEvents).where(eq(mahjongEvents.gameId, game.id));
-      return Response.json({ events: inserted, scoreboard: scoreboardFromEvents(players, events) }, { status: 201 });
+  const { scoreboard } = await loadSessionAccumulated(game, players);
+        return Response.json({ events: inserted, scoreboard }, { status: 201 });
     }
 
     // Admin-only correction — always additive, never edits/deletes history.
@@ -229,8 +258,8 @@ export default async (req: Request) => {
         return Response.json({ error: "playerId and numeric points are required" }, { status: 400 });
       }
       const row = await insertEvent(game.id, playerId, "CORRECTION", points, null, { note: note || "" });
-      const events = await db.select().from(mahjongEvents).where(eq(mahjongEvents.gameId, game.id));
-      return Response.json({ event: row, scoreboard: scoreboardFromEvents(players, events) }, { status: 201 });
+    const { scoreboard } = await loadSessionAccumulated(game, players);
+          return Response.json({ event: row, scoreboard }, { status: 201 });
     }
 
     return Response.json({ error: "Unknown action" }, { status: 400 });
