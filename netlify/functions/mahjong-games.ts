@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
 import { bookings, members, mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
 import { eq, and, inArray, ne } from "drizzle-orm";
-import { ensureMahjongTables, ensureMemberColumns } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables } from "../../db/mahjongUtils.js";
 
 // Game lifecycle for Pung Pung Mahjong Score.
 // A game is always anchored to an existing booking (the checked-in table
@@ -17,9 +17,9 @@ const MAX_PLAYERS = 4;
 async function upsertMemberByWa(name: string, waNumber?: string): Promise<number | null> {
   const wa = (waNumber || "").trim();
   if (!wa) return null;
-  const existing = await db.select().from(members).where(eq(members.waNumber, wa));
-  if (existing.length) return existing[0].id;
-  const [row] = await db.insert(members).values({ waNumber: wa, name: name || "" }).returning();
+  const existing = await db.select({ id: members.id }).from(members).where(eq(members.waNumber, wa));
+      if (existing.length) return existing[0].id;
+      const [row] = await db.insert(members).values({ waNumber: wa, name: name || "" }).returning({ id: members.id });
   return row.id;
 }
 
@@ -33,7 +33,6 @@ async function getGameWithPlayers(gameId: number) {
 
 export default async (req: Request) => {
   await ensureMahjongTables(db);
-  await ensureMemberColumns(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
