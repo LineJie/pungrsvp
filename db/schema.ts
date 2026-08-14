@@ -57,6 +57,7 @@ export const mahjongGames = pgTable("mahjong_games", {
   tableId: text("table_id").notNull(),
   tableName: text("table_name").notNull(),
   location: text().notNull().default("surabaya"),
+  scoringSystem: text("scoring_system").notNull().default("hongkong"), // china (legacy flat rules) | hongkong (fan table) -- chosen by the host when the game is created
   status: text().notNull().default("waiting_for_players"),
   // waiting_for_players | ready | active | finished_win | draw | cancelled
   winnerPlayerId: integer("winner_player_id"), // FK -> mahjong_players.id, set only when status = finished_win
