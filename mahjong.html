@@ -103,6 +103,7 @@ function init(){
   var code = params.get("code");
   if (code) { qs("content").innerHTML = "<div class=\"muted\">Loading your booking...</div>"; loadBooking(code.toUpperCase()); }
   else { renderCodeScreen(); }
+    if (params.get("leaderboard")) { openLeaderboard(); }
 }
 function renderCodeScreen(err){
   var h = "";
