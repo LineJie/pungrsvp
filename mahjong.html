@@ -111,6 +111,7 @@ function renderCodeScreen(err){
   h += "<input class=\"field\" id=\"codeInput\" placeholder=\"PP-XXXXXX\" maxlength=\"9\" style=\"text-transform:uppercase;letter-spacing:1.5px;\">";
   if (err) h += "<div class=\"error-msg\">" + esc(err) + "</div>";
   h += "<button class=\"btn btn-primary\" onclick=\"submitCode()\">Continue &#8594;</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; View Leaderboard</button>";
   h += "</div>";
   qs("content").innerHTML = h;
   qs("bottomNav").style.display = "none";
@@ -134,6 +135,7 @@ function renderNotCheckedIn(){
   var h = "<div class=\"card\"><div class=\"card-title\">Not Checked In Yet</div>";
   h += "<div class=\"muted\">Mahjong Score is available once your table has been checked in by our staff. Please check in first, then come back here.</div>";
   h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Check Booking Status</a>";
+  h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; View Leaderboard</button>";
   h += "</div>";
   qs("content").innerHTML = h;
   qs("bottomNav").style.display = "none";
