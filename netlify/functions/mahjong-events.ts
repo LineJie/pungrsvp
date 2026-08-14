@@ -2,13 +2,18 @@ import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
 import { mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
-import { ensureMahjongTables, ensureSessionIdColumn } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn } from "../../db/mahjongUtils.js";
 import {
   calculateWinScore,
+  calculateAllLoserPayments,
+  calculateHandFan,
+  calculateFanWinPayments,
   calculateKongScore,
-    calculateAllLoserPayments,
-    type LoserDefenseInput,
   type LastCardDraw,
+  type LoserDefenseInput,
+  type FanComboKey,
+  type SeatWind,
+  type WinMode,
   type KongType,
 } from "../../db/mahjongScoring.js";
 
@@ -26,10 +31,15 @@ for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
 return String(hash % 10000).padStart(4, "0");
 }
 
+function parseMeta(e: any): any {
+  try { return e.metadata ? JSON.parse(e.metadata) : {}; } catch { return {}; }
+}
+
 // All scoring math lives in db/mahjongScoring.ts (the single authoritative
 // engine). This function only: validates the request against the current
-// game/player state, calls the engine, and persists the resulting events.
-// The client NEVER sends point values — only the raw facts of what happened.
+// game/player state, calls the engine for whichever scoring_system this
+// game was created with, and persists the resulting events. The client
+// NEVER sends point values — only the raw facts of what happened.
 
 async function loadGame(gameId: number) {
   const [game] = await db.select().from(mahjongGames).where(eq(mahjongGames.id, gameId));
@@ -77,16 +87,10 @@ async function loadSessionAccumulated(game: any, currentPlayers: any[]) {
     return { scoreboard, sessionEvents, sessionGamesCount: gameIds.length };
 }
 
-function scoreboardFromEvents(players: any[], events: any[]) {
-  return players.map((p) => ({
-    ...p,
-    total: events.filter((e) => e.playerId === p.id).reduce((sum, e) => sum + e.points, 0),
-  }));
-}
-
 export default async (req: Request) => {
   await ensureMahjongTables(db);
     await ensureSessionIdColumn(db);
+    await ensureScoringSystemColumn(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
@@ -117,6 +121,7 @@ export default async (req: Request) => {
           gameId: g.id,
           tableName: g.tableName,
           location: g.location,
+          scoringSystem: g.scoringSystem,
           date: g.endedAt || g.createdAt,
           score: myTotal,
           result: g.status === "draw" ? "DRAW" : g.winnerPlayerId === myPlayer.id ? "WIN" : "LOSE",
@@ -138,7 +143,10 @@ export default async (req: Request) => {
 
       const wins = finished.filter((g) => g.status === "finished_win" && myPlayers.some((p) => p.gameId === g.id && p.id === g.winnerPlayerId)).length;
       const draws = finished.filter((g) => g.status === "draw").length;
-      const zimoCount = events.filter((e) => e.eventType === "ZIMO").length;
+      // Zimo count spans both scoring systems: China style records a plain
+      // "ZIMO" event; Hong Kong style records "WIN_MODE" with mode=ZIMO.
+      const zimoCount = events.filter((e) => e.eventType === "ZIMO").length
+        + events.filter((e) => e.eventType === "WIN_MODE" && parseMeta(e).mode === "ZIMO").length;
       const kongCount = events.filter((e) => e.eventType === "KONG_FROM_DISCARD" || e.eventType === "KONG_FROM_WALL").length;
 
       const perGameScore: Record<number, number> = {};
@@ -154,9 +162,11 @@ export default async (req: Request) => {
 
     if (leaderboard) {
       const period = url.searchParams.get("period") || "all"; // week | month | all
-      const location = url.searchParams.get("location");
+      const location = url.searchParams.get("location"); // surabaya | denpasar | absent/all = every branch
+      const includeStats = url.searchParams.get("includeStats");
+
       let games = await db.select().from(mahjongGames).where(inArray(mahjongGames.status, ["finished_win", "draw"]));
-      if (location) games = games.filter((g) => g.location === location);
+      if (location && location !== "all") games = games.filter((g) => g.location === location);
 
       const now = Date.now();
       const cutoff = period === "week" ? now - 7 * 24 * 60 * 60 * 1000
@@ -165,22 +175,104 @@ export default async (req: Request) => {
       if (cutoff) games = games.filter((g) => new Date((g.endedAt || g.createdAt) as any).getTime() >= cutoff);
 
       const gameIds = games.map((g) => g.id);
-      if (!gameIds.length) return Response.json([]);
+      if (!gameIds.length) return Response.json(includeStats ? { players: [], stats: null } : []);
+
+      const gameById = new Map<number, (typeof games)[number]>(games.map((g) => [g.id, g]));
       const players = await db.select().from(mahjongPlayers).where(inArray(mahjongPlayers.gameId, gameIds));
       const events = await db.select().from(mahjongEvents).where(inArray(mahjongEvents.gameId, gameIds));
 
-      const totalsByKey: Record<string, { name: string; waNumber: string; score: number }> = {};
+      // One aggregate row per player identity (matched by WA number, or by
+      // name when no phone was given -- same matching rule used elsewhere).
+      type PlayerAgg = {
+        name: string;
+        waNumber: string;
+        score: number;
+        gameIdsPlayed: Set<number>;
+        sessionIds: Set<number>;
+        wins: number;
+        results: { endedAt: number; won: boolean }[];
+      };
+      const totalsByKey: Record<string, PlayerAgg> = {};
+
       players.forEach((p) => {
+        const g = gameById.get(p.gameId);
+        if (!g) return;
         const key = p.waNumber ? `wa:${p.waNumber}` : `name:${p.name.toLowerCase()}`;
+        if (!totalsByKey[key]) {
+          totalsByKey[key] = { name: p.name, waNumber: p.waNumber || "", score: 0, gameIdsPlayed: new Set(), sessionIds: new Set(), wins: 0, results: [] };
+        }
+        const agg = totalsByKey[key];
         const playerTotal = events.filter((e) => e.playerId === p.id).reduce((s, e) => s + e.points, 0);
-        if (!totalsByKey[key]) totalsByKey[key] = { name: p.name, waNumber: p.waNumber || "", score: 0 };
-        totalsByKey[key].score += playerTotal;
+        const won = g.status === "finished_win" && g.winnerPlayerId === p.id;
+        agg.score += playerTotal;
+        agg.gameIdsPlayed.add(g.id);
+        agg.sessionIds.add(g.sessionId || g.id);
+        if (won) agg.wins += 1;
+        agg.results.push({ endedAt: new Date((g.endedAt || g.createdAt) as any).getTime(), won });
       });
+
       const ranked = Object.values(totalsByKey)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 50)
-      .map((r) => ({ ...r, code: leaderboardCode(r.name, r.waNumber) }));
-      return Response.json(ranked);
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 50)
+        .map((r) => {
+          const gamesCount = r.gameIdsPlayed.size;
+          const chronological = r.results.slice().sort((a, b) => a.endedAt - b.endedAt);
+          const form = chronological.slice(-5).map((res) => (res.won ? "W" : "L"));
+          return {
+            name: r.name,
+            waNumber: r.waNumber,
+            code: leaderboardCode(r.name, r.waNumber),
+            score: r.score,
+            wins: r.wins,
+            games: gamesCount,
+            winPct: gamesCount ? Math.round((r.wins / gamesCount) * 100) : 0,
+            sessions: r.sessionIds.size,
+            avgPerGame: gamesCount ? Math.round((r.score / gamesCount) * 10) / 10 : 0,
+            form,
+          };
+        });
+
+      if (!includeStats) return Response.json(ranked);
+
+      // "Hero" stats aggregated across the whole filtered period + branch --
+      // total sessions/games/hours, who's on the hottest current win streak,
+      // and the single biggest win (largest LOSER_PAYMENT collected in one game).
+      const allSessionIds = new Set(games.map((g) => g.sessionId || g.id));
+      let hoursMs = 0;
+      games.forEach((g) => {
+        if (g.startedAt && g.endedAt) hoursMs += new Date(g.endedAt as any).getTime() - new Date(g.startedAt as any).getTime();
+      });
+
+      let hotStreak: { name: string; count: number } | null = null;
+      Object.values(totalsByKey).forEach((r) => {
+        const newestFirst = r.results.slice().sort((a, b) => b.endedAt - a.endedAt);
+        let streak = 0;
+        for (const res of newestFirst) {
+          if (!res.won) break;
+          streak++;
+        }
+        if (streak > 0 && (!hotStreak || streak > hotStreak.count)) hotStreak = { name: r.name, count: streak };
+      });
+
+      let biggestWin: { name: string; amount: number } | null = null;
+      events
+        .filter((e) => e.eventType === "LOSER_PAYMENT" && e.points > 0)
+        .forEach((e) => {
+          if (biggestWin && e.points <= biggestWin.amount) return;
+          const p = players.find((pl) => pl.id === e.playerId);
+          if (p) biggestWin = { name: p.name, amount: e.points };
+        });
+
+      return Response.json({
+        players: ranked,
+        stats: {
+          sessions: allSessionIds.size,
+          games: gameIds.length,
+          hours: Math.round((hoursMs / 3600000) * 10) / 10,
+          hotStreak,
+          biggestWin,
+        },
+      });
     }
 
     return Response.json({ error: "Missing query parameter" }, { status: 400 });
@@ -200,65 +292,128 @@ export default async (req: Request) => {
       return Response.json({ error: "This game is not active — scoring is not allowed" }, { status: 409 });
     }
     const allPlayerIds = players.map((p) => p.id);
+    const scoringSystem = game.scoringSystem === "china" ? "china" : "hongkong";
 
-    // Record a Zimo win: base Zimo + existing Flower/Season + Last Card Bonus.
-    // Only self-draw wins are supported — there is intentionally no
-    // "Hu from discard" action anywhere in this API.
+    // Record a win. Branches on this game's scoring_system:
+    // - "china": legacy flat house rules -- Zimo (self-draw) only, plus
+    //   Joker/Flower/Season/Last-Card bonuses and per-loser defense tiles.
+    // - "hongkong" (default): Hong Kong Old Style fan table -- host picks
+    //   the winner, ZIMO or HU (+ discarder if HU), and every fan pattern
+    //   that applies (including which wind for the two wind patterns).
     if (action === "recordWin") {
-            const { winnerPlayerId, handContainsJoker, existingFlowers = [], existingSeasons = [], lastCardDraws = [], loserDefenses = [] } = body;
-            if (!allPlayerIds.includes(winnerPlayerId)) {
-                      return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
-            }
-            let result;
-            try {
-                      result = calculateWinScore({
-                                  handContainsJoker: !!handContainsJoker,
-                                  existingFlowers,
-                                  existingSeasons,
-                                  lastCardDraws: lastCardDraws as LastCardDraw[],
-                      });
-            } catch (e: any) {
-                      return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
-            }
+      if (scoringSystem === "china") {
+        const { winnerPlayerId, handContainsJoker, existingFlowers = [], existingSeasons = [], lastCardDraws = [], loserDefenses = [] } = body;
+        if (!allPlayerIds.includes(winnerPlayerId)) {
+          return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
+        }
+        let result;
+        try {
+          result = calculateWinScore({
+            handContainsJoker: !!handContainsJoker,
+            existingFlowers,
+            existingSeasons,
+            lastCardDraws: lastCardDraws as LastCardDraw[],
+          });
+        } catch (e: any) {
+          return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
+        }
 
-            // These individual events are recorded at 0 points -- they exist so the
-            // winner's tile breakdown (Zimo/Flower/Season/Last Card) stays visible
-            // in history, but result.total is NOT credited directly to the winner.
-            // See db/mahjongScoring.ts: result.total is only the PAYMENT BENCHMARK
-            // each loser owes; the winner's actual score comes from the
-            // LOSER_PAYMENT event below (winnerGain).
-            const inserted = [];
-            for (const ev of result.events) {
-                      inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, handValue: ev.points, ...ev.metadata }));
-            }
+        // These individual events are recorded at 0 points -- they exist so the
+        // winner's tile breakdown (Zimo/Flower/Season/Last Card) stays visible
+        // in history, but result.total is NOT credited directly to the winner.
+        // result.total is only the PAYMENT BENCHMARK each loser owes; the
+        // winner's actual score comes from the LOSER_PAYMENT event below.
+        const inserted = [];
+        for (const ev of result.events) {
+          inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, handValue: ev.points, ...ev.metadata }));
+        }
 
-            const losers = players.filter((p) => p.id !== winnerPlayerId);
-            const defenseByPlayer = new Map(loserDefenses.map((d) => [d.playerId, d]));
-            const { results: loserResults, winnerGain } = calculateAllLoserPayments(
-                      result.total,
-                      losers.map((l) => ({
-                                  playerId: l.id,
-                                  existingFlowers: defenseByPlayer.get(l.id)?.existingFlowers || [],
-                                  existingSeasons: defenseByPlayer.get(l.id)?.existingSeasons || [],
-                      }))
-                    );
-            for (const r of loserResults) {
-                      if (r.payment > 0 || r.defenseValue > 0) {
-                                  inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }));
-                      }
-            }
-            if (winnerGain > 0) {
-                      inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers (hand value ${result.total})` }));
-            }
-            await db.update(mahjongGames)
-              .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
-              .where(eq(mahjongGames.id, game.id));
+        const losers = players.filter((p) => p.id !== winnerPlayerId);
+        const defenseByPlayer = new Map((loserDefenses as any[]).map((d) => [d.playerId, d]));
+        const { results: loserResults, winnerGain } = calculateAllLoserPayments(
+          result.total,
+          losers.map((l) => ({
+            playerId: l.id,
+            existingFlowers: defenseByPlayer.get(l.id)?.existingFlowers || [],
+            existingSeasons: defenseByPlayer.get(l.id)?.existingSeasons || [],
+          })) as LoserDefenseInput[]
+        );
+        for (const r of loserResults) {
+          if (r.payment > 0 || r.defenseValue > 0) {
+            inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }));
+          }
+        }
+        if (winnerGain > 0) {
+          inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers (hand value ${result.total})` }));
+        }
+        await db.update(mahjongGames)
+          .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
+          .where(eq(mahjongGames.id, game.id));
 
-            const { scoreboard } = await loadSessionAccumulated(game, players);
-            return Response.json({ events: inserted, total: winnerGain, scoreboard }, { status: 201 });
+        const { scoreboard } = await loadSessionAccumulated(game, players);
+        return Response.json({ events: inserted, total: winnerGain, scoreboard }, { status: 201 });
+      }
+
+      // Hong Kong Old Style
+      const { winnerPlayerId, mode, comboKeys = [], discarderId, windSelections = {} } = body as {
+        winnerPlayerId: number;
+        mode: WinMode;
+        comboKeys: FanComboKey[];
+        discarderId?: number;
+        windSelections?: Partial<Record<FanComboKey, SeatWind>>;
+      };
+      if (!allPlayerIds.includes(winnerPlayerId)) {
+        return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
+      }
+
+      let hand;
+      try {
+        hand = calculateHandFan(comboKeys, windSelections);
+      } catch (e: any) {
+        return Response.json({ error: e.message || "Invalid combo selection" }, { status: 400 });
+      }
+
+      const opponents = players.filter((p) => p.id !== winnerPlayerId);
+      let payment;
+      try {
+        payment = calculateFanWinPayments(mode, hand.totalPoints, opponents.map((o) => o.id), discarderId);
+      } catch (e: any) {
+        return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
+      }
+
+      // Each selected pattern (and the win mode itself) is recorded at 0
+      // points -- purely informational, so the winning hand's fan breakdown
+      // and Zimo/Hu mode stay visible in history/stats. The actual score
+      // movement comes from the LOSER_PAYMENT events below.
+      const inserted = [];
+      inserted.push(await insertEvent(game.id, winnerPlayerId, "WIN_MODE", 0, mode === "HU" ? discarderId ?? null : null, {
+        mode,
+        label: mode === "ZIMO" ? "Menang Zimo (tarik sendiri)" : "Menang Hu (dari buangan)",
+      }));
+      for (const ev of hand.events) {
+        inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, ...ev.metadata }));
+      }
+
+      for (const r of payment.results) {
+        if (r.payment > 0) {
+          inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }));
+        }
+      }
+      inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", payment.winnerGain, null, {
+        label: `Menang ${hand.totalFan} fan (${hand.totalPoints} poin) via ${mode === "ZIMO" ? "Zimo" : "Hu"}`,
+      }));
+
+      await db.update(mahjongGames)
+        .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
+        .where(eq(mahjongGames.id, game.id));
+
+      const { scoreboard } = await loadSessionAccumulated(game, players);
+      return Response.json({ events: inserted, totalFan: hand.totalFan, total: payment.winnerGain, scoreboard }, { status: 201 });
     }
 
-    // Record a Kong (from discard or from wall) during active play.
+    // Record a Kong (from discard or from wall) during active play. Shared
+    // by both scoring systems -- Kong is an in-play bonus independent of
+    // which win-scoring style the game uses.
     if (action === "recordKong") {
       const { type, kongerId, discardedByPlayerId } = body as { type: KongType; kongerId: number; discardedByPlayerId?: number };
       if (!allPlayerIds.includes(kongerId)) {
