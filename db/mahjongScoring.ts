@@ -13,13 +13,13 @@
 //   worth +5, same as any other Honour tile.
 // - Kong from discard: konger +5, discarder -5.
 // - Kong from wall: konger +6, other three players -2 each (nets to 0).
-// - Zimo win payment: each of the 3 losing players owes a flat base
-//   payment (see ZIMO_LOSER_BASE_PAYMENT) to the winner. Any Flower/Season
-//   tiles that losing player personally held act as a defense that reduces
-//   (never reverses) their own payment, floored at 0. The winner collects
-//   the sum of what all 3 losers actually end up paying, on top of their
-//   own hand value from calculateWinScore().
-
+// - Zimo win payment: the winner's hand value (Zimo +1, Flower/Season
+//   tiles, Last Card Bonus draws - see calculateWinScore) is what EACH of
+//   the 3 losing players owes the winner, individually reduced by that
+//   loser's own Flower/Season defense tiles (floored at 0 - defense can
+//   never turn into a gain). The winner's actual point gain from the win
+//   is the SUM of what all 3 losers actually end up paying - this
+//   REPLACES the raw hand value as the winner's score for the win.
 export type BonusTileNumber = 1 | 2 | 3 | 4;
 export type NumberTileValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
@@ -152,7 +152,11 @@ export interface WinScoreInput {
  * already owned + Last Card Bonus draw(s). Validates that the number of
  * Last Card draws matches the Joker rule before scoring anything.
  * Kong events are scored separately via calculateKongScore whenever a Kong
- * happens during play — they are not part of this function.
+ * happens during play - they are not part of this function.
+ *
+ * NOTE: total here is used purely as the PAYMENT BENCHMARK for
+ * calculateAllLoserPayments() below - it is not credited to the winner
+ * directly. See the house-rules note at the top of this file.
  */
 export function calculateWinScore(input: WinScoreInput): { events: ScoredEvent[]; total: number } {
   const expected = getLastCardDrawCount(input.handContainsJoker);
@@ -170,11 +174,6 @@ export function calculateWinScore(input: WinScoreInput): { events: ScoredEvent[]
   return { events, total: sumPoints(events.map((e) => e.points)) };
 }
 
-// Flat base payment every LOSING player owes the Zimo winner, before their
-// own Flower/Season defense is applied. See the house-rules note at the top
-// of this file for the full explanation.
-export const ZIMO_LOSER_BASE_PAYMENT = 1;
-
 export interface LoserDefenseInput {
     playerId: number;
     existingFlowers: BonusTileNumber[];
@@ -188,29 +187,29 @@ export interface LoserPaymentResult {
     label: string;
 }
 
-/**
- * One losing player's payment after their own Flower/Season defense is
-  * applied. The defense reduces the flat base payment but never reverses it
-   * into a gain -- it floors at zero.
-    */
-export function calculateLoserPayment(defense: LoserDefenseInput): LoserPaymentResult {
-    const defenseValue = sumPoints([...defense.existingFlowers, ...defense.existingSeasons]);
-    const payment = Math.max(0, ZIMO_LOSER_BASE_PAYMENT - defenseValue);
-    const label = defenseValue > 0
-      ? `Owed ${ZIMO_LOSER_BASE_PAYMENT}, defended with tiles worth ${defenseValue} (paid ${payment})`
-          : `Owed ${ZIMO_LOSER_BASE_PAYMENT} to the winner`;
-    return { playerId: defense.playerId, payment, defenseValue, label };
+// One losing player's payment after their own Flower/Season defense is
+// applied. baseAmount is the Zimo winner's hand value from
+// calculateWinScore().total (Kong points are never part of it). The
+// defense reduces that base payment but never reverses it into a gain --
+// it floors at zero.
+export function calculateLoserPayment(baseAmount: number, defense: LoserDefenseInput): LoserPaymentResult {
+      const defenseValue = sumPoints([...defense.existingFlowers, ...defense.existingSeasons]);
+      const payment = Math.max(0, baseAmount - defenseValue);
+      const label = defenseValue > 0
+        ? `Owed ${baseAmount} (winner's hand value), defended with tiles worth ${defenseValue} (paid ${payment})`
+                  : `Owed ${baseAmount} to the winner (winner's hand value)`;
+      return { playerId: defense.playerId, payment, defenseValue, label };
 }
 
-/**
- * All 3 losing players' payments for one Zimo win, plus the total the
-  * winner collects from them (on top of the winner's own hand value from
-   * calculateWinScore()).
-    */
-export function calculateAllLoserPayments(defenses: LoserDefenseInput[]): { results: LoserPaymentResult[]; winnerGain: number } {
-    const results = defenses.map(calculateLoserPayment);
-    const winnerGain = sumPoints(results.map((r) => r.payment));
-    return { results, winnerGain };
+// All 3 losing players' payments for one Zimo win. baseAmount is the
+// winner's hand value (calculateWinScore().total). The winner's actual
+// point gain for the win is winnerGain -- the sum of what all 3 losers
+// actually pay. This REPLACES the raw hand value as the winner's score;
+// it is not added on top of it.
+export function calculateAllLoserPayments(baseAmount: number, defenses: LoserDefenseInput[]): { results: LoserPaymentResult[]; winnerGain: number } {
+      const results = defenses.map((d) => calculateLoserPayment(baseAmount, d));
+      const winnerGain = sumPoints(results.map((r) => r.payment));
+      return { results, winnerGain };
 }
 
 export type KongType = "KONG_FROM_DISCARD" | "KONG_FROM_WALL";
