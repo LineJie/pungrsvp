@@ -73,3 +73,12 @@ export async function ensureSessionIdColumn(db: any) {
     await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS session_id integer`);
 }
 
+// Additive safety net: adds the scoring_system column so hosts can choose,
+// per game, between the legacy "china" flat house rules and the newer
+// "hongkong" fan-table system. Existing rows (all pre-dating this feature)
+// default to 'hongkong' going forward; the column default also covers any
+// environment where the migration runs before a Drizzle push.
+export async function ensureScoringSystemColumn(db: any) {
+    await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS scoring_system text NOT NULL DEFAULT 'hongkong'`);
+}
+
