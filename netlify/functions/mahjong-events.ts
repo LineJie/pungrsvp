@@ -206,29 +206,36 @@ export default async (req: Request) => {
     // "Hu from discard" action anywhere in this API.
     if (action === "recordWin") {
             const { winnerPlayerId, handContainsJoker, existingFlowers = [], existingSeasons = [], lastCardDraws = [], loserDefenses = [] } = body;
-      if (!allPlayerIds.includes(winnerPlayerId)) {
-        return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
-      }
-      let result;
-      try {
-        result = calculateWinScore({
-          handContainsJoker: !!handContainsJoker,
-          existingFlowers,
-          existingSeasons,
-          lastCardDraws: lastCardDraws as LastCardDraw[],
-        });
-      } catch (e: any) {
-        return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
-      }
+            if (!allPlayerIds.includes(winnerPlayerId)) {
+                      return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
+            }
+            let result;
+            try {
+                      result = calculateWinScore({
+                                  handContainsJoker: !!handContainsJoker,
+                                  existingFlowers,
+                                  existingSeasons,
+                                  lastCardDraws: lastCardDraws as LastCardDraw[],
+                      });
+            } catch (e: any) {
+                      return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
+            }
 
-      const inserted = [];
-      for (const ev of result.events) {
-        inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, ev.points, null, { label: ev.label, ...ev.metadata }));
-      }
+            // These individual events are recorded at 0 points -- they exist so the
+            // winner's tile breakdown (Zimo/Flower/Season/Last Card) stays visible
+            // in history, but result.total is NOT credited directly to the winner.
+            // See db/mahjongScoring.ts: result.total is only the PAYMENT BENCHMARK
+            // each loser owes; the winner's actual score comes from the
+            // LOSER_PAYMENT event below (winnerGain).
+            const inserted = [];
+            for (const ev of result.events) {
+                      inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, handValue: ev.points, ...ev.metadata }));
+            }
 
             const losers = players.filter((p) => p.id !== winnerPlayerId);
             const defenseByPlayer = new Map(loserDefenses.map((d) => [d.playerId, d]));
             const { results: loserResults, winnerGain } = calculateAllLoserPayments(
+                      result.total,
                       losers.map((l) => ({
                                   playerId: l.id,
                                   existingFlowers: defenseByPlayer.get(l.id)?.existingFlowers || [],
@@ -241,14 +248,14 @@ export default async (req: Request) => {
                       }
             }
             if (winnerGain > 0) {
-                      inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers` }));
+                      inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers (hand value ${result.total})` }));
             }
-      await db.update(mahjongGames)
-        .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
-        .where(eq(mahjongGames.id, game.id));
+            await db.update(mahjongGames)
+              .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
+              .where(eq(mahjongGames.id, game.id));
 
-          const { scoreboard } = await loadSessionAccumulated(game, players);
-              return Response.json({ events: inserted, total: result.total + winnerGain, scoreboard }, { status: 201 });
+            const { scoreboard } = await loadSessionAccumulated(game, players);
+            return Response.json({ events: inserted, total: winnerGain, scoreboard }, { status: 201 });
     }
 
     // Record a Kong (from discard or from wall) during active play.
