@@ -102,6 +102,7 @@
 
   .error-msg { text-align:center; color:var(--red); font-size:13px; padding:20px; display:none; }
   .error-msg.show { display:block; }
+    .leaderboard-link-btn { display:block; width:100%; padding:14px; background:transparent; border:1.5px solid rgba(28,58,46,0.2); border-radius:14px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:var(--green-dark); cursor:pointer; margin-bottom:16px; text-align:center; text-decoration:none; }
 </style>
 </head>
 <body>
@@ -124,6 +125,7 @@
         <button class="search-btn" onclick="checkStatus()">Cek →</button>
       </div>
     </div>
+        <button class="leaderboard-link-btn" onclick="window.location.href='/mahjong.html?leaderboard=1'">&#x1F3C6; Lihat Leaderboard</button>
 
     <div class="error-msg" id="errorMsg">❌ Kode booking tidak ditemukan. Periksa kembali kode kamu.</div>
 
