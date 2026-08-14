@@ -353,92 +353,121 @@ function openBreakdown(pid){
   showModal("modalBreakdown");
 }
 var Z = null;
-function openZimo(){
-  Z = { step:1, winnerPlayerId:null, handContainsJoker:null, existingFlowers:[], existingSeasons:[], lastCardDraws:[], lcIndex:0 };
-  renderZimo();
-  showModal("modalZimo");
-}
-function playerButtonsHtml(list, onClickFn){
-  var h = "";
-  list.forEach(function(p){ h += "<button class=\"btn btn-outline\" onclick=\"" + onClickFn + "(" + p.id + ")\">" + esc(p.name) + " (Seat " + p.seatNumber + ")</button>"; });
-  return h;
-}
-function renderZimo(){
-  var h = "";
-  if (Z.step === 1) {
-    qs("zimoStepLbl").textContent = "Step 1 of 5 - Who won?";
-    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Only self-draw (Zimo) wins are allowed. Select the player who drew the winning tile.</div>";
-    h += playerButtonsHtml(S.players, "zimoPickWinner");
-  } else if (Z.step === 2) {
-    qs("zimoStepLbl").textContent = "Step 2 of 5 - Joker check";
-    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Does the winning hand contain a Zhong / Red Dragon used as a Joker substitute? (This does NOT add +5 by itself)</div>";
-    h += "<button class=\"btn btn-outline\" onclick=\"zimoPickJoker(true)\">Yes, hand has a Joker</button>";
-    h += "<button class=\"btn btn-outline\" onclick=\"zimoPickJoker(false)\">No Joker in hand</button>";
-  } else if (Z.step === 3) {
-    qs("zimoStepLbl").textContent = "Step 3 of 5 - Existing Flower / Season tiles";
-    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Select every Flower and Season tile the winner already owned at the moment of winning. Tap to toggle.</div>";
-    h += "<div class=\"label\">Flower</div><div class=\"grid2\" id=\"flowerGrid\">";
-    for (var i=1;i<=4;i++){ h += "<button type=\"button\" class=\"chip-btn" + (Z.existingFlowers.indexOf(i)>-1?" selected":"") + "\" onclick=\"zimoToggleFlower(" + i + ")\">Flower " + i + "</button>"; }
-    h += "</div><div class=\"label\" style=\"margin-top:10px;\">Season</div><div class=\"grid2\" id=\"seasonGrid\">";
-    for (var s=1;s<=4;s++){ h += "<button type=\"button\" class=\"chip-btn" + (Z.existingSeasons.indexOf(s)>-1?" selected":"") + "\" onclick=\"zimoToggleSeason(" + s + ")\">Season " + s + "</button>"; }
-    h += "</div><button class=\"btn btn-gold\" style=\"margin-top:14px;\" onclick=\"zimoStep3Continue()\">Continue</button>";
-  } else if (Z.step === 4) {
-    var need = Z.handContainsJoker ? 1 : 2;
-    qs("zimoStepLbl").textContent = "Step 4 of 5 - Last Card Bonus (" + (Z.lcIndex+1) + " of " + need + ")";
-    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Draw Last Card #" + (Z.lcIndex+1) + " from the end of the wall. What tile is it?</div>";
-    h += "<div class=\"grid2\">";
-    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('number')\">Number Tile</button>";
-    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('flower')\">Flower</button>";
-    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('season')\">Season</button>";
-    h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('honour')\">Honour Tile</button>";
-    h += "</div><div id=\"lcSub\" style=\"margin-top:12px;\"></div>";
-  } else if (Z.step === 5) {
-    qs("zimoStepLbl").textContent = "Step 5 of 5 - Confirm";
-    var w = S.players.find(function(p){ return p.id === Z.winnerPlayerId; });
-    h += "<div class=\"muted\" style=\"text-align:left;\"><b>Winner:</b> " + esc(w?w.name:"") + "<br><b>Joker in hand:</b> " + (Z.handContainsJoker?"Yes":"No") + "<br><b>Existing Flowers:</b> " + (Z.existingFlowers.join(", ")||"none") + "<br><b>Existing Seasons:</b> " + (Z.existingSeasons.join(", ")||"none") + "<br><b>Last Card draws:</b> " + Z.lastCardDraws.length + " recorded</div>";
-    h += "<div class=\"muted\" style=\"text-align:left;\">Points will be calculated automatically by the server using the official Pung Pung scoring rules.</div>";
-    h += "<button class=\"btn btn-gold\" onclick=\"zimoSubmit()\">Confirm & Record Win</button>";
+  function openZimo(){
+      Z = { step:1, winnerPlayerId:null, handContainsJoker:null, existingFlowers:[], existingSeasons:[], loserDefenses:{}, loserIdx:0, lastCardDraws:[], lcIndex:0 };
+      renderZimo();
+      showModal("modalZimo");
   }
-  qs("zimoBody").innerHTML = h;
-}
-function zimoPickWinner(pid){ Z.winnerPlayerId = pid; Z.step = 2; renderZimo(); }
-function zimoPickJoker(val){ Z.handContainsJoker = val; Z.step = 3; renderZimo(); }
-function zimoToggleFlower(n){ var i = Z.existingFlowers.indexOf(n); if (i>-1) Z.existingFlowers.splice(i,1); else Z.existingFlowers.push(n); renderZimo(); }
-function zimoToggleSeason(n){ var i = Z.existingSeasons.indexOf(n); if (i>-1) Z.existingSeasons.splice(i,1); else Z.existingSeasons.push(n); renderZimo(); }
-function zimoStep3Continue(){ Z.step = 4; Z.lcIndex = 0; Z.lastCardDraws = []; renderZimo(); }
-function zimoLastCardKind(kind){
-    var h = "";
-    if (kind === "number") {
-          h += "<div class=\"label\">Which number is on the tile?</div><div class=\"grid3\">";
-          for (var n=1;n<=9;n++){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardValue('number'," + n + ")\">" + n + "</button>"; }
-          h += "</div>";
-    } else if (kind === "flower" || kind === "season") {
-          h += "<div class=\"label\">Which number?</div><div class=\"grid2\">";
-          for (var i=1;i<=4;i++){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardValue('" + kind + "'," + i + ")\">" + (kind==="flower"?"Flower ":"Season ") + i + "</button>"; }
-          h += "</div>";
-    } else if (kind === "honour") {
-          h += "<div class=\"label\">Which honour tile?</div><div class=\"grid2\">";
-          HONOURS.forEach(function(t){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardHonour('" + t[0] + "')\">" + t[1] + "</button>"; });
-          h += "</div>";
-    }
-    qs("lcSub").innerHTML = h;
-}
-function zimoLastCardValue(kind, n){ var d = {kind:kind}; d.tileNumber = n; Z.lastCardDraws.push(d); zimoAdvanceLastCard(); }
-function zimoLastCardHonour(tile){ Z.lastCardDraws.push({kind:"honour", honourTile:tile}); zimoAdvanceLastCard(); }
-function zimoAdvanceLastCard(){
-  var need = Z.handContainsJoker ? 1 : 2;
-  Z.lcIndex++;
-  if (Z.lcIndex >= need) { Z.step = 5; }
-  renderZimo();
-}
-function zimoSubmit(){
-  apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, handContainsJoker:Z.handContainsJoker, existingFlowers:Z.existingFlowers, existingSeasons:Z.existingSeasons, lastCardDraws:Z.lastCardDraws}).then(function(res){
-    if (!res.ok) { alert(res.data.error || "Could not record win"); return; }
-    closeModal("modalZimo");
-    loadFinishedFull();
-  });
-}
-var K = null;
+  function playerButtonsHtml(list, onClickFn){
+      var h = "";
+      list.forEach(function(p){ h += "<button class=\"btn btn-outline\" onclick=\"" + onClickFn + "(" + p.id + ")\">" + esc(p.name) + " (Seat " + p.seatNumber + ")</button>"; });
+      return h;
+  }
+  function renderZimo(){
+      var h = "";
+      if (Z.step === 1) {
+            qs("zimoStepLbl").textContent = "Step 1 of 6 - Who won?";
+            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Only self-draw (Zimo) wins are allowed. Select the player who drew the winning tile.</div>";
+            h += playerButtonsHtml(S.players, "zimoPickWinner");
+      } else if (Z.step === 2) {
+            qs("zimoStepLbl").textContent = "Step 2 of 6 - Joker check";
+            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Does the winning hand contain a Zhong / Red Dragon used as a Joker substitute? (This does NOT add +5 by itself)</div>";
+            h += "<button class=\"btn btn-outline\" onclick=\"zimoPickJoker(true)\">Yes, hand has a Joker</button>";
+            h += "<button class=\"btn btn-outline\" onclick=\"zimoPickJoker(false)\">No Joker in hand</button>";
+      } else if (Z.step === 3) {
+            qs("zimoStepLbl").textContent = "Step 3 of 6 - Existing Flower / Season tiles";
+            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Select every Flower and Season tile the winner already owned at the moment of winning. Tap to toggle.</div>";
+            h += "<div class=\"label\">Flower</div><div class=\"grid2\" id=\"flowerGrid\">";
+            for (var i=1;i<=4;i++){ h += "<button type=\"button\" class=\"chip-btn" + (Z.existingFlowers.indexOf(i)>-1?" selected":"") + "\" onclick=\"zimoToggleFlower(" + i + ")\">Flower " + i + "</button>"; }
+            h += "</div><div class=\"label\" style=\"margin-top:10px;\">Season</div><div class=\"grid2\" id=\"seasonGrid\">";
+            for (var s=1;s<=4;s++){ h += "<button type=\"button\" class=\"chip-btn" + (Z.existingSeasons.indexOf(s)>-1?" selected":"") + "\" onclick=\"zimoToggleSeason(" + s + ")\">Season " + s + "</button>"; }
+            h += "</div><button class=\"btn btn-gold\" style=\"margin-top:14px;\" onclick=\"zimoStep3Continue()\">Continue</button>";
+      } else if (Z.step === 4) {
+            var losers = S.players.filter(function(p){ return p.id !== Z.winnerPlayerId; });
+            var loser = losers[Z.loserIdx];
+            qs("zimoStepLbl").textContent = "Step 4 of 6 - Loser Defense (" + (Z.loserIdx+1) + " of " + losers.length + ")";
+            if (!Z.loserDefenses[loser.id]) Z.loserDefenses[loser.id] = {flowers:[], seasons:[]};
+            var ld = Z.loserDefenses[loser.id];
+            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Select every Flower and Season tile <b>" + esc(loser.name) + "</b> (losing player) personally held. These reduce how much they owe the winner. Tap to toggle.</div>";
+            h += "<div class=\"label\">Flower</div><div class=\"grid2\">";
+            for (var lf=1;lf<=4;lf++){ h += "<button type=\"button\" class=\"chip-btn" + (ld.flowers.indexOf(lf)>-1?" selected":"") + "\" onclick=\"zimoToggleLoserFlower(" + loser.id + "," + lf + ")\">Flower " + lf + "</button>"; }
+            h += "</div><div class=\"label\" style=\"margin-top:10px;\">Season</div><div class=\"grid2\">";
+            for (var ls=1;ls<=4;ls++){ h += "<button type=\"button\" class=\"chip-btn" + (ld.seasons.indexOf(ls)>-1?" selected":"") + "\" onclick=\"zimoToggleLoserSeason(" + loser.id + "," + ls + ")\">Season " + ls + "</button>"; }
+            h += "</div><button class=\"btn btn-gold\" style=\"margin-top:14px;\" onclick=\"zimoLoserContinue()\">" + ((Z.loserIdx+1 >= losers.length) ? "Continue" : "Next Player") + "</button>";
+      } else if (Z.step === 5) {
+            var need = Z.handContainsJoker ? 1 : 2;
+            qs("zimoStepLbl").textContent = "Step 5 of 6 - Last Card Bonus (" + (Z.lcIndex+1) + " of " + need + ")";
+            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Draw Last Card #" + (Z.lcIndex+1) + " from the end of the wall. What tile is it?</div>";
+            h += "<div class=\"grid2\">";
+            h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('number')\">Number Tile</button>";
+            h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('flower')\">Flower</button>";
+            h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('season')\">Season</button>";
+            h += "<button class=\"chip-btn\" onclick=\"zimoLastCardKind('honour')\">Honour Tile</button>";
+            h += "</div><div id=\"lcSub\" style=\"margin-top:12px;\"></div>";
+      } else if (Z.step === 6) {
+            qs("zimoStepLbl").textContent = "Step 6 of 6 - Confirm";
+            var w = S.players.find(function(p){ return p.id === Z.winnerPlayerId; });
+            var loserSummary = S.players.filter(function(p){ return p.id !== Z.winnerPlayerId; }).map(function(p){
+                    var ld2 = Z.loserDefenses[p.id] || {flowers:[],seasons:[]};
+                    return esc(p.name) + ": Flower " + (ld2.flowers.join(",")||"none") + ", Season " + (ld2.seasons.join(",")||"none");
+            }).join("<br>");
+            h += "<div class=\"muted\" style=\"text-align:left;\"><b>Winner:</b> " + esc(w?w.name:"") + "<br><b>Joker in hand:</b> " + (Z.handContainsJoker?"Yes":"No") + "<br><b>Existing Flowers:</b> " + (Z.existingFlowers.join(", ")||"none") + "<br><b>Existing Seasons:</b> " + (Z.existingSeasons.join(", ")||"none") + "<br><b>Last Card draws:</b> " + Z.lastCardDraws.length + " recorded</div>";
+            h += "<div class=\"muted\" style=\"text-align:left;\"><b>Loser defense tiles:</b><br>" + loserSummary + "</div>";
+            h += "<div class=\"muted\" style=\"text-align:left;\">Points will be calculated automatically by the server using the official Pung Pung scoring rules.</div>";
+            h += "<button class=\"btn btn-gold\" onclick=\"zimoSubmit()\">Confirm & Record Win</button>";
+      }
+      qs("zimoBody").innerHTML = h;
+  }
+  function zimoPickWinner(pid){ Z.winnerPlayerId = pid; Z.step = 2; renderZimo(); }
+  function zimoPickJoker(val){ Z.handContainsJoker = val; Z.step = 3; renderZimo(); }
+  function zimoToggleFlower(n){ var i = Z.existingFlowers.indexOf(n); if (i>-1) Z.existingFlowers.splice(i,1); else Z.existingFlowers.push(n); renderZimo(); }
+  function zimoToggleSeason(n){ var i = Z.existingSeasons.indexOf(n); if (i>-1) Z.existingSeasons.splice(i,1); else Z.existingSeasons.push(n); renderZimo(); }
+  function zimoStep3Continue(){ Z.step = 4; Z.loserIdx = 0; renderZimo(); }
+  function zimoToggleLoserFlower(pid, n){ if (!Z.loserDefenses[pid]) Z.loserDefenses[pid] = {flowers:[], seasons:[]}; var arr = Z.loserDefenses[pid].flowers; var i = arr.indexOf(n); if (i>-1) arr.splice(i,1); else arr.push(n); renderZimo(); }
+  function zimoToggleLoserSeason(pid, n){ if (!Z.loserDefenses[pid]) Z.loserDefenses[pid] = {flowers:[], seasons:[]}; var arr = Z.loserDefenses[pid].seasons; var i = arr.indexOf(n); if (i>-1) arr.splice(i,1); else arr.push(n); renderZimo(); }
+  function zimoLoserContinue(){
+      var losers = S.players.filter(function(p){ return p.id !== Z.winnerPlayerId; });
+      Z.loserIdx++;
+      if (Z.loserIdx >= losers.length) { Z.step = 5; Z.lcIndex = 0; Z.lastCardDraws = []; }
+      renderZimo();
+  }
+  function zimoLastCardKind(kind){
+        var h = "";
+        if (kind === "number") {
+                    h += "<div class=\"label\">Which number is on the tile?</div><div class=\"grid3\">";
+                    for (var n=1;n<=9;n++){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardValue('number'," + n + ")\">" + n + "</button>"; }
+                    h += "</div>";
+        } else if (kind === "flower" || kind === "season") {
+                    h += "<div class=\"label\">Which number?</div><div class=\"grid2\">";
+                    for (var i=1;i<=4;i++){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardValue('" + kind + "'," + i + ")\">" + (kind==="flower"?"Flower ":"Season ") + i + "</button>"; }
+                    h += "</div>";
+        } else if (kind === "honour") {
+                    h += "<div class=\"label\">Which honour tile?</div><div class=\"grid2\">";
+                    HONOURS.forEach(function(t){ h += "<button class=\"chip-btn\" onclick=\"zimoLastCardHonour('" + t[0] + "')\">" + t[1] + "</button>"; });
+                    h += "</div>";
+        }
+        qs("lcSub").innerHTML = h;
+  }
+  function zimoLastCardValue(kind, n){ var d = {kind:kind}; d.tileNumber = n; Z.lastCardDraws.push(d); zimoAdvanceLastCard(); }
+  function zimoLastCardHonour(tile){ Z.lastCardDraws.push({kind:"honour", honourTile:tile}); zimoAdvanceLastCard(); }
+  function zimoAdvanceLastCard(){
+      var need = Z.handContainsJoker ? 1 : 2;
+      Z.lcIndex++;
+      if (Z.lcIndex >= need) { Z.step = 6; }
+      renderZimo();
+  }
+  function zimoSubmit(){
+      var loserDefensesArr = Object.keys(Z.loserDefenses).map(function(pid){
+            var ld = Z.loserDefenses[pid];
+            return {playerId: parseInt(pid,10), existingFlowers: ld.flowers, existingSeasons: ld.seasons};
+      });
+      apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, handContainsJoker:Z.handContainsJoker, existingFlowers:Z.existingFlowers, existingSeasons:Z.existingSeasons, lastCardDraws:Z.lastCardDraws, loserDefenses:loserDefensesArr}).then(function(res){
+            if (!res.ok) { alert(res.data.error || "Could not record win"); return; }
+            closeModal("modalZimo");
+            loadFinishedFull();
+      });
+  }
+  var K = null;
 function openKong(){ K = { step:1, type:null, kongerId:null, discardedByPlayerId:null }; renderKong(); showModal("modalKong"); }
 function renderKong(){
   var h = "";
