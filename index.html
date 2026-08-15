@@ -56,6 +56,13 @@
     width: 160px; height: 160px;
     background: radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%);
     border-radius: 50%;
+    /* Lingkaran ini murni dekoratif, tapi karena posisinya absolute dengan
+       z-index:auto, browser mengecatnya DI ATAS tombol "..." (.more-btn)
+       yang non-positioned — jadi tanpa ini, klik ke tombol titik-tiga di
+       pojok kanan atas suka "ketelan" oleh lingkaran ini dan menu tidak
+       kebuka. pointer-events:none memastikan lingkaran ini tidak pernah
+       menangkap klik/tap sama sekali. */
+    pointer-events: none;
   }
 
   .header-nav {
