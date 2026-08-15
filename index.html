@@ -713,6 +713,7 @@
   </div>
   <div class="more-menu" id="moreMenu">
     <div class="more-menu-item" onclick="openLeaderboardHome()"><span class="mi-ic">&#x1F3C6;</span> Leaderboard Mahjong</div>
+    <div class="more-menu-item" onclick="window.location.href='/kombinasi.html'"><span class="mi-ic">🀄</span> Kamus Kombinasi</div>
   </div>
 
   <!-- CURVE TRANSITION -->
@@ -764,21 +765,21 @@
 <!-- LOKASI -->
     <div class="card">
       <div class="section-label">Pilih Lokasi</div>
-      <div class="location-row selected" id="locBanana" onclick="selectLocation('banana')">
+      <div class="location-row selected" id="locBanana" onclick="selectLocation('surabaya')">
         <div class="loc-icon">📍</div>
         <div class="loc-text">
           <strong>Banana Leaf, Graha Famili</strong>
-        <span>Lantai 2 — Surabaya Barat · Self check-in</span>
+        <span>Lantai 1–2 — Surabaya Barat · Self check-in</span>
         </div>
       <div class="loc-check">✓</div>
       </div>
-    <div class="location-row disabled" id="locDenpasar" onclick="selectLocation('denpasar')" style="margin-top:10px;">
+    <div class="location-row" id="locDenpasar" onclick="selectLocation('denpasar')" style="margin-top:10px;">
     <div class="loc-icon">📍</div>
     <div class="loc-text">
     <strong>Denpasar, Bali</strong>
-    <span>Segera hadir</span>
+    <span>3 Meja — Spring, Winter & Autumn Table</span>
     </div>
-    <div class="loc-badge">Coming Soon</div>
+    <div class="loc-check" style="display:none;">✓</div>
     </div>
     </div>
 
@@ -806,7 +807,7 @@
       <div class="duration-row">
         <div>
           <div class="duration-label" id="durationLabel">2 Jam</div>
-          <div class="duration-hint">Rp 50.000 / jam per meja</div>
+          <div class="duration-hint" id="durationHint">Rp 50.000 / jam per meja</div>
         </div>
         <div class="stepper">
           <button class="step-btn" onclick="changeDuration(-1)">−</button>
@@ -984,7 +985,26 @@
     { time: '23:00', satOnly: true },
   ];
 
-  const TOTAL_TABLES = 5;
+  // Dua set meja: Surabaya (Banana Leaf) dan Denpasar, Bali. Rate per meja
+  // per jam disimpan di masing-masing (semua Rp 50rb/jam, KECUALI Autumn
+  // Table — meja manual Denpasar — yang Rp 30rb/jam). tableData / TOTAL_TABLES
+  // di bawah menunjuk ke set yang sedang aktif dan berubah lewat selectLocation().
+  const tableDataSurabaya = [
+    { id: '1', name: 'Bamboo Table', floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🎋', avail: true, bookedBy: null },
+    { id: '2', name: 'Orchid Table',  floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🌸', avail: true, bookedBy: null },
+    { id: '3', name: 'Lotus Table',  floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🪷', avail: true, bookedBy: null },
+    { id: '4', name: 'Sakura Table', floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🌺', avail: true, bookedBy: null },
+    { id: '5', name: 'Dragon Table', floor: 'Lantai 1', cap: '4 orang', rate: 50000, emoji: '🐉', avail: true, bookedBy: null },
+  ];
+  const tableDataDenpasar = [
+    { id: 'b1', name: 'Spring Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '🌱', avail: true, bookedBy: null },
+    { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', avail: true, bookedBy: null },
+    { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', avail: true, bookedBy: null },
+  ];
+
+  let currentLocation = 'surabaya';
+  let tableData = tableDataSurabaya;
+  let TOTAL_TABLES = tableData.length;
 
   function getTimeData(isSaturday) {
     return allTimeSlots
@@ -994,15 +1014,7 @@
 
   let timeData = getTimeData(false);
 
-  const tableData = [
-    { id: '1', name: 'Bamboo Table', floor: 'Lantai 2', cap: '4 orang', avail: true, bookedBy: null },
-    { id: '2', name: 'Orchid Table',  floor: 'Lantai 2', cap: '4 orang', avail: true, bookedBy: null },
-    { id: '3', name: 'Lotus Table',  floor: 'Lantai 2', cap: '4 orang', avail: true, bookedBy: null },
-    { id: '4', name: 'Sakura Table', floor: 'Lantai 2', cap: '4 orang', avail: true, bookedBy: null },
-    { id: '5', name: 'Dragon Table', floor: 'Lantai 1', cap: '4 orang', avail: true, bookedBy: null },
-  ];
-
-  // Bookings per date: { [dateKey]: { [time]: { [tableId]: customerName } } }
+  // Bookings per lokasi+tanggal: { [location|dateKey]: { [time]: { [tableId]: customerName } } }
   let bookingsCache = {};
 
   // === STATE ===
@@ -1013,9 +1025,10 @@
 
   // === LOAD BOOKINGS FOR DATE ===
   async function loadBookingsForDate(dateKey) {
-    if (bookingsCache[dateKey]) return;
+    const cacheKey = currentLocation + '|' + dateKey;
+    if (bookingsCache[cacheKey]) return;
     try {
-      const res = await fetch(`/api/bookings?date=${dateKey}&location=surabaya`);
+      const res = await fetch(`/api/bookings?date=${dateKey}&location=${currentLocation}`);
       const rows = await res.json();
       // Simpan per meja sebagai daftar sesi (bukan hanya per jam mulai),
       // supaya kita bisa bedakan booking yang masih terjadwal normal
@@ -1034,9 +1047,9 @@
           status: b.status
         });
       });
-      bookingsCache[dateKey] = byTable;
+      bookingsCache[cacheKey] = byTable;
     } catch (e) {
-      bookingsCache[dateKey] = {};
+      bookingsCache[cacheKey] = {};
     }
   }
 
@@ -1068,7 +1081,7 @@
   function applyBookings() {
     if (selectedDate === null) return;
     const dateKey = dateData[selectedDate].dateKey;
-    const byTable = bookingsCache[dateKey] || {};
+    const byTable = bookingsCache[currentLocation + '|' + dateKey] || {};
     const isToday = dateKey === getTodayKeyWIB();
     const nowHour = getNowWIB().getHours();
 
@@ -1177,11 +1190,7 @@
       const crossFloor = activeFloor && t.floor !== activeFloor;
       const maxReached = selectedTables.length >= 4 && !isSelected;
       const isDisabled = !t.avail || crossFloor || maxReached;
-      const emoji = t.name === 'Dragon Table' ? '🐉' :
-                    t.name === 'Bamboo Table' ? '🎋' :
-                    t.name === 'Orchid Table'  ? '🌸' :
-                    t.name === 'Lotus Table'  ? '🪷' :
-                    t.name === 'Sakura Table' ? '🌺' : '🀄';
+      const emoji = t.emoji || '🀄';
       const tagLabel = !t.avail
         ? `Terisi · ${typeof t.bookedBy === 'object' ? t.bookedBy?.customerName : t.bookedBy || '—'}`
         : crossFloor ? 'Beda lantai'
@@ -1247,7 +1256,12 @@
     }
 
     document.getElementById('sumDur').textContent = duration + ' jam';
-    const total = 50000 * duration * Math.max(selectedTables.length, 1);
+    // Total dihitung dari tarif ASLI tiap meja (bukan flat 50rb) supaya
+    // Autumn Table (meja manual Denpasar, 30rb/jam) terhitung benar.
+    const perHourTotal = selectedTables.length > 0
+      ? selectedTables.reduce((sum, i) => sum + (tableData[i].rate || 50000), 0)
+      : (tableData[0] ? tableData[0].rate : 50000);
+    const total = perHourTotal * duration;
     document.getElementById('sumPrice').textContent = 'Rp ' + total.toLocaleString('id-ID');
   }
 
@@ -1262,9 +1276,48 @@ function closeCommunity() {
 
   // === LOCATION SELECTOR ===
   function selectLocation(loc) {
-    if (loc === 'denpasar') {
-      alert('Lokasi Denpasar, Bali akan segera hadir! Booking untuk cabang ini belum dibuka. Silakan booking di Banana Leaf, Graha Famili dulu ya.');
-      return;
+    if (loc === currentLocation) return;
+    currentLocation = loc;
+    tableData = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+    TOTAL_TABLES = tableData.length;
+
+    // Update kartu lokasi (checkmark & border aktif)
+    const bananaRow = document.getElementById('locBanana');
+    const denpasarRow = document.getElementById('locDenpasar');
+    if (bananaRow) {
+      bananaRow.classList.toggle('selected', loc === 'surabaya');
+      const chk = bananaRow.querySelector('.loc-check');
+      if (chk) chk.style.display = loc === 'surabaya' ? '' : 'none';
+    }
+    if (denpasarRow) {
+      denpasarRow.classList.toggle('selected', loc === 'denpasar');
+      const chk = denpasarRow.querySelector('.loc-check');
+      if (chk) chk.style.display = loc === 'denpasar' ? '' : 'none';
+    }
+
+    // Update keterangan tarif di kartu Durasi
+    const hint = document.getElementById('durationHint');
+    if (hint) {
+      hint.textContent = loc === 'denpasar'
+        ? 'Rp 50.000/jam (Spring & Winter) · Rp 30.000/jam (Autumn)'
+        : 'Rp 50.000 / jam per meja';
+    }
+
+    // Reset pilihan meja/waktu — meja lokasi lama tidak berlaku di lokasi baru
+    selectedTables = [];
+    selectedTime = null;
+    timeData = selectedDate !== null ? getTimeData(dateData[selectedDate].isSaturday) : getTimeData(false);
+
+    renderTables();
+    renderTimes();
+    updateSummary();
+
+    if (selectedDate !== null) {
+      loadBookingsForDate(dateData[selectedDate].dateKey).then(() => {
+        applyBookings();
+        renderTimes();
+        renderTables();
+      });
     }
   }
 
@@ -1288,11 +1341,12 @@ function closeCommunity() {
     const t = timeData[selectedTime];
     const tbs = selectedTables.map(i => tableData[i]);
     const notes = document.querySelector('.notes-input').value;
-    const totalNum = 50000 * duration * tbs.length;
+    const totalNum = tbs.reduce((sum, tb) => sum + (tb.rate || 50000), 0) * duration;
     const totalHarga = totalNum.toLocaleString('id-ID');
 
-    // Store pending data
-    _pendingBookingData = { customerName, customerPhone, d, t, tbs, notes, totalHarga, totalNum, duration };
+    // Store pending data (termasuk lokasi saat ini, supaya konsisten walau
+    // ada perubahan state lain sebelum proceedBooking() benar-benar jalan)
+    _pendingBookingData = { customerName, customerPhone, d, t, tbs, notes, totalHarga, totalNum, duration, location: currentLocation };
 
     // Show confirm modal
     const mejaNota = tbs.length > 1 ? ` (${tbs.length} meja)` : '';
@@ -1312,7 +1366,7 @@ function closeCommunity() {
   async function proceedBooking() {
     closeConfirmModal();
     if (!_pendingBookingData) return;
-    const { customerName, customerPhone, d, t, tbs, notes, totalHarga, duration: bookingDuration } = _pendingBookingData;
+    const { customerName, customerPhone, d, t, tbs, notes, totalHarga, duration: bookingDuration, location: bookingLocation } = _pendingBookingData;
 
     // Save to database
     let bookingCode = '';
@@ -1322,7 +1376,7 @@ function closeCommunity() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerName, customerContact: customerPhone,
           date: d.dateKey, time: t.time, tableId: tb.id, tableName: tb.name,
-          floor: tb.floor, duration: bookingDuration, notes, location: 'surabaya' })
+          floor: tb.floor, duration: bookingDuration, notes, location: bookingLocation })
       }).then(async r => {
         if (r.status === 409) {
           const err = await r.json();
@@ -1331,12 +1385,12 @@ function closeCommunity() {
         return r.json();
       })));
       bookingCode = results[0]?.bookingCode || '';
-      delete bookingsCache[d.dateKey];
+      delete bookingsCache[bookingLocation + '|' + d.dateKey];
     } catch (e) {
       if (e.message && e.message.includes('sudah dipesan')) {
         alert('⚠️ ' + e.message);
         if (selectedDate !== null) {
-          delete bookingsCache[dateData[selectedDate].dateKey];
+          delete bookingsCache[currentLocation + '|' + dateData[selectedDate].dateKey];
           await loadBookingsForDate(dateData[selectedDate].dateKey);
           applyBookings(); renderTimes(); renderTables();
         }

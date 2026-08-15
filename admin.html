@@ -537,11 +537,14 @@
           <label>Meja</label>
           <select id="ci_table">
             <option value="">Pilih meja</option>
-            <option value="1|Bamboo Table|Lantai 2">🎋 Bamboo — Lt.2</option>
-            <option value="2|Orchid Table|Lantai 2">🌸 Orchid — Lt.2</option>
-            <option value="3|Lotus Table|Lantai 2">🪷 Lotus — Lt.2</option>
-            <option value="4|Sakura Table|Lantai 2">🌺 Sakura — Lt.2</option>
-            <option value="5|Dragon Table|Lantai 1">🐉 Dragon — Lt.1</option>
+            <option value="1|Bamboo Table|Lantai 2|surabaya">🎋 Bamboo — Lt.2 (Sby)</option>
+            <option value="2|Orchid Table|Lantai 2|surabaya">🌸 Orchid — Lt.2 (Sby)</option>
+            <option value="3|Lotus Table|Lantai 2|surabaya">🪷 Lotus — Lt.2 (Sby)</option>
+            <option value="4|Sakura Table|Lantai 2|surabaya">🌺 Sakura — Lt.2 (Sby)</option>
+            <option value="5|Dragon Table|Lantai 1|surabaya">🐉 Dragon — Lt.1 (Sby)</option>
+            <option value="b1|Spring Table|Denpasar, Bali|denpasar">🌱 Spring — Bali</option>
+            <option value="b2|Winter Table|Denpasar, Bali|denpasar">❄️ Winter — Bali</option>
+            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali</option>
           </select>
         </div>
         <div class="form-group">
@@ -587,11 +590,14 @@
           <label>Meja</label>
           <select id="mi_table">
             <option value="">Pilih meja</option>
-            <option value="1|Bamboo Table|Lantai 2">🎋 Bamboo — Lt.2</option>
-            <option value="2|Orchid Table|Lantai 2">🌸 Orchid — Lt.2</option>
-            <option value="3|Lotus Table|Lantai 2">🪷 Lotus — Lt.2</option>
-            <option value="4|Sakura Table|Lantai 2">🌺 Sakura — Lt.2</option>
-            <option value="5|Dragon Table|Lantai 1">🐉 Dragon — Lt.1</option>
+            <option value="1|Bamboo Table|Lantai 2|surabaya">🎋 Bamboo — Lt.2 (Sby)</option>
+            <option value="2|Orchid Table|Lantai 2|surabaya">🌸 Orchid — Lt.2 (Sby)</option>
+            <option value="3|Lotus Table|Lantai 2|surabaya">🪷 Lotus — Lt.2 (Sby)</option>
+            <option value="4|Sakura Table|Lantai 2|surabaya">🌺 Sakura — Lt.2 (Sby)</option>
+            <option value="5|Dragon Table|Lantai 1|surabaya">🐉 Dragon — Lt.1 (Sby)</option>
+            <option value="b1|Spring Table|Denpasar, Bali|denpasar">🌱 Spring — Bali</option>
+            <option value="b2|Winter Table|Denpasar, Bali|denpasar">❄️ Winter — Bali</option>
+            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali</option>
           </select>
         </div>
         <div class="form-group">
@@ -808,11 +814,14 @@
 
   // ── TIMELINE ──────────────────────────────────────────────
   const TABLES = [
-    { id:'1', name:'Bamboo Table', floor:'Lantai 2', emoji:'🎋' },
-    { id:'2', name:'Orchid Table',  floor:'Lantai 2', emoji:'🌸' },
-    { id:'3', name:'Lotus Table',  floor:'Lantai 2', emoji:'🪷' },
-    { id:'4', name:'Sakura Table', floor:'Lantai 2', emoji:'🌺' },
-    { id:'5', name:'Dragon Table', floor:'Lantai 1', emoji:'🐉' },
+    { id:'1', name:'Bamboo Table', floor:'Lantai 2', emoji:'🎋', location:'surabaya' },
+    { id:'2', name:'Orchid Table',  floor:'Lantai 2', emoji:'🌸', location:'surabaya' },
+    { id:'3', name:'Lotus Table',  floor:'Lantai 2', emoji:'🪷', location:'surabaya' },
+    { id:'4', name:'Sakura Table', floor:'Lantai 2', emoji:'🌺', location:'surabaya' },
+    { id:'5', name:'Dragon Table', floor:'Lantai 1', emoji:'🐉', location:'surabaya' },
+    { id:'b1', name:'Spring Table', floor:'Denpasar, Bali', emoji:'🌱', location:'denpasar' },
+    { id:'b2', name:'Winter Table', floor:'Denpasar, Bali', emoji:'❄️', location:'denpasar' },
+    { id:'b3', name:'Autumn Table', floor:'Denpasar, Bali', emoji:'🍂', location:'denpasar' },
   ];
   const HOURS = [10,11,12,13,14,15,16,17,18,19,20,21,22,23];
   const COL_W = 56; // px per hour
@@ -849,7 +858,15 @@
     // Divider line between floors
     let prevFloor = null;
 
-    TABLES.forEach(tbl => {
+    // Timeline hanya menampilkan meja di lokasi yang sedang dilihat
+    // (_viewLocation) — supaya staff Denpasar tidak melihat meja
+    // Surabaya dan sebaliknya. Super Admin dengan _viewLocation === 'all'
+    // tetap melihat semua meja (dikelompokkan otomatis lewat divider floor).
+    const visibleTables = (_viewLocation && _viewLocation !== 'all')
+      ? TABLES.filter(tbl => tbl.location === _viewLocation)
+      : TABLES;
+
+    visibleTables.forEach(tbl => {
       if (prevFloor && tbl.floor !== prevFloor) {
         html += `<div style="border-top:2px dashed rgba(28,58,46,0.15);margin:6px 0 10px;"></div>
                  <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">— ${tbl.floor} —</div>`;
@@ -1227,7 +1244,7 @@ async function loadStaff() {
     if (!name || !tableVal) { showToast('Nama dan meja wajib diisi!'); return; }
     if (_ciFree) notes = notes ? notes + ' [OWNER GRATIS]' : '[OWNER GRATIS]';
     else if (!_ciPaid) notes = notes ? notes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
-    const [tableId, tableName, floor] = tableVal.split('|');
+    const [tableId, tableName, floor, location] = tableVal.split('|');
     const now = new Date();
     const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const timeKey = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -1238,7 +1255,7 @@ async function loadStaff() {
         body: JSON.stringify({
           customerName: name, customerContact: contact,
           date: dateKey, time: timeKey,
-          tableId, tableName, floor,
+          tableId, tableName, floor, location,
           duration: 2, notes,
           status: 'checked_in',
           checkinAt: now.toISOString()
@@ -1464,11 +1481,14 @@ async function loadStaff() {
   <div class="form-group">
   <label>Meja</label>
   <select id="corrTable">
-  <option value="1|Bamboo Table|Lantai 2">Bamboo Table — Lt. 2</option>
-  <option value="2|Orchid Table|Lantai 2">Orchid Table — Lt. 2</option>
-  <option value="3|Lotus Table|Lantai 2">Lotus Table — Lt. 2</option>
-  <option value="4|Sakura Table|Lantai 2">Sakura Table — Lt. 2</option>
-  <option value="5|Dragon Table|Lantai 1">Dragon Table — Lt. 1</option>
+  <option value="1|Bamboo Table|Lantai 2|surabaya">Bamboo Table — Lt. 2 (Surabaya)</option>
+  <option value="2|Orchid Table|Lantai 2|surabaya">Orchid Table — Lt. 2 (Surabaya)</option>
+  <option value="3|Lotus Table|Lantai 2|surabaya">Lotus Table — Lt. 2 (Surabaya)</option>
+  <option value="4|Sakura Table|Lantai 2|surabaya">Sakura Table — Lt. 2 (Surabaya)</option>
+  <option value="5|Dragon Table|Lantai 1|surabaya">Dragon Table — Lt. 1 (Surabaya)</option>
+  <option value="b1|Spring Table|Denpasar, Bali|denpasar">Spring Table — Denpasar, Bali</option>
+  <option value="b2|Winter Table|Denpasar, Bali|denpasar">Winter Table — Denpasar, Bali</option>
+  <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali</option>
   </select>
   </div>
   <div class="form-group">
@@ -1978,7 +1998,7 @@ async function loadStaff() {
     }
     if (!_miPaid) notes = notes ? notes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
 
-    const [tableId, tableName, floor] = tableVal.split('|');
+    const [tableId, tableName, floor, location] = tableVal.split('|');
 
     try {
       const res = await fetch('/api/bookings', {
@@ -1986,7 +2006,7 @@ async function loadStaff() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerName: name, customerContact: contact,
-          date, time, tableId, tableName, floor,
+          date, time, tableId, tableName, floor, location,
           duration, notes, status: 'confirmed'
         })
       });
@@ -2030,6 +2050,29 @@ async function loadStaff() {
       const laporanLink = document.getElementById('laporanLink');
       if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
     setupLocationSwitcher();
+    filterWalkinTableOptions();
+  }
+
+  // Sembunyikan pilihan meja dari lokasi lain di form Walk-in / Input Manual
+  // — staff Surabaya cuma lihat meja Surabaya, staff Denpasar cuma lihat
+  // meja Denpasar. Super Admin melihat semua meja saat _viewLocation = 'all',
+  // atau meja lokasi yang sedang dipilih di dropdown lokasi.
+  function filterWalkinTableOptions() {
+    const relevantLoc = isSuperAdmin
+      ? (_viewLocation === 'all' ? null : _viewLocation)
+      : _authLocation;
+    ['ci_table', 'mi_table'].forEach(selId => {
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return; // placeholder "Pilih meja"
+        const optLoc = opt.value.split('|')[3];
+        const show = !relevantLoc || optLoc === relevantLoc;
+        opt.hidden = !show;
+        opt.disabled = !show;
+      });
+      if (sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value = '';
+    });
   }
 
   function setupLocationSwitcher() {
@@ -2047,6 +2090,7 @@ async function loadStaff() {
     const sel = document.getElementById('locationSwitcher');
     if (!sel) return;
     _viewLocation = sel.value;
+    filterWalkinTableOptions();
     loadBookings(true);
   }
   // === PASSWORD GATE ===
@@ -2120,11 +2164,14 @@ async function loadStaff() {
         <div class="form-group">
           <label>Meja</label>
           <select id="editTable">
-            <option value="1|Bamboo Table|Lantai 2">Bamboo Table — Lt. 2</option>
-            <option value="2|Orchid Table|Lantai 2">Orchid Table — Lt. 2</option>
-            <option value="3|Lotus Table|Lantai 2">Lotus Table — Lt. 2</option>
-            <option value="4|Sakura Table|Lantai 2">Sakura Table — Lt. 2</option>
-            <option value="5|Dragon Table|Lantai 1">Dragon Table — Lt. 1</option>
+            <option value="1|Bamboo Table|Lantai 2|surabaya">Bamboo Table — Lt. 2 (Surabaya)</option>
+            <option value="2|Orchid Table|Lantai 2|surabaya">Orchid Table — Lt. 2 (Surabaya)</option>
+            <option value="3|Lotus Table|Lantai 2|surabaya">Lotus Table — Lt. 2 (Surabaya)</option>
+            <option value="4|Sakura Table|Lantai 2|surabaya">Sakura Table — Lt. 2 (Surabaya)</option>
+            <option value="5|Dragon Table|Lantai 1|surabaya">Dragon Table — Lt. 1 (Surabaya)</option>
+            <option value="b1|Spring Table|Denpasar, Bali|denpasar">Spring Table — Denpasar, Bali</option>
+            <option value="b2|Winter Table|Denpasar, Bali|denpasar">Winter Table — Denpasar, Bali</option>
+            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali</option>
           </select>
         </div>
         <div class="form-group">
