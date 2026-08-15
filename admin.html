@@ -194,6 +194,7 @@
   .badge-paylater { background: rgba(26,102,53,0.1); color: #1a6635; border: 1px solid rgba(26,102,53,0.3); }
   .badge-checked_in { background: rgba(52,120,246,0.12); color: #1a5fc8; }
   .badge-longplay { background: rgba(255,152,0,0.15); color: #c66900; border: 1.5px solid rgba(255,152,0,0.4); font-weight: 700; animation: pulseWarning 2s ease-in-out infinite; }
+  .badge-ownerfree { background: rgba(155,89,182,0.14); color: #6c3483; border: 1px solid rgba(155,89,182,0.35); }
   @keyframes pulseWarning { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
   .badge-completed { background: rgba(28,58,46,0.1); color: var(--green-dark); }
   .badge-paylater { background: rgba(26,102,53,0.1); color: #1a6635; border: 1px solid rgba(26,102,53,0.3); }
@@ -425,6 +426,12 @@
     color: #7a5c00;
   }
 
+  .paid-toggle button.active-free {
+    background: rgba(155,89,182,0.16);
+    border-color: #9b59b6;
+    color: #6c3483;
+  }
+
   .paid-toggle button.active-paid {
     background: rgba(74,140,104,0.15);
     border-color: var(--green-mid);
@@ -549,6 +556,7 @@
       <div class="paid-toggle">
         <button type="button" id="ci_paid_no" class="active-unpaid" onclick="setPaidStatus('ci', false)">🕐 Belum Bayar</button>
         <button type="button" id="ci_paid_yes" onclick="setPaidStatus('ci', true)">💰 Sudah Bayar</button>
+        <button type="button" id="ci_paid_free" onclick="setCiFree()" title="Owner main tanpa bayar — dapat kode booking, meja langsung aktif">🎁 Gratis (Owner)</button>
       </div>
       <button class="btn btn-success" onclick="submitCheckin()" style="width:100%;padding:13px;font-size:14px;">⚡ Check-in Sekarang</button>
     </div>
@@ -939,6 +947,7 @@
         }
       }
       const isPayLater = (b.status === 'confirmed' || b.status === 'checked_in') && b.notes && b.notes.includes('[BAYAR NANTI]');
+      const isOwnerFree = b.notes && b.notes.includes('[OWNER GRATIS]');
 
       // Deteksi sudah main terlalu lama (>5 jam) tapi belum checkout
       let longPlayWarning = '';
@@ -952,14 +961,16 @@
         }
       }
 
-      const badgeLabel = (isPayLater && b.status === 'confirmed') ? '🕐 Bayar Saat Checkout'
+      const badgeLabel = (isOwnerFree && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main Gratis (Owner)${longPlayWarning}` : '🎁 Main Gratis (Owner)')
+        : (isOwnerFree && b.status === 'completed') ? '🎁 Selesai (Gratis)'
+        : (isPayLater && b.status === 'confirmed') ? '🕐 Bayar Saat Checkout'
         : (isPayLater && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main, Bayar Nanti${longPlayWarning}` : '🎮 Main (Bayar Nanti)')
         : b.status === 'confirmed' ? '✅ Lunas'
         : b.status === 'pending' ? pendingLabel
         : b.status === 'checked_in' ? (isLongPlay ? `⚠️ Sedang Main${longPlayWarning}` : '🎮 Sedang Main')
         : b.status === 'completed' ? '🏁 Selesai'
         : '❌ Batal';
-      const badgeClassFinal = isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
+      const badgeClassFinal = isOwnerFree ? 'badge-ownerfree' : isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
       const endHour = String(parseInt(b.time) + b.duration).padStart(2,'0');
       const isAdmin = userRole === 'admin';
       // Checkin time display
@@ -1181,13 +1192,31 @@ async function loadStaff() {
   // false = belum bayar (bayar nanti saat checkout), true = sudah bayar di muka
   let _ciPaid = false;
   let _miPaid = false;
+  // true = booking gratis untuk owner (main tanpa bayar sama sekali, checkout Rp 0).
+  // Hanya berlaku untuk tab Walk-in Sekarang ('ci') — bukan Input Manual.
+  let _ciFree = false;
 
   function setPaidStatus(prefix, paid) {
-    if (prefix === 'ci') _ciPaid = paid; else _miPaid = paid;
+    if (prefix === 'ci') { _ciPaid = paid; _ciFree = false; } else _miPaid = paid;
     const noBtn = document.getElementById(prefix + '_paid_no');
     const yesBtn = document.getElementById(prefix + '_paid_yes');
     noBtn.className = paid ? '' : 'active-unpaid';
     yesBtn.className = paid ? 'active-paid' : '';
+    if (prefix === 'ci') {
+      const freeBtn = document.getElementById('ci_paid_free');
+      if (freeBtn) freeBtn.className = '';
+    }
+  }
+
+  // Toggle "Gratis (Owner)" — dipakai owner/staff pas mau main sendiri tanpa
+  // bayar. Tetap dapat kode booking & langsung checked_in seperti walk-in
+  // biasa, cuma ditandai [OWNER GRATIS] supaya checkout-nya otomatis Rp 0.
+  function setCiFree() {
+    _ciFree = true;
+    _ciPaid = false;
+    document.getElementById('ci_paid_no').className = '';
+    document.getElementById('ci_paid_yes').className = '';
+    document.getElementById('ci_paid_free').className = 'active-free';
   }
 
   async function submitCheckin() {
@@ -1196,7 +1225,8 @@ async function loadStaff() {
     const contact = document.getElementById('ci_contact').value.trim();
     let notes = document.getElementById('ci_notes').value.trim();
     if (!name || !tableVal) { showToast('Nama dan meja wajib diisi!'); return; }
-    if (!_ciPaid) notes = notes ? notes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
+    if (_ciFree) notes = notes ? notes + ' [OWNER GRATIS]' : '[OWNER GRATIS]';
+    else if (!_ciPaid) notes = notes ? notes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
     const [tableId, tableName, floor] = tableVal.split('|');
     const now = new Date();
     const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -1219,7 +1249,9 @@ async function loadStaff() {
         showToast(err.error ? `⚠️ ${err.error}` : 'Gagal check-in. Coba lagi.');
         return;
       }
-      showToast(`⚡ ${name} check-in di ${tableName}!`);
+      const created = await res.json().catch(() => null);
+      const codeSuffix = created?.bookingCode ? ` — kode ${created.bookingCode}` : '';
+      showToast(_ciFree ? `🎁 ${name} main gratis di ${tableName}${codeSuffix}!` : `⚡ ${name} check-in di ${tableName}${codeSuffix}!`);
       document.getElementById('ci_name').value = '';
       document.getElementById('ci_table').value = '';
       document.getElementById('ci_contact').value = '';
@@ -1445,6 +1477,7 @@ async function loadStaff() {
   <option value="tunai">Tunai</option>
   <option value="qris">QRIS</option>
   <option value="debit">Debit</option>
+  <option value="gratis">Gratis (Owner)</option>
   </select>
   </div>
   <div class="form-group">
@@ -1520,7 +1553,7 @@ async function loadStaff() {
       `<b>👤</b> ${escHtml(b.customerName.replace(' (walk-in)',''))}<br>` +
       `<b>🀄</b> ${escHtml(b.tableName)} (${escHtml(b.floor)})<br>` +
       `<b>🎫</b> ${b.bookingCode || 'Walk-in'}<br>` +
-      `<b>💳</b> ${b.paymentMethod === 'tunai' ? 'Tunai' : b.paymentMethod === 'qris' ? 'QRIS' : b.paymentMethod === 'debit' ? 'Debit BCA' : '—'}`;
+      `<b>💳</b> ${b.paymentMethod === 'tunai' ? 'Tunai' : b.paymentMethod === 'qris' ? 'QRIS' : b.paymentMethod === 'debit' ? 'Debit BCA' : b.paymentMethod === 'gratis' ? '🎁 Gratis (Owner)' : '—'}`;
 
     b._diffMins = mins;
     b._actualMins = mins;
@@ -1569,7 +1602,8 @@ async function loadStaff() {
     // Toleransi 10 menit: 2j10m=2jam, 2j11m=3jam
     const billableHours = Math.max(1, Math.ceil((diffMins - 10) / 60));
     const roundedMins = billableHours * 60;
-    const totalRp = billableHours * 50000;
+    const isOwnerFree = !!(b.notes && b.notes.includes('[OWNER GRATIS]'));
+    const totalRp = isOwnerFree ? 0 : billableHours * 50000;
 
     // Update UI
     const checkinStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
@@ -1606,11 +1640,31 @@ async function loadStaff() {
       `<b>🀄</b> ${escHtml(b.tableName)} (${escHtml(b.floor)})<br>` +
       `<b>🎫</b> ${b.bookingCode || 'Walk-in'}`;
 
-    if (_posPayment === null) {
+    // Booking gratis untuk owner — sembunyikan pilihan metode bayar (tidak
+    // relevan, totalnya sudah Rp 0) dan langsung aktifkan tombol selesai.
+    const paymentSection = document.getElementById('posPaymentSection');
+    const gratisNotice = document.getElementById('posGratisNotice');
+    if (paymentSection) paymentSection.style.display = isOwnerFree ? 'none' : 'block';
+    if (gratisNotice) gratisNotice.style.display = isOwnerFree ? 'block' : 'none';
+    document.getElementById('tunaiSection').style.display = 'none';
+
+    if (isOwnerFree) {
+      selectPaymentGratis();
+    } else if (_posPayment === null || _posPayment === 'gratis') {
       selectPayment(null);
       document.getElementById('cashReceived').value = '';
       document.getElementById('changeAmount').textContent = 'Rp 0';
     }
+  }
+
+  // Auto-pilih "gratis" untuk booking owner — total sudah Rp 0, tidak perlu
+  // pilih tunai/QRIS/debit, tinggal klik selesai.
+  function selectPaymentGratis() {
+    _posPayment = 'gratis';
+    const btn = document.getElementById('posCompleteBtn');
+    const skipBtn = document.getElementById('posSkipBtn');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+    if (skipBtn) { skipBtn.disabled = false; skipBtn.style.opacity = '1'; skipBtn.style.cursor = 'pointer'; }
   }
 
   // ── Edit jam checkout manual (untuk kasus lupa checkout) — KHUSUS ADMIN ──
@@ -1717,7 +1771,7 @@ async function loadStaff() {
     const actualM = (b._diffMins || 0) % 60;
     const actualStr = actualH > 0 ? `${actualH}j ${actualM}m` : `${actualM} mnt`;
     const durStr = `${billedHours} jam (aktual ${actualStr})`;
-    const payLabel = payMethod === 'tunai' ? 'Tunai' : payMethod === 'qris' ? 'QRIS' : 'Debit BCA';
+    const payLabel = payMethod === 'tunai' ? 'Tunai' : payMethod === 'qris' ? 'QRIS' : payMethod === 'gratis' ? 'Gratis (Owner)' : 'Debit BCA';
     const cashIn = receivedOverride != null ? receivedOverride : (parseInt(document.getElementById('cashReceived').value) || 0);
     const change = payMethod === 'tunai' ? cashIn - totalRp : 0;
     const dateStr = checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric',timeZone:'Asia/Jakarta'});
@@ -2142,6 +2196,9 @@ async function loadStaff() {
       </div>
 
       <!-- Payment method -->
+      <div id="posGratisNotice" style="display:none;margin-bottom:14px;background:rgba(155,89,182,0.12);border:1.5px solid rgba(155,89,182,0.35);border-radius:14px;padding:12px 14px;font-size:12.5px;color:#6c3483;font-weight:600;">
+        🎁 Booking gratis (Owner) — tanpa pembayaran, langsung checkout.
+      </div>
       <div id="posPaymentSection" style="margin-bottom:14px;">
         <div style="font-size:11px;font-weight:600;color:#7A7060;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Metode Pembayaran</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
