@@ -209,9 +209,14 @@ export default async (req: Request) => {
               const checkinAt = existing?.checkinAt ? new Date(existing.checkinAt) : checkoutAt;
               const diffMins = Math.max(0, Math.round((checkoutAt.getTime() - checkinAt.getTime()) / 60000));
               const billableHours = Math.max(1, Math.ceil((diffMins - 10) / 60));
+              // Booking gratis untuk owner (ditandai [OWNER GRATIS] di notes saat walk-in
+              // dibuat) selalu checkout Rp 0, terlepas dari apa yang dikirim klien —
+              // supaya konsisten dengan totalPaid lain yang dihitung ulang di server.
+              const isOwnerFree = !!(existing?.notes && existing.notes.includes("[OWNER GRATIS]"));
               updateData.checkoutAt = checkoutAt;
               updateData.actualDuration = diffMins; // durasi ASLI, bukan yang sudah dibulatkan
-            updateData.totalPaid = billableHours * 50000;
+            updateData.totalPaid = isOwnerFree ? 0 : billableHours * 50000;
+            if (isOwnerFree) updateData.paymentMethod = "gratis";
       }
 
       const [row] = await db.update(bookings).set(updateData).where(eq(bookings.id, id)).returning();
