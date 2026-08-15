@@ -1003,7 +1003,8 @@
            ${isAdmin ? `<button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
            <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>` : ''}`
         : b.status === 'checked_in'
-        ? `<button class="btn btn-success btn-sm" onclick="openPOS(${b.id})" title="Checkout & bayar">🧾 Checkout</button>`
+        ? `<button class="btn btn-success btn-sm" onclick="openPOS(${b.id})" title="Checkout & bayar">🧾 Checkout</button>
+           <button class="btn btn-sm" onclick="window.open('/mahjong.html?code=${encodeURIComponent(b.bookingCode || '')}', '_blank')" title="Bantu tamu input skor Mahjong untuk meja ini" style="background:rgba(28,58,46,0.06);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.15);font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">🀄 Input Skor</button>`
         : b.status === 'pending' && isAdmin
         ? `<button class="btn btn-success btn-sm" onclick="confirmBooking(${b.id})" title="Sudah transfer">✓ Lunas</button>
            <button class="btn btn-sm" onclick="confirmPayLater(${b.id})" title="Bayar saat checkout" style="background:#e8f4fd;color:#1a6635;border:1.5px solid #1a6635;font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">🕐 Bayar Nanti</button>
