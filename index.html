@@ -118,23 +118,29 @@
     filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
   }
 
-  .brand-name {
-    font-family: 'Playfair Display', serif;
-    color: white;
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    line-height: 1;
-    margin-bottom: 6px;
+  .page-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 7px 12px;
+    border: 1px solid rgba(232,201,122,0.35);
+    border-radius: 999px;
+    color: var(--gold-light);
+    font-size: 12px;
+    font-weight: 600;
   }
 
-  .brand-name span { color: var(--gold-light); }
-
-  .brand-tagline {
-    color: rgba(255,255,255,0.55);
-    font-size: 12px;
-    font-weight: 300;
-    letter-spacing: 1.5px;
+  .opening-badge {
+    display: inline-block;
+    margin-bottom: 5px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(201,168,76,0.16);
+    color: #8A6615;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
   }
 
@@ -143,6 +149,13 @@
     justify-content: center;
     gap: 24px;
     padding: 12px 0 0;
+  }
+
+  .header-location {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
   }
 
   .stat {
@@ -697,9 +710,14 @@
   <div class="header">
     <div class="header-nav">
       <button class="back-btn">←</button>
-      <a href="/status.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:20px;padding:8px 14px;color:white;font-size:12px;font-weight:600;">
-        🎫 Cek Booking
-      </a>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <a href="/mahjong.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:20px;padding:8px 12px;color:white;font-size:12px;font-weight:600;">
+          🀄 Catat Skor
+        </a>
+        <a href="/status.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:20px;padding:8px 12px;color:white;font-size:12px;font-weight:600;">
+          🎫 Cek Booking
+        </a>
+      </div>
       <div class="more-btn" onclick="toggleMoreMenu()">
         <div class="dot"></div>
         <div class="dot"></div>
@@ -709,12 +727,12 @@
 
     <div class="brand-section">
       <div class="logo-circle"><img src="https://raw.githubusercontent.com/LineJie/pungrsvp/main/images/Pung%20Logo.png" alt="Pung Pung Mahjong"></div>
-      <div class="brand-tagline">Makan · Main · Santai</div>
+      <div class="page-label">📅 Pilih Meja &amp; Jadwal</div>
 
       <div class="stats-strip">
-        <div class="stat"><span class="stat-icon">🀄</span> 5 Meja</div>
-        <div class="stat"><span class="stat-icon">📍</span> Lt. 2 Banana Leaf</div>
-        <div class="stat"><span class="stat-icon">⭐</span> 5</div>
+        <button class="stat header-location" type="button" onclick="document.getElementById('locBanana').closest('.card').scrollIntoView({behavior:'smooth', block:'center'})" aria-label="Pilih lokasi booking">
+          <span class="stat-icon">📍</span> <span id="headerLocation">Surabaya</span> · Ubah lokasi
+        </button>
       </div>
     </div>
   </div>
@@ -783,8 +801,10 @@
     <div class="location-row" id="locDenpasar" onclick="selectLocation('denpasar')" style="margin-top:10px;">
     <div class="loc-icon">📍</div>
     <div class="loc-text">
+    <div class="opening-badge">Opening Soon · Buka 23 Agustus</div>
     <strong>Denpasar, Bali</strong>
-    <span>3 Meja — Spring, Winter & Autumn Table</span>
+    <span>Lantai 2 The Magendra · Teuku Umar Barat No.888</span>
+    <span>3 Meja — Spring, Winter &amp; Autumn (Manual Mahjong)</span>
     </div>
     <div class="loc-check" style="display:none;">✓</div>
     </div>
@@ -936,7 +956,7 @@
     <button class="cta-btn" onclick="submitBooking()">
       <div class="cta-inner">
         <span>🀄</span>
-        <span>Konfirmasi Booking via WA</span>
+        <span>Lanjut ke Konfirmasi</span>
       </div>
     </button>
 
@@ -1006,7 +1026,7 @@
   const tableDataDenpasar = [
     { id: 'b1', name: 'Spring Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '🌱', avail: true, bookedBy: null },
     { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', avail: true, bookedBy: null },
-    { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', avail: true, bookedBy: null },
+    { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', note: 'Manual Mahjong', avail: true, bookedBy: null },
   ];
 
   let currentLocation = 'surabaya';
@@ -1212,7 +1232,7 @@
            onclick="${!isDisabled ? `selectTable(${i})` : ''}">
         <span class="table-emoji">${emoji}</span>
         <div class="table-name">${t.name}</div>
-        <div class="table-cap">📍 ${t.floor} · 👥 ${t.cap}${isSat && t.id === '5' ? '<br><span style=\'color:#C0392B;font-size:10px;font-weight:600;\'>⚠ Sabtu tutup 22:00</span>' : ''}</div>
+        <div class="table-cap">📍 ${t.floor} · 👥 ${t.cap}${t.note ? `<br><span style='color:#8A6615;font-size:10px;font-weight:700;'>🀄 ${t.note}</span>` : ''}${isSat && t.id === '5' ? '<br><span style=\'color:#C0392B;font-size:10px;font-weight:600;\'>⚠ Sabtu tutup 22:00</span>' : ''}</div>
         <span class="table-tag ${tagClass}">${tagLabel}</span>
       </div>`;
     }).join('');
@@ -1287,6 +1307,11 @@ function closeCommunity() {
     currentLocation = loc;
     tableData = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
     TOTAL_TABLES = tableData.length;
+
+    // Header hanya menunjukkan cabang aktif. Nama brand tetap konsisten,
+    // sedangkan alamat lengkap tersedia pada kartu pilihan lokasi di bawah.
+    const headerLocation = document.getElementById('headerLocation');
+    if (headerLocation) headerLocation.textContent = loc === 'denpasar' ? 'Opening Soon · Denpasar, Bali' : 'Surabaya';
 
     // Update kartu lokasi (checkmark & border aktif)
     const bananaRow = document.getElementById('locBanana');

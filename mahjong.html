@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Mahjong Score - Pung Pung</title>
+<title>Pung Pung Mahjong – Catat Skor Permainan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&family=Zilla+Slab:wght@600;700;900&family=Space+Mono:wght@400;700&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
 <style>
@@ -14,7 +14,10 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 .header{background:var(--green-dark);padding:26px 20px 30px;text-align:center;position:relative;}
 .back-link{position:absolute;left:16px;top:20px;color:rgba(255,255,255,0.6);text-decoration:none;font-size:13px;}
 .header-title{font-family:"Playfair Display",serif;color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;}
-.header-sub{font-size:12px;color:rgba(255,255,255,0.5);}
+.header-title span{color:var(--gold-light);}
+.header-sub{font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:1.4px;text-transform:uppercase;}
+.page-label{display:inline-flex;align-items:center;gap:6px;margin-top:13px;padding:7px 12px;border:1px solid rgba(232,201,122,0.35);border-radius:999px;color:var(--gold-light);font-size:12px;font-weight:600;}
+.header-context{margin-top:11px;font-size:12px;color:rgba(255,255,255,0.62);}
 .curve{height:22px;background:var(--green-dark);position:relative;}
 .curve:after{content:"";position:absolute;bottom:0;left:0;right:0;height:22px;background:var(--cream);border-radius:22px 22px 0 0;}
 .content{padding:8px 16px 24px;}
@@ -126,27 +129,28 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 <body>
 <div class="phone-frame" id="phoneFrame">
 <div class="header">
-<a href="/status.html" class="back-link">Back</a>
-<div style="font-size:26px;margin-bottom:6px;">&#x1F004;</div>
-<div class="header-title">Mahjong Score</div>
-<div class="header-sub" id="headerSub">Pung Pung Mahjong</div>
+<a href="/" class="back-link">← Booking</a>
+<div class="header-title">Pung Pung <span>Mahjong</span></div>
+<div class="header-sub">Mahjong Playroom</div>
+<div class="page-label">🀄 Catat Skor Permainan</div>
+<div class="header-context" id="headerSub">Masukkan kode booking untuk mulai</div>
 </div>
 <div class="curve"></div>
 <div class="content" id="content"></div>
 </div>
 <div class="bottom-nav" id="bottomNav" style="display:none">
-<div class="nav-item active" id="navScore" onclick="navClick('score')"><span class="ic">&#x1F004;</span>Score</div>
-<div class="nav-item" id="navHistory" onclick="navClick('history')"><span class="ic">&#x1F4DC;</span>History</div>
-<div class="nav-item" id="navStats" onclick="navClick('stats')"><span class="ic">&#x1F4CA;</span>Stats</div>
-<div class="nav-item" id="navLeaderboard" onclick="navClick('leaderboard')"><span class="ic">&#x1F3C6;</span>Ranking</div>
-<div class="nav-item" id="navFanGuide" onclick="window.location.href='/kombinasi.html'"><span class="ic">&#30058;</span>Fan Guide</div>
+<div class="nav-item active" id="navScore" onclick="navClick('score')"><span class="ic">&#x1F004;</span>Skor</div>
+<div class="nav-item" id="navHistory" onclick="navClick('history')"><span class="ic">&#x1F4DC;</span>Riwayat</div>
+<div class="nav-item" id="navStats" onclick="navClick('stats')"><span class="ic">&#x1F4CA;</span>Statistik</div>
+<div class="nav-item" id="navLeaderboard" onclick="navClick('leaderboard')"><span class="ic">&#x1F3C6;</span>Peringkat</div>
+<div class="nav-item" id="navFanGuide" onclick="window.location.href='/kombinasi.html'"><span class="ic">&#30058;</span>Panduan Fan</div>
 </div>
 <div class="modal-overlay" id="modalBreakdown"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalBreakdown')">&#x2715;</button><div class="modal-title" id="bdTitle">Score Breakdown</div><div id="bdBody"></div></div></div>
 <div class="modal-overlay" id="modalZimo"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalZimo')">&#x2715;</button><div class="modal-title">&#x1F004; Catat Kemenangan</div><div class="modal-step" id="zimoStepLbl"></div><div id="zimoBody"></div></div></div>
 <div class="modal-overlay" id="modalKong"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalKong')">&#x2715;</button><div class="modal-title">Kong</div><div class="modal-step" id="kongStepLbl"></div><div id="kongBody"></div></div></div>
-<div class="modal-overlay" id="modalHistory"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalHistory')">&#x2715;</button><div class="modal-title">My Mahjong History</div><div id="histBody"></div></div></div>
-<div class="modal-overlay" id="modalStats"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStats')">&#x2715;</button><div class="modal-title">My Mahjong Stats</div><div id="statsBody"></div></div></div>
-<div class="modal-overlay" id="modalLeaderboard"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalLeaderboard')">&#x2715;</button><div class="modal-title">Pung Pung Leaderboard</div><div id="lbBody"></div></div></div>
+<div class="modal-overlay" id="modalHistory"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalHistory')">&#x2715;</button><div class="modal-title">Riwayat Mahjong Saya</div><div id="histBody"></div></div></div>
+<div class="modal-overlay" id="modalStats"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStats')">&#x2715;</button><div class="modal-title">Statistik Mahjong Saya</div><div id="statsBody"></div></div></div>
+<div class="modal-overlay" id="modalLeaderboard"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalLeaderboard')">&#x2715;</button><div class="modal-title">Peringkat Pung Pung</div><div id="lbBody"></div></div></div>
 <script>
 var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score", lastPlayers:[], lastMyIndex:-1, lastSessionId:null, lastScoringSystem:null, sessionGamesCount:1, pickedScoringSystem:"hongkong" };
 var SCORING_SYSTEM_LABELS = { china: "China", hongkong: "Hongkong (Fan)" };
@@ -186,18 +190,18 @@ function closeModal(id){ qs(id).classList.remove("open"); }
 function init(){
   var params = new URLSearchParams(window.location.search);
   var code = params.get("code");
-  if (code) { qs("content").innerHTML = "<div class=\"muted\">Loading your booking...</div>"; loadBooking(code.toUpperCase()); }
+  if (code) { qs("content").innerHTML = "<div class=\"muted\">Memuat booking kamu...</div>"; loadBooking(code.toUpperCase()); }
   else { renderCodeScreen(); }
     if (params.get("leaderboard")) { openLeaderboard(); }
 }
 function renderCodeScreen(err){
   var h = "";
-  h += "<div class=\"card\"><div class=\"card-title\">Enter Your Booking Code</div>";
-  h += "<div class=\"label\">Booking Code</div>";
+  h += "<div class=\"card\"><div class=\"card-title\">Masukkan Kode Booking</div>";
+  h += "<div class=\"label\">Kode Booking</div>";
   h += "<input class=\"field\" id=\"codeInput\" placeholder=\"PP-XXXXXX\" maxlength=\"9\" style=\"text-transform:uppercase;letter-spacing:1.5px;\">";
   if (err) h += "<div class=\"error-msg\">" + esc(err) + "</div>";
-  h += "<button class=\"btn btn-primary\" onclick=\"submitCode()\">Continue &#8594;</button>";
-    h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; View Leaderboard</button>";
+  h += "<button class=\"btn btn-primary\" onclick=\"submitCode()\">Lanjut &#8594;</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; Lihat Peringkat</button>";
   h += "</div>";
   qs("content").innerHTML = h;
   qs("bottomNav").style.display = "none";
@@ -209,19 +213,20 @@ function submitCode(){
 }
 function loadBooking(code){
   apiGet("/api/bookings?code=" + encodeURIComponent(code)).then(function(res){
-    if (!res.ok || res.data.error) { renderCodeScreen("Booking code not found. Please check and try again."); return; }
+    if (!res.ok || res.data.error) { renderCodeScreen("Kode booking tidak ditemukan. Periksa lalu coba lagi."); return; }
     S.booking = res.data; S.code = code;
-    qs("headerSub").textContent = S.booking.tableName + " - " + S.booking.floor;
+    var locationName = S.booking.location === "denpasar" ? "Denpasar, Bali" : "Surabaya";
+    qs("headerSub").textContent = "📍 " + locationName + " · " + S.booking.tableName;
     if (S.booking.status !== "checked_in") { renderNotCheckedIn(); return; }
     qs("bottomNav").style.display = "flex";
     loadGameForBooking();
   });
 }
 function renderNotCheckedIn(){
-  var h = "<div class=\"card\"><div class=\"card-title\">Not Checked In Yet</div>";
-  h += "<div class=\"muted\">Mahjong Score is available once your table has been checked in by our staff. Please check in first, then come back here.</div>";
-  h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Check Booking Status</a>";
-  h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; View Leaderboard</button>";
+  var h = "<div class=\"card\"><div class=\"card-title\">Belum Check-in</div>";
+  h += "<div class=\"muted\">Pencatatan skor tersedia setelah meja kamu di-check-in oleh staff. Silakan check-in terlebih dahulu, lalu kembali ke sini.</div>";
+  h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Cek Status Booking</a>";
+  h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; Lihat Peringkat</button>";
   h += "</div>";
   qs("content").innerHTML = h;
   qs("bottomNav").style.display = "none";
@@ -246,17 +251,17 @@ function renderLobbyNoGame(){
   if (S.lastPlayers && S.lastPlayers.length === 4) { renderSamePlayersPrompt(); return; }
   var name = localStorage.getItem("mj_name") || "";
   var wa = localStorage.getItem("mj_wa") || "";
-  var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Start a Mahjong Game</div>";
-  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">No game yet at " + esc(S.booking.tableName) + ". Be the host and invite the other 3 players!</div>";
+  var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Mulai Permainan Mahjong</div>";
+  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">Belum ada permainan di " + esc(S.booking.tableName) + ". Jadilah host dan undang tiga pemain lainnya.</div>";
   h += "<div class=\"label\">Sistem Skor</div>";
   h += "<div class=\"grid2\" style=\"margin-bottom:12px;\">";
   h += "<button type=\"button\" class=\"chip-btn" + (S.pickedScoringSystem!=="china"?" selected":"") + "\" onclick=\"pickScoringSystem('hongkong')\">Hongkong (Fan)</button>";
   h += "<button type=\"button\" class=\"chip-btn" + (S.pickedScoringSystem==="china"?" selected":"") + "\" onclick=\"pickScoringSystem('china')\">China</button>";
   h += "</div>";
   h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">" + (S.pickedScoringSystem==="china" ? "Sistem lama: Zimo saja, poin flat + bonus Bunga/Musim/Kartu Terakhir." : "Sistem baru: 21 pola fan Hong Kong, bisa Zimo atau Hu.") + "</div>";
-  h += "<div class=\"label\">Your Name</div><input class=\"field\" id=\"hostName\" value=\"" + esc(name) + "\" placeholder=\"Your name\">";
-  h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"hostWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
-  h += "<button class=\"btn btn-gold\" onclick=\"createGame()\">Create Game</button>";
+  h += "<div class=\"label\">Nama Kamu</div><input class=\"field\" id=\"hostName\" value=\"" + esc(name) + "\" placeholder=\"Nama kamu\">";
+  h += "<div class=\"label\">Nomor WhatsApp</div><input class=\"field\" id=\"hostWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
+  h += "<button class=\"btn btn-gold\" onclick=\"createGame()\">Buat Permainan</button>";
   h += "</div>";
   qs("content").innerHTML = h;
 }
@@ -264,10 +269,10 @@ function pickScoringSystem(v){ S.pickedScoringSystem = v; renderLobbyNoGame(); }
 function createGame(){
   var name = qs("hostName").value.trim();
   var wa = qs("hostWa").value.trim();
-  if (!name) { alert("Please enter your name"); return; }
+  if (!name) { alert("Masukkan nama kamu terlebih dahulu"); return; }
   apiSend("/api/mahjong/games", "POST", {bookingId:S.booking.id, hostName:name, hostWaNumber:wa, scoringSystem:S.pickedScoringSystem}).then(function(res){
     if (!res.ok) {
-      alert(res.data.error || "Could not create game");
+      alert(res.data.error || "Permainan tidak dapat dibuat");
       loadGameForBooking();
       return;
     }
@@ -280,14 +285,14 @@ function createGame(){
 }
   function renderSamePlayersPrompt(){
     setNavScore();
-    var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Same 4 Players as Last Game?</div>";
-    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Start a new game at " + esc(S.booking.tableName) + " with the same players as before:</div>";
+    var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; Pakai 4 Pemain yang Sama?</div>";
+    h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Mulai permainan baru di " + esc(S.booking.tableName) + " dengan pemain yang sama:</div>";
     S.lastPlayers.forEach(function(p){
       h += "<div class=\"player-row\"><div><div class=\"pname\">" + esc(p.name) + "</div></div></div>";
     });
     h += "<div class=\"muted\" style=\"text-align:left;padding:6px 0 10px;\">Sistem skor: <b>" + esc(SCORING_SYSTEM_LABELS[S.lastScoringSystem] || SCORING_SYSTEM_LABELS.hongkong) + "</b> (lanjut sistem yang sama)</div>";
-    h += "<button class=\"btn btn-gold\" onclick=\"continueWithSamePlayers()\">Yes, Same 4 Players</button>";
-    h += "<button class=\"btn btn-outline\" onclick=\"startWithNewPlayers()\">No, Different Players</button>";
+    h += "<button class=\"btn btn-gold\" onclick=\"continueWithSamePlayers()\">Ya, Pakai 4 Pemain Ini</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"startWithNewPlayers()\">Tidak, Ganti Pemain</button>";
     h += "</div>";
     qs("content").innerHTML = h;
   }
@@ -320,39 +325,39 @@ function renderLobbyGame(){
   var mine = myPlayerId();
   var iJoined = S.players.some(function(p){ return p.id === mine; });
   var h = "<div class=\"card\"><div class=\"card-title\">&#x1F004; " + esc(S.booking.tableName) + "</div>";
-  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 4px;\">" + S.players.length + " of 4 players joined</div>";
+  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 4px;\">" + S.players.length + " dari 4 pemain sudah bergabung</div>";
   h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Sistem skor: <b>" + esc(SCORING_SYSTEM_LABELS[S.game.scoringSystem] || SCORING_SYSTEM_LABELS.hongkong) + "</b></div>";
   S.players.forEach(function(p){
     h += "<div class=\"player-row\"><div><div class=\"pname\">" + esc(p.name) + (p.id===mine ? "<span class=\"you-badge\">YOU</span>" : "") + "</div><div class=\"pseat\">Seat " + p.seatNumber + "</div></div></div>";
   });
   h += "</div>";
   if (S.players.length >= 4) {
-    h += "<button class=\"btn btn-gold\" onclick=\"startGame()\">Start Game</button>";
+    h += "<button class=\"btn btn-gold\" onclick=\"startGame()\">Mulai Permainan</button>";
   } else if (!iJoined) {
     var name = localStorage.getItem("mj_name") || ""; var wa = localStorage.getItem("mj_wa") || "";
-    h += "<div class=\"card\"><div class=\"card-title\">Join This Table</div>";
-    h += "<div class=\"label\">Your Name</div><input class=\"field\" id=\"joinName\" value=\"" + esc(name) + "\" placeholder=\"Your name\">";
-    h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"joinWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
-    h += "<button class=\"btn btn-gold\" onclick=\"joinGame()\">Join Table</button></div>";
+    h += "<div class=\"card\"><div class=\"card-title\">Gabung ke Meja Ini</div>";
+    h += "<div class=\"label\">Nama Kamu</div><input class=\"field\" id=\"joinName\" value=\"" + esc(name) + "\" placeholder=\"Nama kamu\">";
+    h += "<div class=\"label\">Nomor WhatsApp</div><input class=\"field\" id=\"joinWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
+    h += "<button class=\"btn btn-gold\" onclick=\"joinGame()\">Gabung ke Meja</button></div>";
   } else {
-        h += "<div class=\"muted\">Waiting for more players to join (" + S.players.length + "/4)...</div>";
+        h += "<div class=\"muted\">Menunggu pemain lain bergabung (" + S.players.length + "/4)...</div>";
   }
     if (S.players.length < 4) {
-          h += "<div class=\"card\"><div class=\"card-title\">Add a Player Without a Phone</div>";
-          h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">If a friend doesn't have their own phone, type their name here to add them yourself.</div>";
-          h += "<div class=\"label\">Player Name</div><input class=\"field\" id=\"addPlayerName\" placeholder=\"Friend's name\">";
-          h += "<div class=\"label\">WhatsApp Number</div><input class=\"field\" id=\"addPlayerWa\" placeholder=\"08xxxxxxxxxx\">";
-          h += "<button class=\"btn btn-outline\" onclick=\"addPlayerByHost()\">Add Player</button></div>";
+          h += "<div class=\"card\"><div class=\"card-title\">Tambah Pemain Tanpa Ponsel</div>";
+          h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Jika temanmu tidak membawa ponsel, masukkan namanya di sini untuk menambahkannya.</div>";
+          h += "<div class=\"label\">Nama Pemain</div><input class=\"field\" id=\"addPlayerName\" placeholder=\"Nama teman\">";
+          h += "<div class=\"label\">Nomor WhatsApp</div><input class=\"field\" id=\"addPlayerWa\" placeholder=\"08xxxxxxxxxx\">";
+          h += "<button class=\"btn btn-outline\" onclick=\"addPlayerByHost()\">Tambah Pemain</button></div>";
     }
-    h += "<button class=\"btn btn-danger btn-sm\" onclick=\"cancelGame()\">Cancel This Game</button>";
+    h += "<button class=\"btn btn-danger btn-sm\" onclick=\"cancelGame()\">Batalkan Permainan</button>";
   qs("content").innerHTML = h;
 }
 function joinGame(){
   var name = qs("joinName").value.trim();
   var wa = qs("joinWa").value.trim();
-  if (!name) { alert("Please enter your name"); return; }
+  if (!name) { alert("Masukkan nama kamu terlebih dahulu"); return; }
   apiSend("/api/mahjong/games?id=" + S.game.id + "&action=join", "PATCH", {name:name, waNumber:wa}).then(function(res){
-    if (!res.ok) { alert(res.data.error || "Could not join"); loadGameForBooking(); return; }
+    if (!res.ok) { alert(res.data.error || "Tidak dapat bergabung"); loadGameForBooking(); return; }
     localStorage.setItem("mj_name", name); if (wa) localStorage.setItem("mj_wa", wa);
     S.game = res.data.game; S.players = res.data.players;
     localStorage.setItem("mj_player_" + S.game.id, res.data.joined.id);
@@ -362,7 +367,7 @@ function joinGame(){
   function addPlayerByHost(){
     var name = qs("addPlayerName").value.trim();
     var wa = qs("addPlayerWa").value.trim();
-    if (!name) { alert("Please enter the player's name"); return; }
+  if (!name) { alert("Masukkan nama pemain terlebih dahulu"); return; }
     apiSend("/api/mahjong/games?id=" + S.game.id + "&action=join", "PATCH", {name:name, waNumber:wa}).then(function(res){
       if (!res.ok) { alert(res.data.error || "Could not add player"); loadGameForBooking(); return; }
       S.game = res.data.game; S.players = res.data.players;
@@ -388,7 +393,7 @@ function loadActiveFull(){
   });
 }
 function scoreboardHtml(){
-    var h = "<div class=\"scoreboard\"><div class=\"sb-title\">Live Scoreboard &middot; tap a score to see why</div>";
+    var h = "<div class=\"scoreboard\"><div class=\"sb-title\">Skor Langsung &middot; ketuk skor untuk melihat rinciannya</div>";
     if (S.game) { h += "<div class=\"muted\" style=\"text-align:center;font-size:11px;padding:0 0 4px;\">Sistem: " + esc(SCORING_SYSTEM_LABELS[S.game.scoringSystem] || SCORING_SYSTEM_LABELS.hongkong) + "</div>"; }
     if (S.sessionGamesCount > 1) { h += "<div class=\"muted\" style=\"text-align:center;font-size:12px;padding:2px 0 6px;\">Akumulasi " + S.sessionGamesCount + " game di meja ini</div>"; }
     h += "<div class=\"sb-grid\">";
@@ -408,11 +413,11 @@ function renderActive(){
   var h = scoreboardHtml();
   h += "<button class=\"btn btn-gold\" onclick=\"openZimo()\">&#x1F004; Ada yang Menang!</button>";
   h += "<button class=\"btn btn-outline\" onclick=\"openKong()\">+ KONG</button>";
-  h += "<button class=\"btn btn-danger btn-sm\" onclick=\"markDraw()\">Wall Finished - Mark as Draw</button>";
+  h += "<button class=\"btn btn-danger btn-sm\" onclick=\"markDraw()\">Tembok Habis — Catat Seri</button>";
   qs("content").innerHTML = h;
 }
 function markDraw(){
-  if (!confirm("Mark this game as a DRAW? Use this only when the wall is exhausted and nobody won by Zimo. Any Kong points already recorded will remain valid.")) return;
+  if (!confirm("Tandai permainan ini sebagai SERI? Gunakan hanya ketika tembok habis dan tidak ada yang menang Zimo. Poin Kong yang sudah tercatat tetap berlaku.")) return;
   apiSend("/api/mahjong/games?id=" + S.game.id + "&action=draw", "PATCH").then(function(){ loadFinishedFull(); });
 }
 function loadFinishedFull(){
@@ -425,14 +430,14 @@ function loadFinishedFull(){
 function renderFinished(){
   setNavScore();
   var st = S.game.status;
-  var label = st === "draw" ? "Draw Game - No Winner" : st === "cancelled" ? "Game Cancelled" : "Game Finished";
+  var label = st === "draw" ? "Permainan Seri — Tidak Ada Pemenang" : st === "cancelled" ? "Permainan Dibatalkan" : "Permainan Selesai";
   if (st === "finished_win") {
     var w = S.players.find(function(p){ return p.id === S.game.winnerPlayerId; });
     if (w) label = "&#x1F3C6; " + esc(w.name) + " Menang!";
   }
   var h = "<div class=\"card\"><div class=\"card-title\">" + label + "</div></div>";
   h += scoreboardHtml();
-  h += "<button class=\"btn btn-gold\" onclick=\"resetForNewGame()\">Start New Game at This Table</button>";
+  h += "<button class=\"btn btn-gold\" onclick=\"resetForNewGame()\">Mulai Permainan Baru di Meja Ini</button>";
   qs("content").innerHTML = h;
 }
 function resetForNewGame(){ var mine = myPlayerId(); var idx = S.players.findIndex(function(p){ return p.id === mine; }); S.lastPlayers = (S.players.length === 4) ? S.players.slice() : []; S.lastMyIndex = idx; S.lastSessionId = (S.players.length === 4 && S.game) ? (S.game.sessionId || S.game.id) : null; S.lastScoringSystem = S.game ? (S.game.scoringSystem || "hongkong") : "hongkong"; S.game = null; S.players = []; S.events = []; renderLobbyNoGame(); }
@@ -441,7 +446,7 @@ function openBreakdown(pid){
   if (!p) return;
   var evs = S.events.filter(function(e){ return e.playerId === pid; });
   var h = "";
-  if (!evs.length) { h += "<div class=\"muted\">No scoring events yet.</div>"; }
+  if (!evs.length) { h += "<div class=\"muted\">Belum ada catatan skor.</div>"; }
   evs.forEach(function(e){
     var meta = {}; try { meta = e.metadata ? JSON.parse(e.metadata) : {}; } catch(ex){}
     var lbl = meta.label || e.eventType;
@@ -772,7 +777,7 @@ function navClick(which){
 }
 function openHistory(){
   var wa = localStorage.getItem("mj_wa") || "";
-  var h = "<div class=\"label\">Your WhatsApp Number</div><input class=\"field\" id=\"histWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadHistory()\">Show My History</button><div id=\"histList\"></div>";
+  var h = "<div class=\"label\">Nomor WhatsApp Kamu</div><input class=\"field\" id=\"histWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadHistory()\">Tampilkan Riwayat Saya</button><div id=\"histList\"></div>";
   qs("histBody").innerHTML = h;
   showModal("modalHistory");
   if (wa) loadHistory();
@@ -784,7 +789,7 @@ function loadHistory(){
   apiGet("/api/mahjong/events?historyWa=" + encodeURIComponent(wa)).then(function(res){
     var list = res.data || [];
     var h = "";
-    if (!list.length) { h = "<div class=\"muted\">No games found yet for this number.</div>"; }
+    if (!list.length) { h = "<div class=\"muted\">Belum ada permainan untuk nomor ini.</div>"; }
     list.forEach(function(g){
       var d = new Date(g.date); var dateStr = isNaN(d) ? "" : d.toLocaleDateString();
       var resultColor = g.result === "WIN" ? "var(--green-mid)" : g.result === "DRAW" ? "var(--text-muted)" : "var(--red)";
@@ -795,7 +800,7 @@ function loadHistory(){
 }
 function openStats(){
   var wa = localStorage.getItem("mj_wa") || "";
-  var h = "<div class=\"label\">Your WhatsApp Number</div><input class=\"field\" id=\"statsWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadStats()\">Show My Stats</button><div id=\"statsList\"></div>";
+  var h = "<div class=\"label\">Nomor WhatsApp Kamu</div><input class=\"field\" id=\"statsWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadStats()\">Tampilkan Statistik Saya</button><div id=\"statsList\"></div>";
   qs("statsBody").innerHTML = h;
   showModal("modalStats");
   if (wa) loadStats();
@@ -806,7 +811,7 @@ function loadStats(){
   localStorage.setItem("mj_wa", wa);
   apiGet("/api/mahjong/events?statsWa=" + encodeURIComponent(wa)).then(function(res){
     var s = res.data || {};
-    var rows = [["Games Played", s.gamesPlayed], ["Zimo Count", s.zimoCount], ["Kong Count", s.kongCount], ["Wins", s.wins], ["Draws", s.draws], ["Highest Score", s.highestScore], ["Total Mahjong Score", s.totalScore]];
+    var rows = [["Permainan", s.gamesPlayed], ["Jumlah Zimo", s.zimoCount], ["Jumlah Kong", s.kongCount], ["Menang", s.wins], ["Seri", s.draws], ["Skor Tertinggi", s.highestScore], ["Total Skor Mahjong", s.totalScore]];
     var h = "";
     rows.forEach(function(r){ h += "<div class=\"event-row\"><span>" + r[0] + "</span><span class=\"pt pos\">" + r[1] + "</span></div>"; });
     qs("statsList").innerHTML = h;
@@ -820,7 +825,7 @@ function openLeaderboard(){
   h += "<button class=\"chip-btn\" id=\"lbLocSurabaya\" onclick=\"setLbLocation('surabaya')\">Surabaya</button>";
   h += "<button class=\"chip-btn\" id=\"lbLocDenpasar\" onclick=\"setLbLocation('denpasar')\">Bali</button>";
   h += "</div>";
-  h += "<div class=\"filter-row\"><button class=\"chip-btn\" id=\"lbWeek\" onclick=\"setLbPeriod('week')\">This Week</button><button class=\"chip-btn\" id=\"lbMonth\" onclick=\"setLbPeriod('month')\">This Month</button><button class=\"chip-btn\" id=\"lbAll\" onclick=\"setLbPeriod('all')\">All Time</button></div><div id=\"lbList\"></div>";
+  h += "<div class=\"filter-row\"><button class=\"chip-btn\" id=\"lbWeek\" onclick=\"setLbPeriod('week')\">Minggu Ini</button><button class=\"chip-btn\" id=\"lbMonth\" onclick=\"setLbPeriod('month')\">Bulan Ini</button><button class=\"chip-btn\" id=\"lbAll\" onclick=\"setLbPeriod('all')\">Semua Waktu</button></div><div id=\"lbList\"></div>";
   qs("lbBody").innerHTML = h;
   showModal("modalLeaderboard");
   loadLeaderboard();
@@ -903,7 +908,7 @@ function loadLeaderboard(){
   ["All","Surabaya","Denpasar"].forEach(function(k){ var el = qs("lbLoc"+k); if (el) el.classList.remove("selected"); });
   var locIdMap = {all:"lbLocAll", surabaya:"lbLocSurabaya", denpasar:"lbLocDenpasar"};
   if (qs(locIdMap[location])) qs(locIdMap[location]).classList.add("selected");
-  qs("lbList").innerHTML = "<div class=\"muted\">Loading...</div>";
+  qs("lbList").innerHTML = "<div class=\"muted\">Memuat...</div>";
   var locParam = (location && location !== "all") ? ("&location=" + location) : "";
   apiGet("/api/mahjong/events?leaderboard=1&includeStats=1&period=" + period + locParam).then(function(res){
     var data = res.data || {};

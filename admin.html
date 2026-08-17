@@ -544,7 +544,7 @@
             <option value="5|Dragon Table|Lantai 1|surabaya">🐉 Dragon — Lt.1 (Sby)</option>
             <option value="b1|Spring Table|Denpasar, Bali|denpasar">🌱 Spring — Bali</option>
             <option value="b2|Winter Table|Denpasar, Bali|denpasar">❄️ Winter — Bali</option>
-            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali</option>
+            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali (Manual Mahjong)</option>
           </select>
         </div>
         <div class="form-group">
@@ -597,7 +597,7 @@
             <option value="5|Dragon Table|Lantai 1|surabaya">🐉 Dragon — Lt.1 (Sby)</option>
             <option value="b1|Spring Table|Denpasar, Bali|denpasar">🌱 Spring — Bali</option>
             <option value="b2|Winter Table|Denpasar, Bali|denpasar">❄️ Winter — Bali</option>
-            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali</option>
+            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali (Manual Mahjong)</option>
           </select>
         </div>
         <div class="form-group">
@@ -1489,7 +1489,7 @@ async function loadStaff() {
   <option value="5|Dragon Table|Lantai 1|surabaya">Dragon Table — Lt. 1 (Surabaya)</option>
   <option value="b1|Spring Table|Denpasar, Bali|denpasar">Spring Table — Denpasar, Bali</option>
   <option value="b2|Winter Table|Denpasar, Bali|denpasar">Winter Table — Denpasar, Bali</option>
-  <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali</option>
+  <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali (Manual Mahjong)</option>
   </select>
   </div>
   <div class="form-group">
@@ -1798,6 +1798,11 @@ async function loadStaff() {
     const dateStr = checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric',timeZone:'Asia/Jakarta'});
     const timeStr = checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
     const checkinTimeStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
+    // Alamat pada struk mengikuti cabang booking. Jangan menampilkan alamat
+    // Banana Leaf untuk permainan yang berlangsung di Denpasar.
+    const receiptLocationLines = b.location === 'denpasar'
+      ? '<div class="center" style="font-size:10px;">Lantai 2 The Magendra</div><div class="center" style="font-size:10px;">Teuku Umar Barat No.888 · Denpasar, Bali</div>'
+      : '<div class="center" style="font-size:10px;">Banana Leaf, Graha Famili</div><div class="center" style="font-size:10px;">Surabaya Barat</div>';
 
     const w = window.open('', '_blank', 'width=400,height=600');
     w.document.write(`<!DOCTYPE html><html><head><title>Struk Pung Pung</title>
@@ -1811,8 +1816,7 @@ async function loadStaff() {
       .logo { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 2px; }
     </style></head><body>
     <div class="logo">🀄 PUNG PUNG MAHJONG</div>
-    <div class="center" style="font-size:10px;">Lantai 2 Banana Leaf, Graha Famili</div>
-    <div class="center" style="font-size:10px;">Surabaya Barat</div>
+    ${receiptLocationLines}
     <div class="line"></div>
     <div class="center bold">${dateStr}</div>
     <div class="center">${timeStr} WIB</div>
@@ -2172,7 +2176,7 @@ async function loadStaff() {
             <option value="5|Dragon Table|Lantai 1|surabaya">Dragon Table — Lt. 1 (Surabaya)</option>
             <option value="b1|Spring Table|Denpasar, Bali|denpasar">Spring Table — Denpasar, Bali</option>
             <option value="b2|Winter Table|Denpasar, Bali|denpasar">Winter Table — Denpasar, Bali</option>
-            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali</option>
+            <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali (Manual Mahjong)</option>
           </select>
         </div>
         <div class="form-group">
