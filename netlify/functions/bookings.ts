@@ -1,8 +1,8 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings } from "../../db/schema.js";
+import { bookings, promos } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { ensureLocationColumns } from "../../db/authUtils.js";
+import { ensureLocationColumns, ensurePromosTable } from "../../db/authUtils.js";
 
 // Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
 // to gate the admin-correction and void-transaction paths in PATCH below,
@@ -53,6 +53,7 @@ async function sendEmailNotification(booking: any) {
 
 export default async (req: Request) => {
     await ensureLocationColumns(db);
+    await ensurePromosTable(db);
     const url = new URL(req.url);
 
     if (req.method === "GET") {
@@ -225,10 +226,47 @@ export default async (req: Request) => {
               // dibuat) selalu checkout Rp 0, terlepas dari apa yang dikirim klien —
               // supaya konsisten dengan totalPaid lain yang dihitung ulang di server.
               const isOwnerFree = !!(existing?.notes && existing.notes.includes("[OWNER GRATIS]"));
-              updateData.checkoutAt = checkoutAt;
-              updateData.actualDuration = diffMins; // durasi ASLI, bukan yang sudah dibulatkan
-            updateData.totalPaid = isOwnerFree ? 0 : billableHours * getHourlyRate(existing?.tableId);
+
+          // Promo (dipilih staff manual di POS) — klien cuma kirim `promoId`,
+          // BUKAN angka diskon. Server yang ambil promo dari DB, validasi
+          // aktif & cabangnya cocok sama booking, lalu hitung potongannya
+          // sendiri. Ini sengaja supaya harga tidak bisa dimanipulasi lewat
+          // request yang di-tamper (sama alasan totalPaid selalu dihitung ulang
+          // di sini, bukan dipercaya dari klien).
+          let appliedPromo: { id: number; name: string; type: string; value: number } | null = null;
+          if (!isOwnerFree && body.promoId) {
+                  const [promo] = await db.select().from(promos).where(eq(promos.id, parseInt(body.promoId)));
+                  if (!promo || !promo.active || promo.location !== existing?.location) {
+                            return Response.json({ error: "Promo tidak valid, tidak aktif, atau bukan untuk cabang ini" }, { status: 400 });
+                  }
+                  appliedPromo = promo;
+          }
+
+      const rate = getHourlyRate(existing?.tableId);
+          let totalRp = isOwnerFree ? 0 : billableHours * rate;
+          if (appliedPromo && !isOwnerFree) {
+                  if (appliedPromo.type === "free_hours") {
+                            const discountHours = Math.min(appliedPromo.value, billableHours);
+                            totalRp = (billableHours - discountHours) * rate;
+                  } else if (appliedPromo.type === "percent_off") {
+                            totalRp = Math.round(totalRp * (1 - appliedPromo.value / 100));
+                  } else if (appliedPromo.type === "flat_off") {
+                            totalRp = Math.max(0, totalRp - appliedPromo.value);
+                  }
+          }
+
+      updateData.checkoutAt = checkoutAt;
+          updateData.actualDuration = diffMins; // durasi ASLI, bukan yang sudah dibulatkan
+            updateData.totalPaid = totalRp;
             if (isOwnerFree) updateData.paymentMethod = "gratis";
+            // Tag [PROMO:nama] ditempel SERVER ke notes yang sudah tersimpan di DB
+            // (bukan notes kiriman klien), biar ke-track konsisten dan tidak bisa
+            // dipalsukan/dihapus lewat request yang di-tamper.
+            if (appliedPromo) {
+                    const baseNotes = existing?.notes || "";
+                    const tag = `[PROMO:${appliedPromo.name}]`;
+                    updateData.notes = baseNotes.includes(tag) ? baseNotes : (baseNotes ? baseNotes + " " + tag : tag);
+            }
       }
 
       const [row] = await db.update(bookings).set(updateData).where(eq(bookings.id, id)).returning();
