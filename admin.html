@@ -665,7 +665,7 @@
   <!-- VIEW TABS -->
   <div style="display:flex;gap:8px;margin-bottom:14px;">
     <button id="tabTimeline" class="btn btn-primary" onclick="switchTab('timeline')" style="flex:1">📅 Timeline</button>
-    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button><button id="tabStaff" class="btn" onclick="switchTab('staff')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🛡️ Kelola Staff</button>
+    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button><button id="tabStaff" class="btn" onclick="switchTab('staff')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🛡️ Kelola Staff</button><button id="tabPromo" class="btn" onclick="switchTab('promo')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🎁 Kelola Promo</button>
   </div>
 
   <!-- TIMELINE VIEW -->
@@ -701,7 +701,7 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
 
 <script>
   let allBookings = [];
@@ -767,6 +767,10 @@
       document.getElementById('tabStaff').className = tab === 'staff' ? 'btn btn-primary' : 'btn';
       document.getElementById('tabStaff').style = (tab === 'staff' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)') + (isSuperAdmin ? '' : ';display:none');
       if (tab === 'staff') loadStaff();
+      document.getElementById('viewPromo').style.display = tab === 'promo' ? 'block' : 'none';
+      document.getElementById('tabPromo').className = tab === 'promo' ? 'btn btn-primary' : 'btn';
+      document.getElementById('tabPromo').style = (tab === 'promo' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)') + (isSuperAdmin ? '' : ';display:none');
+      if (tab === 'promo') loadPromoManager();
   }
 
   function renderTable(data) {
@@ -965,6 +969,7 @@
       }
       const isPayLater = (b.status === 'confirmed' || b.status === 'checked_in') && b.notes && b.notes.includes('[BAYAR NANTI]');
       const isOwnerFree = b.notes && b.notes.includes('[OWNER GRATIS]');
+      const promoTagMatch = (b.notes || '').match(/\[PROMO:([^\]]+)\]/);
 
       // Deteksi sudah main terlalu lama (>5 jam) tapi belum checkout
       let longPlayWarning = '';
@@ -985,7 +990,7 @@
         : b.status === 'confirmed' ? '✅ Lunas'
         : b.status === 'pending' ? pendingLabel
         : b.status === 'checked_in' ? (isLongPlay ? `⚠️ Sedang Main${longPlayWarning}` : '🎮 Sedang Main')
-        : b.status === 'completed' ? '🏁 Selesai'
+        : b.status === 'completed' ? (promoTagMatch ? `🏁 Selesai · 🎁 ${escHtml(promoTagMatch[1])}` : '🏁 Selesai')
         : '❌ Batal';
       const badgeClassFinal = isOwnerFree ? 'badge-ownerfree' : isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
       const endHour = String(parseInt(b.time) + b.duration).padStart(2,'0');
@@ -1169,6 +1174,88 @@ async function loadStaff() {
             showToast('Staff dihapus');
             loadStaff();
       } catch (e) { showToast('Gagal menghapus'); }
+  }
+
+  // === PROMO MANAGEMENT (Super Admin only) ===
+  const PROMO_TYPE_LABEL = { free_hours: 'Gratis Jam', percent_off: 'Potongan %', flat_off: 'Potongan Rp' };
+
+  function updatePromoValueHint() {
+    const type = document.getElementById('pr_type').value;
+    const label = document.getElementById('pr_value_label');
+    label.textContent = type === 'free_hours' ? 'Nilai (jam)' : type === 'percent_off' ? 'Nilai (persen, 1-100)' : 'Nilai (Rupiah)';
+  }
+
+  function formatPromoValue(p) {
+    if (p.type === 'free_hours') return `${p.value} jam gratis`;
+    if (p.type === 'percent_off') return `${p.value}% off`;
+    return `Rp ${Number(p.value).toLocaleString('id-ID')} off`;
+  }
+
+  async function loadPromoManager() {
+    document.getElementById('promoBody').innerHTML = '<tr><td colspan="7" class="loading">Memuat data…</td></tr>';
+    try {
+      const res = await fetch('/api/promos');
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('promoBody').innerHTML = `<tr><td colspan="7" class="empty-state">${escHtml(data.error || 'Gagal memuat data.')}</td></tr>`;
+        return;
+      }
+      renderPromoList(data);
+    } catch (e) {
+      document.getElementById('promoBody').innerHTML = '<tr><td colspan="7" class="empty-state">Gagal memuat data.</td></tr>';
+    }
+  }
+
+  function renderPromoList(data) {
+    if (!data.length) {
+      document.getElementById('promoBody').innerHTML = '<tr><td colspan="7" class="empty-state">Belum ada promo.</td></tr>';
+      return;
+    }
+    document.getElementById('promoBody').innerHTML = data.map(p => `
+      <tr>
+        <td class="name-cell">${escHtml(p.name)}</td>
+        <td>${p.location === 'denpasar' ? 'Denpasar' : 'Surabaya'}</td>
+        <td>${PROMO_TYPE_LABEL[p.type] || p.type}</td>
+        <td>${formatPromoValue(p)}</td>
+        <td>${p.active ? '<span style="color:#1a6635;font-weight:600;">🟢 Aktif</span>' : '<span style="color:#a83232;font-weight:600;">⚪ Nonaktif</span>'}</td>
+        <td>${p.createdAt ? formatDate(String(p.createdAt).slice(0,10)) : '—'}</td>
+        <td><button class="btn btn-sm" style="background:${p.active ? '#fde8e8' : '#e8f4fd'};color:${p.active ? '#a83232' : '#1a6635'};border:1.5px solid ${p.active ? '#a83232' : '#1a6635'};font-weight:600;" onclick="togglePromoActive(${p.id}, ${p.active})">${p.active ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
+      </tr>`).join('');
+  }
+
+  async function submitPromo() {
+    const name = document.getElementById('pr_name').value.trim();
+    const location = document.getElementById('pr_location').value;
+    const type = document.getElementById('pr_type').value;
+    const value = document.getElementById('pr_value').value;
+    if (!name || !value) { showToast('Lengkapi semua field dulu ya!'); return; }
+    try {
+      const res = await fetch('/api/promos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ name, location, type, value })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal menyimpan promo'); return; }
+      showToast('✅ Promo berhasil dibuat!');
+      document.getElementById('pr_name').value = '';
+      document.getElementById('pr_value').value = '';
+      loadPromoManager();
+    } catch (e) { showToast('Gagal menyimpan promo'); }
+  }
+
+  async function togglePromoActive(id, currentlyActive) {
+    try {
+      const res = await fetch(`/api/promos?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ active: !currentlyActive })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal mengubah status promo'); return; }
+      showToast(currentlyActive ? '⚪ Promo dinonaktifkan' : '🟢 Promo diaktifkan');
+      loadPromoManager();
+    } catch (e) { showToast('Gagal mengubah status promo'); }
   }
   
   function fmtWIB(isoStr) {
@@ -1531,10 +1618,18 @@ async function loadStaff() {
   let _posBooking = null;
   let _posPayment = null;
   let _posCheckoutTime = null;
+  // Daftar promo aktif untuk cabang booking ini (dimuat dari /api/promos di
+  // initPOS), dan promo yang lagi dipilih staff di dropdown (null = tanpa promo).
+  let _posPromoList = [];
+  let _posSelectedPromo = null;
 
   function initPOS(b) {
     _posBooking = b;
     _posPayment = null;
+    _posSelectedPromo = null;
+    _posPromoList = [];
+    const promoSelect = document.getElementById('posPromoSelect');
+    if (promoSelect) promoSelect.innerHTML = '<option value="">— Tanpa promo —</option>';
 
     if (b.status === 'completed') {
       // Booking sudah checkout — tampilkan struk yang SUDAH TERSIMPAN,
@@ -1545,6 +1640,28 @@ async function loadStaff() {
 
     setPOSMode('active');
     _posCheckoutTime = new Date();
+    loadPromosForPOS(b.location);
+    recalculatePOS();
+  }
+
+  // Ambil promo aktif khusus cabang booking ini, isi ke dropdown POS.
+  async function loadPromosForPOS(location) {
+    try {
+      const res = await fetch(`/api/promos?location=${encodeURIComponent(location || 'surabaya')}&active=true`);
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) return;
+      _posPromoList = data;
+      const promoSelect = document.getElementById('posPromoSelect');
+      if (!promoSelect) return;
+      promoSelect.innerHTML = '<option value="">— Tanpa promo —</option>' +
+        data.map(p => `<option value="${p.id}">${escHtml(p.name)} (${escHtml(formatPromoValue(p))})</option>`).join('');
+    } catch (e) { /* gagal load promo — dropdown tetap "Tanpa promo" */ }
+  }
+
+  function applyPromoSelection() {
+    const sel = document.getElementById('posPromoSelect');
+    const id = sel.value ? parseInt(sel.value) : null;
+    _posSelectedPromo = id ? _posPromoList.find(p => p.id === id) || null : null;
     recalculatePOS();
   }
 
@@ -1567,7 +1684,12 @@ async function loadStaff() {
     document.getElementById('posCheckoutTime').textContent = checkout
       ? checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})
         + ' · ' + checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:'Asia/Jakarta'}) + ' WIB' : '—';
-    document.getElementById('posDuration').innerHTML = `${billedH} jam (aktual: ${durStr})`;
+    // Promo yang dulu dipakai (kalau ada) — dibaca dari tag [PROMO:nama] di
+    // notes, yang ditempel SERVER saat checkout (lihat bookings.ts).
+    const promoMatch = (b.notes || '').match(/\[PROMO:([^\]]+)\]/);
+    document.getElementById('posDuration').innerHTML = promoMatch
+      ? `${billedH} jam <span style="color:#c9a4e8;">(🎁 ${escHtml(promoMatch[1])})</span> · aktual: ${durStr}`
+      : `${billedH} jam (aktual: ${durStr})`;
     document.getElementById('posDuration').style.color = '#E8C97A';
     document.getElementById('posTotal').textContent = 'Rp ' + (b.totalPaid || 0).toLocaleString('id-ID');
     document.getElementById('posInfo').innerHTML =
@@ -1595,6 +1717,9 @@ async function loadStaff() {
     const paymentSection = document.getElementById('posPaymentSection');
     if (paymentSection) paymentSection.style.display = readonly ? 'none' : 'block';
     document.getElementById('tunaiSection').style.display = 'none';
+
+    const promoRow = document.getElementById('posPromoRow');
+    if (promoRow) promoRow.style.display = readonly ? 'none' : 'block';
 
     document.getElementById('posCompleteBtn').style.display = readonly ? 'none' : 'block';
     document.getElementById('posSkipBtn').style.display = readonly ? 'none' : 'block';
@@ -1624,7 +1749,27 @@ async function loadStaff() {
     const billableHours = Math.max(1, Math.ceil((diffMins - 10) / 60));
     const roundedMins = billableHours * 60;
     const isOwnerFree = !!(b.notes && b.notes.includes('[OWNER GRATIS]'));
-    const totalRp = isOwnerFree ? 0 : billableHours * 50000;
+
+    // Preview kalkulasi promo — MIRROR rumus di bookings.ts biar staff lihat
+    // angka yang sama sebelum klik selesai. Harga FINAL tetap dihitung ulang
+    // di server saat checkout (lihat catatan di bookings.ts), jadi ini cuma
+    // buat tampilan, bukan sumber kebenaran.
+    const promo = isOwnerFree ? null : _posSelectedPromo;
+    let totalRp = isOwnerFree ? 0 : billableHours * 50000;
+    let discountHours = 0;
+    if (promo) {
+      if (promo.type === 'free_hours') {
+        discountHours = Math.min(promo.value, billableHours);
+        totalRp = (billableHours - discountHours) * 50000;
+      } else if (promo.type === 'percent_off') {
+        totalRp = Math.round(totalRp * (1 - promo.value / 100));
+      } else if (promo.type === 'flat_off') {
+        totalRp = Math.max(0, totalRp - promo.value);
+      }
+    }
+
+    const promoRow = document.getElementById('posPromoRow');
+    if (promoRow) promoRow.style.display = isOwnerFree ? 'none' : 'block';
 
     // Update UI
     const checkinStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
@@ -1645,16 +1790,33 @@ async function loadStaff() {
       const hariBerapa = Math.floor(diffMins / 1440);
       durLabel.innerHTML = `⚠️ ${durH} jam (${diffMins} menit — ${hariBerapa > 0 ? hariBerapa + ' hari lalu' : 'lama!'})`;
       durLabel.style.color = '#ff8a80';
+    } else if (promo) {
+      const promoDesc = promo.type === 'free_hours'
+        ? `🎁 ${promo.name} → bayar ${billableHours - discountHours} jam`
+        : `🎁 ${promo.name}`;
+      durLabel.innerHTML = `${durH} jam <span style="color:#c9a4e8;">(${promoDesc})</span>`;
+      durLabel.style.color = '#E8C97A';
     } else {
       durLabel.innerHTML = `${durH} jam (aktual: ${diffMins} menit)`;
       durLabel.style.color = '#E8C97A';
     }
 
+    const totalOriginalEl = document.getElementById('posTotalOriginal');
+    if (totalOriginalEl) {
+      const originalRp = billableHours * 50000;
+      if (promo && totalRp < originalRp) {
+        totalOriginalEl.textContent = 'Rp ' + originalRp.toLocaleString('id-ID');
+        totalOriginalEl.style.display = 'inline';
+      } else {
+        totalOriginalEl.style.display = 'none';
+      }
+    }
     document.getElementById('posTotal').textContent = 'Rp ' + totalRp.toLocaleString('id-ID');
 
     _posBooking._actualMins = roundedMins;
     _posBooking._diffMins = diffMins;
     _posBooking._totalRp = totalRp;
+    _posBooking._promoId = promo ? promo.id : null;
 
     document.getElementById('posInfo').innerHTML =
       `<b>👤</b> ${escHtml(b.customerName.replace(' (walk-in)',''))}<br>` +
@@ -1764,7 +1926,9 @@ async function loadStaff() {
       // Pakai _posCheckoutTime — bisa jam sekarang ATAU jam yang sudah diedit manual
       // (untuk kasus kasir/admin lupa checkout di waktu yang benar)
       _posBooking._checkoutAt = _posCheckoutTime;
-      await fetch('/api/bookings?id=' + b.id, {
+      // Kirim promoId aja (bukan angka diskon) — server yang validasi &
+      // hitung ulang totalPaid otoritatif (lihat catatan di bookings.ts).
+      const res = await fetch('/api/bookings?id=' + b.id, {
         method: 'PATCH',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -1772,9 +1936,18 @@ async function loadStaff() {
           checkoutAt: _posCheckoutTime.toISOString(),
           actualDuration: b._actualMins,
           paymentMethod: _posPayment,
-          totalPaid: b._totalRp
+          promoId: b._promoId || null
         })
       });
+      const updated = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(updated.error || 'Gagal checkout — promo mungkin sudah tidak aktif, coba lagi.');
+        return;
+      }
+      // Pakai totalPaid & notes HASIL SERVER buat struk (bukan preview client),
+      // termasuk tag [PROMO:...] yang baru ditempel server kalau promo dipakai.
+      b._totalRp = updated.totalPaid ?? b._totalRp;
+      b.notes = updated.notes ?? b.notes;
       closePOS();
       showToast(shouldPrint ? '🏁 Checkout berhasil!' : '🏁 Checkout selesai (tanpa struk)');
       loadBookings();
@@ -1828,6 +2001,7 @@ async function loadStaff() {
     <div class="row"><span>Check-in</span><span>${checkinTimeStr} WIB</span></div>
     <div class="row"><span>Checkout</span><span>${timeStr} WIB</span></div>
     <div class="row"><span>Durasi</span><span>${durStr}</span></div>
+    ${(() => { const m = (b.notes || '').match(/\[PROMO:([^\]]+)\]/); return m ? `<div class="row"><span>🎁 Promo</span><span>${m[1]}</span></div>` : ''; })()}
     <div class="line"></div>
     <div class="row bold"><span>Total</span><span>Rp ${totalRp.toLocaleString('id-ID')}</span></div>
     <div class="row"><span>Pembayaran</span><span>${payLabel}</span></div>
@@ -2241,9 +2415,18 @@ async function loadStaff() {
           <span style="font-size:12px;color:rgba(255,255,255,0.6);">Durasi aktual</span>
           <span style="font-size:13px;font-weight:600;color:#E8C97A;" id="posDuration">—</span>
         </div>
+        <div id="posPromoRow" style="margin-bottom:8px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.1);">
+          <label for="posPromoSelect" style="font-size:11px;color:rgba(255,255,255,0.6);display:block;margin-bottom:5px;">🎁 Promo (opsional)</label>
+          <select id="posPromoSelect" onchange="applyPromoSelection()" style="width:100%;padding:7px 8px;border-radius:8px;border:none;font-size:12.5px;background:rgba(255,255,255,0.08);color:white;">
+            <option value="">— Tanpa promo —</option>
+          </select>
+        </div>
         <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:13px;color:rgba(255,255,255,0.7);">Total</span>
-          <span style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#E8C97A;" id="posTotal">Rp 0</span>
+          <span style="text-align:right;">
+            <span id="posTotalOriginal" style="display:none;font-size:11px;color:rgba(255,255,255,0.45);text-decoration:line-through;margin-right:6px;"></span>
+            <span style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#E8C97A;" id="posTotal">Rp 0</span>
+          </span>
         </div>
       </div>
 
