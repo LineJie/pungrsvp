@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 
 export const bookings = pgTable("bookings", {
   id: serial().primaryKey(),
@@ -30,6 +30,25 @@ export const members = pgTable("members", {
     createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Promo module (additive) ───────────────────────────────────────────────
+// Promos are created by Super Admin ONLY (enforced in netlify/functions/promos.ts,
+// same isSuperAdminReq pattern used for booking corrections). Each promo is
+// scoped to a single branch (location) — a promo that should run in both
+// branches simply gets created twice, once per location, so Surabaya and
+// Denpasar can each run different offers at the same time.
+// Staff pick an active promo manually from a dropdown at POS checkout
+// (netlify/functions/bookings.ts computes the actual discount server-side —
+// never trusts a discount amount sent from the client).
+export const promos = pgTable("promos", {
+  id: serial().primaryKey(),
+  location: text().notNull().default("surabaya"), // surabaya | denpasar
+  name: text().notNull(),
+  type: text().notNull(), // free_hours | percent_off | flat_off
+  value: integer().notNull(), // hours (free_hours) | percent 1-100 (percent_off) | rupiah (flat_off)
+  active: boolean().notNull().default(true), // manual ON/OFF toggle, no auto-expiry
+  createdBy: text("created_by").default(""), // superadmin username, for audit trail
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const staff = pgTable("staff", {
     id: serial().primaryKey(),

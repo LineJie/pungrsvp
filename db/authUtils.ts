@@ -28,6 +28,21 @@ export async function ensureStaffTable(db: any) {
                                                   `);
 }
 
+export async function ensurePromosTable(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS promos (
+              id serial PRIMARY KEY,
+                    location text NOT NULL DEFAULT 'surabaya',
+                          name text NOT NULL,
+                                type text NOT NULL,
+                                      value integer NOT NULL,
+                                            active boolean NOT NULL DEFAULT true,
+                                                  created_by text DEFAULT '',
+                                                        created_at timestamp DEFAULT now()
+                                                            )
+                                                              `);
+}
+
 export async function ensureLocationColumns(db: any) {
         await db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
         await db.execute(sql`ALTER TABLE staff ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
