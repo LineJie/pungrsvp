@@ -920,14 +920,14 @@
           <div id="pmSummary"></div>
         </div>
 
-        <!-- BCA payment info -->
+        <!-- Bank payment info (dinamis: BCA Teresa untuk Surabaya, Mandiri Rika untuk Denpasar) -->
         <div style="background:linear-gradient(135deg,#1C3A2E,#2D5A45);border-radius:16px;padding:18px 20px;margin-bottom:16px;">
           <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;">Transfer ke</div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-            <div style="background:#0066B2;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700;color:white;letter-spacing:1px;">BCA</div>
+            <div id="pmBankBadge" style="background:#0066B2;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700;color:white;letter-spacing:1px;">BCA</div>
             <div style="text-align:left;">
-              <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#E8C97A;letter-spacing:2px;">8630038775</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.6);">a.n. Teresa Carolina</div>
+              <div id="pmRekNumber" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#E8C97A;letter-spacing:2px;">8630038775</div>
+              <div id="pmRekName" style="font-size:11px;color:rgba(255,255,255,0.6);">a.n. Teresa Carolina</div>
             </div>
           </div>
           <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
@@ -1030,6 +1030,14 @@
   ];
 
   let currentLocation = 'surabaya';
+
+  // Rekening transfer per cabang. Surabaya tetap BCA a.n. Teresa Carolina,
+  // Denpasar/Bali pakai Mandiri a.n. Rika A. JANGAN ditukar antar cabang.
+  const REKENING = {
+    surabaya: { bank: 'BCA', badgeColor: '#0066B2', number: '8630038775', name: 'Teresa Carolina' },
+    denpasar: { bank: 'Mandiri', badgeColor: '#003D79', number: '1450014635755', name: 'Rika A' }
+  };
+  let _pmRekening = REKENING.surabaya;
   let tableData = tableDataSurabaya;
   let TOTAL_TABLES = tableData.length;
 
@@ -1435,7 +1443,10 @@ function closeCommunity() {
     const mejaNota = tbs.length > 1 ? ` (${tbs.length} meja)` : '';
     const notesTxt = notes ? `\n📝 Catatan: ${notes}` : '';
     const codeTxt = bookingCode ? `\n🎫 Kode Booking: ${bookingCode}` : '';
-    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} WIB\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke BCA 8630038775 dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
+    // Rekening tujuan mengikuti cabang booking (bookingLocation), bukan currentLocation,
+    // supaya tetap akurat walau customer sempat ganti-ganti cabang di form.
+    _pmRekening = REKENING[bookingLocation] || REKENING.surabaya;
+    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} WIB\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke ${_pmRekening.bank} ${_pmRekening.number} dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
     const waUrl = `https://wa.me/628999880707?text=${encodeURIComponent(waMsg)}`;
 
     // Tampilkan payment modal DULU sebelum reset form
@@ -1447,6 +1458,10 @@ function closeCommunity() {
       `<b>⏰</b> ${t.time} WIB &nbsp;·&nbsp; <b>⏱</b> ${bookingDuration} jam<br>` +
       tbs.map(tb => `<b>🀄</b> ${tb.name} (${tb.floor})`).join('<br>');
     document.getElementById('pmTotal').textContent = 'Rp ' + totalHarga;
+    document.getElementById('pmBankBadge').textContent = _pmRekening.bank;
+    document.getElementById('pmBankBadge').style.background = _pmRekening.badgeColor;
+    document.getElementById('pmRekNumber').textContent = _pmRekening.number;
+    document.getElementById('pmRekName').textContent = 'a.n. ' + _pmRekening.name;
     document.getElementById('pmWaBtn').onclick = () => { window.open(waUrl, '_blank'); };
     document.getElementById('paymentModal').style.display = 'flex';
     _pendingBookingData = null;
@@ -1469,13 +1484,14 @@ function closeCommunity() {
   }
 
   function copyRekening() {
-    navigator.clipboard.writeText('8630038775').then(() => {
+    const nomor = _pmRekening.number;
+    navigator.clipboard.writeText(nomor).then(() => {
       const btn = event.target;
       const orig = btn.textContent;
       btn.textContent = '✅ Tersalin!';
       setTimeout(() => btn.textContent = orig, 2000);
     }).catch(() => {
-      prompt('Salin nomor rekening ini:', '8630038775');
+      prompt('Salin nomor rekening ini:', nomor);
     });
   }
 
