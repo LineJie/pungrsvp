@@ -1976,24 +1976,28 @@ async function loadStaff() {
     const receiptLocationLines = b.location === 'denpasar'
       ? '<div class="center" style="font-size:10px;">Lantai 2 The Magendra</div><div class="center" style="font-size:10px;">Teuku Umar Barat No.888 · Denpasar, Bali</div>'
       : '<div class="center" style="font-size:10px;">Banana Leaf, Graha Famili</div><div class="center" style="font-size:10px;">Surabaya Barat</div>';
+    // Kontak footer struk mengikuti cabang booking juga — WA & IG Denpasar beda dari Surabaya.
+    const receiptContact = b.location === 'denpasar'
+      ? { phone: '0882-3136-0817', ig: '@pungpung.mahjongbali' }
+      : { phone: '0899-9880-707', ig: '@pungpung.mahjong' };
 
     const w = window.open('', '_blank', 'width=400,height=600');
     w.document.write(`<!DOCTYPE html><html><head><title>Struk Pung Pung</title>
     <style>
       @media print { body { margin: 0; } }
-      body { font-family: 'Courier New', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 10px; }
+      body { font-family: 'Courier New', monospace; font-size: 16px; width: 280px; margin: 0 auto; padding: 10px; }
       .center { text-align: center; }
       .bold { font-weight: bold; }
       .line { border-top: 1px dashed #000; margin: 8px 0; }
-      .row { display: flex; justify-content: space-between; margin: 3px 0; }
-      .logo { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+      .row { display: flex; justify-content: space-between; margin: 4px 0; }
+      .logo { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 2px; }
     </style></head><body>
     <div class="logo">🀄 PUNG PUNG MAHJONG</div>
     ${receiptLocationLines}
     <div class="line"></div>
     <div class="center bold">${dateStr}</div>
     <div class="center">${timeStr} WIB</div>
-    <div class="center" style="font-size:10px;">Kode: ${b.bookingCode || 'Walk-in'}</div>
+    <div class="center" style="font-size:14px;">Kode: ${b.bookingCode || 'Walk-in'}</div>
     <div class="line"></div>
     <div class="row"><span>Nama</span><span>${b.customerName.replace(' (walk-in)','')}</span></div>
     <div class="row"><span>Meja</span><span>${b.tableName}</span></div>
@@ -2010,9 +2014,9 @@ async function loadStaff() {
     <div class="line"></div>
     <div class="center" style="margin-top:8px;">Terima kasih sudah main!</div>
     <div class="center bold">Makan. Main. Santai. 🀄</div>
-    <div class="center" style="font-size:10px;margin-top:4px;">📞 0899-9880-707</div>
-    <div class="center" style="font-size:10px;">📸 @pungpung.mahjong</div>
-    <div class="center" style="font-size:10px;margin-top:2px;">pungrsvp.netlify.app</div>
+    <div class="center" style="font-size:13px;margin-top:4px;">📞 ${receiptContact.phone}</div>
+    <div class="center" style="font-size:13px;">📸 ${receiptContact.ig}</div>
+    <div class="center" style="font-size:13px;margin-top:2px;">pungrsvp.netlify.app</div>
     <br><br>
     </body></html>`);
     w.document.close();
