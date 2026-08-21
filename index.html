@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Pung Pung Mahjong – Booking Meja</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=Zilla+Slab:wght@600;700;900&family=Space+Mono:wght@400;700&display=swap');
 
   :root {
     --cream: #F5F0E8;
@@ -19,6 +19,44 @@
     --red: #C0392B;
     --tile-shadow: 0 2px 8px rgba(28,58,46,0.15);
   }
+
+  /* Leaderboard styling — disamakan dengan halaman mahjong.html (cek status booking) */
+  .chip-btn{padding:9px 4px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:var(--cream);color:var(--green-dark);font-size:12px;font-weight:600;cursor:pointer;text-align:center;flex:1;}
+  .chip-btn.selected{background:var(--green-dark);color:var(--gold-light);border-color:var(--green-dark);}
+  .lb-muted{color:var(--text-muted);font-size:12px;text-align:center;padding:12px;}
+  .lb-switch-row{display:flex;gap:6px;margin-bottom:8px;}
+  .lb-filter-row{display:flex;gap:8px;margin-bottom:14px;}
+  .lb-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+  .lb-stat-card{background:var(--warm-white);border:1px solid rgba(28,58,46,0.08);border-radius:14px;padding:12px;}
+  .lb-stat-label{font-family:"Space Mono",monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
+  .lb-stat-value{font-family:"Zilla Slab",serif;font-size:22px;font-weight:700;color:var(--green-dark);line-height:1.15;}
+  .lb-stat-sub{font-size:10px;color:var(--text-muted);margin-top:2px;}
+  .lb-podium{margin-bottom:8px;}
+  .lb-leader-card{background:linear-gradient(135deg,var(--green-dark),var(--green-mid));border-radius:16px;padding:16px;margin-bottom:8px;}
+  .lb-leader-crown{font-size:20px;margin-bottom:6px;}
+  .lb-leader-avatar{width:44px;height:44px;border-radius:50%;background:var(--gold);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-family:"Zilla Slab",serif;font-weight:700;font-size:18px;float:left;margin-right:12px;}
+  .lb-leader-name{font-family:"Zilla Slab",serif;font-size:19px;font-weight:700;color:#fff;padding-top:4px;}
+  .lb-leader-meta{font-family:"Space Mono",monospace;font-size:9px;color:rgba(255,255,255,0.65);letter-spacing:0.5px;margin-top:3px;}
+  .lb-leader-score{font-family:"Zilla Slab",serif;font-size:26px;font-weight:900;color:var(--gold-light);margin-top:10px;clear:both;text-align:right;}
+  .lb-runner-row{display:flex;align-items:center;background:var(--warm-white);border-radius:12px;padding:10px 12px;margin-bottom:6px;}
+  .lb-runner-rank{font-family:"Zilla Slab",serif;font-size:16px;font-weight:700;color:var(--text-muted);width:20px;flex-shrink:0;}
+  .lb-runner-avatar{width:32px;height:32px;border-radius:50%;background:var(--cream);border:1.5px solid var(--gold);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-family:"Zilla Slab",serif;font-weight:700;font-size:13px;margin-right:10px;flex-shrink:0;}
+  .lb-runner-info{flex:1;min-width:0;}
+  .lb-runner-name{font-weight:700;color:var(--green-dark);font-size:13px;}
+  .lb-runner-meta{font-family:"Space Mono",monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.3px;}
+  .lb-runner-score{font-family:"Zilla Slab",serif;font-weight:700;font-size:16px;color:var(--green-mid);flex-shrink:0;margin-left:6px;}
+  .lb-table-title{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin:16px 0 8px;padding-left:2px;}
+  .lb-row{background:var(--warm-white);border-radius:12px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;}
+  .lb-row-rank{font-family:"Zilla Slab",serif;font-weight:700;font-size:14px;color:var(--text-muted);width:22px;flex-shrink:0;}
+  .lb-row-main{flex:1;min-width:0;}
+  .lb-row-name{font-weight:700;color:var(--green-dark);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lb-row-meta{font-family:"Space Mono",monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.3px;margin-top:2px;}
+  .lb-form{display:flex;gap:2px;margin-top:4px;}
+  .lb-form span{width:9px;height:9px;border-radius:2px;background:rgba(28,58,46,0.15);display:inline-block;}
+  .lb-form span.w{background:var(--green-mid);}
+  .lb-form span.l{background:var(--red);}
+  .lb-row-score{font-family:"Zilla Slab",serif;font-weight:700;font-size:17px;color:var(--green-mid);text-align:right;flex-shrink:0;margin-left:8px;}
+  .lb-row-score.neg{color:var(--red);}
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -777,12 +815,7 @@
       <div onclick="event.stopPropagation()" style="background:#FDFAF4;border-radius:24px;padding:24px 20px;width:320px;margin:16px;max-height:80vh;overflow-y:auto;">
         <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1C3A2E;text-align:center;margin-bottom:4px;">&#x1F3C6; Leaderboard Mahjong</div>
         <div style="font-size:12px;color:#7A7060;text-align:center;margin-bottom:16px;">Top pemain Pung Pung Mahjong</div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
-          <button id="lbfWeek" onclick="loadLeaderboardHome('week')" style="flex:1;padding:9px 4px;border-radius:12px;border:none;background:#1C3A2E;color:#E8C97A;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Minggu</button>
-          <button id="lbfMonth" onclick="loadLeaderboardHome('month')" style="flex:1;padding:9px 4px;border-radius:12px;border:none;background:#F5F0E8;color:#1C3A2E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Bulan</button>
-          <button id="lbfAll" onclick="loadLeaderboardHome('all')" style="flex:1;padding:9px 4px;border-radius:12px;border:none;background:#F5F0E8;color:#1C3A2E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Semua</button>
-        </div>
-        <div id="lbHomeList"></div>
+        <div id="lbHomeBody"></div>
         <button onclick="closeLeaderboardHome()" style="width:100%;margin-top:14px;padding:11px;background:#F5F0E8;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#7A7060;cursor:pointer;">Tutup</button>
       </div>
     </div>
@@ -961,7 +994,7 @@
     </button>
 
     <div class="wa-link">
-      Butuh bantuan? <a href="https://wa.me/628999880707">Chat langsung di WhatsApp</a>
+      Butuh bantuan? <a id="waHelpLink" href="https://wa.me/628999880707">Chat langsung di WhatsApp</a>
     </div>
 
     <div class="safe-bottom"></div>
@@ -1034,8 +1067,8 @@
   // Rekening transfer per cabang. Surabaya tetap BCA a.n. Teresa Carolina,
   // Denpasar/Bali pakai Mandiri a.n. Rika A. JANGAN ditukar antar cabang.
   const REKENING = {
-    surabaya: { bank: 'BCA', badgeColor: '#0066B2', number: '8630038775', name: 'Teresa Carolina' },
-    denpasar: { bank: 'Mandiri', badgeColor: '#003D79', number: '1450014635755', name: 'Rika A' }
+    surabaya: { bank: 'BCA', badgeColor: '#0066B2', number: '8630038775', name: 'Teresa Carolina', wa: '628999880707' },
+    denpasar: { bank: 'Mandiri', badgeColor: '#003D79', number: '1450014635755', name: 'Rika A', wa: '6288231360817' }
   };
   let _pmRekening = REKENING.surabaya;
   let tableData = tableDataSurabaya;
@@ -1315,6 +1348,7 @@ function closeCommunity() {
     currentLocation = loc;
     tableData = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
     TOTAL_TABLES = tableData.length;
+    document.getElementById('waHelpLink').href = 'https://wa.me/' + REKENING[loc].wa;
 
     // Header hanya menunjukkan cabang aktif. Nama brand tetap konsisten,
     // sedangkan alamat lengkap tersedia pada kartu pilihan lokasi di bawah.
@@ -1446,8 +1480,8 @@ function closeCommunity() {
     // Rekening tujuan mengikuti cabang booking (bookingLocation), bukan currentLocation,
     // supaya tetap akurat walau customer sempat ganti-ganti cabang di form.
     _pmRekening = REKENING[bookingLocation] || REKENING.surabaya;
-    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} WIB\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke ${_pmRekening.bank} ${_pmRekening.number} dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
-    const waUrl = `https://wa.me/628999880707?text=${encodeURIComponent(waMsg)}`;
+    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} WIB\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke ${_pmRekening.bank} ${_pmRekening.number} a.n. ${_pmRekening.name} dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
+    const waUrl = `https://wa.me/${_pmRekening.wa}?text=${encodeURIComponent(waMsg)}`;
 
     // Tampilkan payment modal DULU sebelum reset form
     document.getElementById('pmBookingCode').textContent = bookingCode ? `Kode: ${bookingCode}` : '';
@@ -1509,40 +1543,115 @@ function closeCommunity() {
     }
   });
 
+  let _lbPeriod = 'week';
+  let _lbLocation = 'all';
   function openLeaderboardHome() {
     document.getElementById('moreMenu').classList.remove('open');
+    _lbPeriod = 'week';
+    _lbLocation = 'all';
+    let h = '<div class="lb-switch-row" id="lbLocRow">';
+    h += '<button class="chip-btn" id="lbLocAll" onclick="setLbLocationHome(\'all\')">Semua</button>';
+    h += '<button class="chip-btn" id="lbLocSurabaya" onclick="setLbLocationHome(\'surabaya\')">Surabaya</button>';
+    h += '<button class="chip-btn" id="lbLocDenpasar" onclick="setLbLocationHome(\'denpasar\')">Bali</button>';
+    h += '</div>';
+    h += '<div class="lb-filter-row"><button class="chip-btn" id="lbWeek" onclick="setLbPeriodHome(\'week\')">Minggu Ini</button><button class="chip-btn" id="lbMonth" onclick="setLbPeriodHome(\'month\')">Bulan Ini</button><button class="chip-btn" id="lbAll" onclick="setLbPeriodHome(\'all\')">Semua Waktu</button></div><div id="lbHomeList"></div>';
+    document.getElementById('lbHomeBody').innerHTML = h;
     document.getElementById('lbModal').style.display = 'flex';
-    loadLeaderboardHome('week');
+    loadLeaderboardHome();
   }
   function closeLeaderboardHome() {
     document.getElementById('lbModal').style.display = 'none';
   }
-  function loadLeaderboardHome(period) {
-    const idMap = { week: 'lbfWeek', month: 'lbfMonth', all: 'lbfAll' };
-    Object.keys(idMap).forEach((k) => {
-      const btn = document.getElementById(idMap[k]);
-      if (!btn) return;
-      const active = k === period;
-      btn.style.background = active ? '#1C3A2E' : '#F5F0E8';
-      btn.style.color = active ? '#E8C97A' : '#1C3A2E';
-    });
-    document.getElementById('lbHomeList').innerHTML = 'Memuat...';
-    fetch('/api/mahjong/events?leaderboard=1&period=' + period + '&location=surabaya')
-    .then((r) => r.json())
-    .then((list) => {
-      if (!list || !list.length) {
-        document.getElementById('lbHomeList').innerHTML = 'Belum ada pemain untuk periode ini.';
-        return;
+  function setLbPeriodHome(p) { _lbPeriod = p; loadLeaderboardHome(); }
+  function setLbLocationHome(l) { _lbLocation = l; loadLeaderboardHome(); }
+  function lbInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    let s = parts[0].charAt(0);
+    if (parts.length > 1) s += parts[parts.length - 1].charAt(0);
+    return s.toUpperCase();
+  }
+  function lbFormHtml(form) {
+    const arr = (form && form.length) ? form : [];
+    let h = '<div class="lb-form">';
+    for (let i = 0; i < 5; i++) {
+      const idx = arr.length - 5 + i;
+      const cls = (idx >= 0) ? (arr[idx] === 'W' ? ' w' : ' l') : '';
+      h += '<span class="' + cls + '"></span>';
+    }
+    h += '</div>';
+    return h;
+  }
+  function renderLeaderboardHomeBody(list, stats) {
+    let h = '';
+    if (stats) {
+      h += '<div class="lb-stats-grid">';
+      h += '<div class="lb-stat-card"><div class="lb-stat-label">Sesi</div><div class="lb-stat-value">' + stats.sessions + '</div></div>';
+      h += '<div class="lb-stat-card"><div class="lb-stat-label">Games</div><div class="lb-stat-value">' + stats.games + '</div></div>';
+      h += '<div class="lb-stat-card"><div class="lb-stat-label">Jam Main</div><div class="lb-stat-value">' + stats.hours + '<span style="font-size:12px;">h</span></div></div>';
+      if (stats.hotStreak) {
+        h += '<div class="lb-stat-card"><div class="lb-stat-label">Hot Streak</div><div class="lb-stat-value" style="font-size:17px;">' + stats.hotStreak.count + '&#215; ' + escHtml(stats.hotStreak.name) + '</div></div>';
+      } else if (stats.biggestWin) {
+        h += '<div class="lb-stat-card"><div class="lb-stat-label">Biggest Win</div><div class="lb-stat-value">+' + stats.biggestWin.amount + '</div><div class="lb-stat-sub">' + escHtml(stats.biggestWin.name) + '</div></div>';
+      } else {
+        h += '<div class="lb-stat-card"><div class="lb-stat-label">Status</div><div class="lb-stat-value" style="font-size:14px;">Belum ada</div></div>';
       }
-      let h = '';
-      list.forEach((p, i) => {
-        h += '#' + (i + 1) + ' ' + escHtml(p.name) + ' - Code ' + escHtml(p.code) + ' - ' + p.score + '<br>';
-      });
-      document.getElementById('lbHomeList').innerHTML = h;
-    })
-    .catch((e) => {
-      document.getElementById('lbHomeList').innerHTML = 'Gagal memuat leaderboard.';
+      h += '</div>';
+    }
+    if (!list.length) { return h + '<div class="lb-muted">Belum ada game yang selesai di periode/cabang ini.</div>'; }
+
+    const leader = list[0];
+    const runners = list.slice(1, 3);
+    const rest = list.slice(3);
+
+    h += '<div class="lb-podium">';
+    h += '<div class="lb-leader-card"><div class="lb-leader-crown">&#x1F3C6;</div>';
+    h += '<div class="lb-leader-avatar">' + escHtml(lbInitials(leader.name)) + '</div>';
+    h += '<div class="lb-leader-name">' + escHtml(leader.name) + '</div>';
+    h += '<div class="lb-leader-meta">' + leader.games + ' GAMES &middot; ' + leader.winPct + '% WIN &middot; ' + leader.sessions + ' SESI</div>';
+    h += '<div class="lb-leader-score">' + (leader.score > 0 ? '+' : '') + leader.score + '</div>';
+    h += '</div>';
+    runners.forEach((p, i) => {
+      h += '<div class="lb-runner-row"><div class="lb-runner-rank">' + (i + 2) + '</div>';
+      h += '<div class="lb-runner-avatar">' + escHtml(lbInitials(p.name)) + '</div>';
+      h += '<div class="lb-runner-info"><div class="lb-runner-name">' + escHtml(p.name) + '</div><div class="lb-runner-meta">' + p.games + ' GAMES &middot; ' + p.winPct + '% WIN</div></div>';
+      h += '<div class="lb-runner-score">' + (p.score > 0 ? '+' : '') + p.score + '</div></div>';
     });
+    h += '</div>';
+
+    if (rest.length) {
+      h += '<div class="lb-table-title">Full Standings</div>';
+      rest.forEach((p, i) => {
+        const rank = i + 4;
+        h += '<div class="lb-row"><div class="lb-row-rank">' + rank + '</div>';
+        h += '<div class="lb-row-main"><div class="lb-row-name">' + escHtml(p.name) + '</div>';
+        h += '<div class="lb-row-meta">' + p.winPct + '% &middot; ' + p.wins + 'W/' + p.games + 'G &middot; ' + p.sessions + ' sesi &middot; avg ' + (p.avgPerGame > 0 ? '+' : '') + p.avgPerGame + '</div>';
+        h += lbFormHtml(p.form) + '</div>';
+        h += '<div class="lb-row-score' + (p.score < 0 ? ' neg' : '') + '">' + (p.score > 0 ? '+' : '') + p.score + '</div></div>';
+      });
+    }
+    return h;
+  }
+  function loadLeaderboardHome() {
+    ['Week', 'Month', 'All'].forEach((k) => { const el = document.getElementById('lb' + k); if (el) el.classList.remove('selected'); });
+    const idMap = { week: 'lbWeek', month: 'lbMonth', all: 'lbAll' };
+    if (document.getElementById(idMap[_lbPeriod])) document.getElementById(idMap[_lbPeriod]).classList.add('selected');
+    ['All', 'Surabaya', 'Denpasar'].forEach((k) => { const el = document.getElementById('lbLoc' + k); if (el) el.classList.remove('selected'); });
+    const locIdMap = { all: 'lbLocAll', surabaya: 'lbLocSurabaya', denpasar: 'lbLocDenpasar' };
+    if (document.getElementById(locIdMap[_lbLocation])) document.getElementById(locIdMap[_lbLocation]).classList.add('selected');
+    document.getElementById('lbHomeList').innerHTML = '<div class="lb-muted">Memuat...</div>';
+    const locParam = (_lbLocation && _lbLocation !== 'all') ? ('&location=' + _lbLocation) : '';
+    fetch('/api/mahjong/events?leaderboard=1&includeStats=1&period=' + _lbPeriod + locParam)
+      .then((r) => r.json())
+      .then((res) => {
+        const data = res.data || res || {};
+        const list = data.players || [];
+        const stats = data.stats || null;
+        document.getElementById('lbHomeList').innerHTML = renderLeaderboardHomeBody(list, stats);
+      })
+      .catch(() => {
+        document.getElementById('lbHomeList').innerHTML = '<div class="lb-muted">Gagal memuat leaderboard.</div>';
+      });
   }
 
   // === INIT ===

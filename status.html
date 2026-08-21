@@ -152,6 +152,20 @@
 </div>
 
 <script>
+  // Rekening & WA per cabang. Surabaya = BCA Teresa Carolina, Denpasar/Bali = Mandiri Rika A.
+  // Harus tetap sinkron dengan REKENING di index.html — kalau salah satu diubah, ubah juga yang satunya.
+  const REKENING = {
+    surabaya: { bank: 'BCA', number: '8630038775', name: 'Teresa Carolina', wa: '628999880707' },
+    denpasar: { bank: 'Mandiri', number: '1450014635755', name: 'Rika A', wa: '6288231360817' }
+  };
+
+  // Tarif per meja — HARUS sinkron dengan TABLE_RATES di netlify/functions/bookings.ts.
+  // Default Rp 50.000/jam, kecuali Autumn Table (b3, meja manual Denpasar) Rp 30.000/jam.
+  const TABLE_RATES = { b3: 30000 };
+  function getHourlyRate(tableId) {
+    return (tableId && TABLE_RATES[tableId] !== undefined) ? TABLE_RATES[tableId] : 50000;
+  }
+
   async function checkStatus() {
     const code = document.getElementById('codeInput').value.trim().toUpperCase();
     if (!code || code.length < 6) { alert('Masukkan kode booking yang valid ya!'); return; }
@@ -190,7 +204,10 @@
     icon.textContent = meta.icon;
     text.className = `status-text ${b.status}`;
     text.textContent = meta.text;
-    sub.textContent = meta.sub;
+    const rek = REKENING[b.location] || REKENING.surabaya;
+    sub.textContent = b.status === 'pending'
+      ? `Silakan transfer ke ${rek.bank} ${rek.number} a.n. ${rek.name} dan kirim bukti ke WA kami`
+      : meta.sub;
 
     // Format date
     const [y,m,d] = b.date.split('-');
@@ -203,7 +220,7 @@
       <div class="detail-row"><span class="detail-key">Waktu</span><span class="detail-val">${b.time} WIB</span></div>
       <div class="detail-row"><span class="detail-key">Meja</span><span class="detail-val">${escHtml(b.tableName)}<br><span style="font-size:11px;font-weight:400;color:var(--text-muted)">${escHtml(b.floor)}</span></span></div>
       <div class="detail-row"><span class="detail-key">Durasi</span><span class="detail-val">${b.duration} jam</span></div>
-      <div class="detail-row"><span class="detail-key">Total</span><span class="detail-val" style="color:var(--gold)">Rp ${(50000*b.duration).toLocaleString('id-ID')}</span></div>
+      <div class="detail-row"><span class="detail-key">Total</span><span class="detail-val" style="color:var(--gold)">Rp ${(typeof b.totalPaid === 'number' ? b.totalPaid : (getHourlyRate(b.tableId) * b.duration)).toLocaleString('id-ID')}</span></div>
       ${b.notes ? `<div class="detail-row"><span class="detail-key">Catatan</span><span class="detail-val">${escHtml(b.notes)}</span></div>` : ''}
     `;
 
@@ -219,7 +236,7 @@
     }
 
     const waMsg = `Halo Pung Pung! Saya mau tanya status booking saya.\\nKode: ${b.bookingCode}\\nNama: ${b.customerName}`;
-    document.getElementById('waBtn').onclick = () => window.open(`https://wa.me/628999880707?text=${encodeURIComponent(waMsg)}`, '_blank');
+    document.getElementById('waBtn').onclick = () => window.open(`https://wa.me/${rek.wa}?text=${encodeURIComponent(waMsg)}`, '_blank');
     document.getElementById('resultCard').classList.add('show');
   }
 
