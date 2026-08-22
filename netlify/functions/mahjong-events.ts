@@ -1,8 +1,10 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
+import { mahjongGames, mahjongPlayers, mahjongEvents, staff } from "../../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
-import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn } from "../../db/mahjongUtils.js";
+import { verifyPassword } from "../../db/authUtils.js";
+import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn } from "../../db/mahjongUtils.js";
+import { randomUUID } from "node:crypto";
 import {
   calculateWinScore,
   calculateAllLoserPayments,
@@ -35,6 +37,30 @@ function parseMeta(e: any): any {
   try { return e.metadata ? JSON.parse(e.metadata) : {}; } catch { return {}; }
 }
 
+// Staff auth check -- ANY logged-in staff (admin or kasir), not just Super
+// Admin. Same header pattern as the isSuperAdminReq() checks in
+// bookings.ts/promos.ts/staff.ts (client sends the credentials it collected
+// at login on every request), but this one also accepts regular `staff`
+// table rows, not only the superadmin env-var login. Used to gate score
+// corrections, undo, and player-name fixes below -- mahjong.html itself has
+// no login of its own, so these actions require the staff panel login
+// (added in this same change) to have succeeded first.
+const SUPERADMIN_USERNAME = "tere";
+async function checkStaffReq(req: Request): Promise<{ ok: boolean; name: string }> {
+  const u = req.headers.get("x-auth-username") || "";
+  const p = req.headers.get("x-auth-password") || "";
+  if (!u || !p) return { ok: false, name: "" };
+  const superadminPw = process.env.SUPERADMIN_PASSWORD;
+  if (superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw) {
+    return { ok: true, name: "Super Admin" };
+  }
+  const rows = await db.select().from(staff).where(eq(staff.username, u));
+  if (rows.length && verifyPassword(p, rows[0].passwordHash)) {
+    return { ok: true, name: rows[0].name || u };
+  }
+  return { ok: false, name: "" };
+}
+
 // All scoring math lives in db/mahjongScoring.ts (the single authoritative
 // engine). This function only: validates the request against the current
 // game/player state, calls the engine for whichever scoring_system this
@@ -49,11 +75,12 @@ async function loadGame(gameId: number) {
   return { game, players };
 }
 
-async function insertEvent(gameId: number, playerId: number, eventType: string, points: number, relatedPlayerId?: number | null, metadata?: unknown) {
+async function insertEvent(gameId: number, playerId: number, eventType: string, points: number, relatedPlayerId?: number | null, metadata?: unknown, actionGroup?: string | null) {
   const [row] = await db.insert(mahjongEvents).values({
     gameId, playerId, eventType, points,
     relatedPlayerId: relatedPlayerId ?? null,
     metadata: metadata !== undefined ? JSON.stringify(metadata) : null,
+    actionGroup: actionGroup ?? null,
   }).returning();
   return row;
 }
@@ -91,6 +118,7 @@ export default async (req: Request) => {
   await ensureMahjongTables(db);
     await ensureSessionIdColumn(db);
     await ensureScoringSystemColumn(db);
+    await ensureActionGroupColumn(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
@@ -288,7 +316,12 @@ export default async (req: Request) => {
     if (!data) return Response.json({ error: "Game not found" }, { status: 404 });
     const { game, players } = data;
 
-    if (game.status !== "active") {
+    // recordWin/recordKong only make sense while a game is actively being
+    // played. correction/undo/renamePlayer are staff-only fixes that must
+    // stay available AFTER a game finishes too -- that's usually exactly
+    // when a mistake gets noticed (checking the leaderboard, a customer
+    // pointing out their name is wrong, etc).
+    if ((action === "recordWin" || action === "recordKong") && game.status !== "active") {
       return Response.json({ error: "This game is not active — scoring is not allowed" }, { status: 409 });
     }
     const allPlayerIds = players.map((p) => p.id);
@@ -301,6 +334,7 @@ export default async (req: Request) => {
     //   the winner, ZIMO or HU (+ discarder if HU), and every fan pattern
     //   that applies (including which wind for the two wind patterns).
     if (action === "recordWin") {
+      const actionGroup = randomUUID();
       if (scoringSystem === "china") {
         const { winnerPlayerId, handContainsJoker, existingFlowers = [], existingSeasons = [], lastCardDraws = [], loserDefenses = [] } = body;
         if (!allPlayerIds.includes(winnerPlayerId)) {
@@ -325,7 +359,7 @@ export default async (req: Request) => {
         // winner's actual score comes from the LOSER_PAYMENT event below.
         const inserted = [];
         for (const ev of result.events) {
-          inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, handValue: ev.points, ...ev.metadata }));
+          inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, handValue: ev.points, ...ev.metadata }, actionGroup));
         }
 
         const losers = players.filter((p) => p.id !== winnerPlayerId);
@@ -340,11 +374,11 @@ export default async (req: Request) => {
         );
         for (const r of loserResults) {
           if (r.payment > 0 || r.defenseValue > 0) {
-            inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }));
+            inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }, actionGroup));
           }
         }
         if (winnerGain > 0) {
-          inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers (hand value ${result.total})` }));
+          inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", winnerGain, null, { label: `Collected ${winnerGain} from losers (hand value ${result.total})` }, actionGroup));
         }
         await db.update(mahjongGames)
           .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
@@ -389,19 +423,19 @@ export default async (req: Request) => {
       inserted.push(await insertEvent(game.id, winnerPlayerId, "WIN_MODE", 0, mode === "HU" ? discarderId ?? null : null, {
         mode,
         label: mode === "ZIMO" ? "Menang Zimo (tarik sendiri)" : "Menang Hu (dari buangan)",
-      }));
+      }, actionGroup));
       for (const ev of hand.events) {
-        inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, ...ev.metadata }));
+        inserted.push(await insertEvent(game.id, winnerPlayerId, ev.eventType, 0, null, { label: ev.label, ...ev.metadata }, actionGroup));
       }
 
       for (const r of payment.results) {
         if (r.payment > 0) {
-          inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }));
+          inserted.push(await insertEvent(game.id, r.playerId, "LOSER_PAYMENT", -r.payment, winnerPlayerId, { label: r.label }, actionGroup));
         }
       }
       inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", payment.winnerGain, null, {
         label: `Menang ${hand.totalFan} fan (${hand.totalPoints} poin) via ${mode === "ZIMO" ? "Zimo" : "Hu"}`,
-      }));
+      }, actionGroup));
 
       await db.update(mahjongGames)
         .set({ status: "finished_win", winnerPlayerId, endedAt: new Date() })
@@ -425,23 +459,115 @@ export default async (req: Request) => {
       } catch (e: any) {
         return Response.json({ error: e.message || "Invalid Kong data" }, { status: 400 });
       }
+      const actionGroup = randomUUID();
       const inserted = [];
       for (const d of deltas) {
-        inserted.push(await insertEvent(game.id, d.playerId, d.eventType, d.points, d.relatedPlayerId, { label: d.label }));
+        inserted.push(await insertEvent(game.id, d.playerId, d.eventType, d.points, d.relatedPlayerId, { label: d.label }, actionGroup));
       }
   const { scoreboard } = await loadSessionAccumulated(game, players);
         return Response.json({ events: inserted, scoreboard }, { status: 201 });
     }
 
-    // Admin-only correction — always additive, never edits/deletes history.
+    // Staff-only correction (admin or kasir) — always additive, never edits
+    // or deletes history. Requires x-auth-username/x-auth-password headers
+    // from a successful staff login (mahjong.html's staff panel).
     if (action === "correction") {
+      const staffCheck = await checkStaffReq(req);
+      if (!staffCheck.ok) {
+        return Response.json({ error: "Login staff diperlukan untuk koreksi skor" }, { status: 403 });
+      }
       const { playerId, points, note } = body;
       if (!allPlayerIds.includes(playerId) || typeof points !== "number") {
         return Response.json({ error: "playerId and numeric points are required" }, { status: 400 });
       }
-      const row = await insertEvent(game.id, playerId, "CORRECTION", points, null, { note: note || "" });
+      if (!note || !String(note).trim()) {
+        return Response.json({ error: "Alasan koreksi wajib diisi" }, { status: 400 });
+      }
+      const actionGroup = randomUUID();
+      const row = await insertEvent(game.id, playerId, "CORRECTION", points, null, { note: note.trim(), performedBy: staffCheck.name }, actionGroup);
     const { scoreboard } = await loadSessionAccumulated(game, players);
           return Response.json({ event: row, scoreboard }, { status: 201 });
+    }
+
+    // Staff-only undo — reverses the most recent scoring ACTION (every row
+    // inserted together by one recordWin/recordKong/correction call, grouped
+    // by action_group), not just the last single event row. Implemented as a
+    // mirrored insert with negated points (eventType "UNDO"), never a delete
+    // -- so the original mistake AND the fact it was undone both stay
+    // visible in the audit trail. If the undone action was the one that
+    // finished the game (a win), the game is reopened back to "active".
+    if (action === "undo") {
+      const staffCheck = await checkStaffReq(req);
+      if (!staffCheck.ok) {
+        return Response.json({ error: "Login staff diperlukan untuk undo" }, { status: 403 });
+      }
+      const allEvents = await db.select().from(mahjongEvents).where(eq(mahjongEvents.gameId, game.id));
+      const alreadyUndone = new Set(
+        allEvents.filter((e: any) => e.eventType === "UNDO").map((e: any) => parseMeta(e).undoneGroup).filter(Boolean)
+      );
+      const candidates = allEvents.filter((e: any) => e.eventType !== "UNDO" && e.actionGroup && !alreadyUndone.has(e.actionGroup));
+      if (!candidates.length) {
+        return Response.json({ error: "Tidak ada aksi yang bisa di-undo" }, { status: 409 });
+      }
+      let targetGroup = "";
+      let targetTime = -Infinity;
+      for (const e of candidates) {
+        const t = new Date(e.createdAt as any).getTime();
+        if (t > targetTime) { targetTime = t; targetGroup = e.actionGroup as string; }
+      }
+      const groupEvents = candidates.filter((e: any) => e.actionGroup === targetGroup);
+      const newActionGroup = randomUUID();
+      const inserted = [];
+      for (const e of groupEvents) {
+        inserted.push(await insertEvent(
+          game.id, e.playerId, "UNDO", -e.points, e.relatedPlayerId,
+          { undoneGroup: targetGroup, undoneEventId: e.id, undoneLabel: parseMeta(e).label || parseMeta(e).note || e.eventType, performedBy: staffCheck.name },
+          newActionGroup
+        ));
+      }
+      // Reopen the game if the undone action was the one that finished it.
+      const finishedTypes = new Set(["LOSER_PAYMENT", "WIN_MODE"]);
+      const wasWinAction = groupEvents.some((e: any) => finishedTypes.has(e.eventType));
+      let reopened = false;
+      if (wasWinAction && game.status !== "active") {
+        await db.update(mahjongGames)
+          .set({ status: "active", winnerPlayerId: null, endedAt: null })
+          .where(eq(mahjongGames.id, game.id));
+        reopened = true;
+      }
+      const { scoreboard } = await loadSessionAccumulated({ ...game, ...(reopened ? { status: "active" } : {}) }, players);
+      return Response.json({
+        events: inserted,
+        scoreboard,
+        undone: { label: parseMeta(groupEvents[0]).label || parseMeta(groupEvents[0]).note || groupEvents[0].eventType, reopened },
+      }, { status: 201 });
+    }
+
+    // Staff-only player-name/WA fix — for typos made when a host or player
+    // typed their own name/number in at join time. Only touches the
+    // mahjong_players row (display identity), never rewrites any
+    // mahjong_events row. Note for whoever reads history later: if this
+    // player continues into further games in the same "same 4 players?"
+    // session AFTER the rename, their score keeps accumulating correctly
+    // (matched going forward on the corrected name/WA); games already
+    // played earlier in the session under the OLD name still show that old
+    // name in that game's own history, which is expected/harmless.
+    if (action === "renamePlayer") {
+      const staffCheck = await checkStaffReq(req);
+      if (!staffCheck.ok) {
+        return Response.json({ error: "Login staff diperlukan untuk edit nama" }, { status: 403 });
+      }
+      const { playerId, name, waNumber } = body;
+      if (!allPlayerIds.includes(playerId) || !name || !String(name).trim()) {
+        return Response.json({ error: "playerId and non-empty name are required" }, { status: 400 });
+      }
+      const updateData: any = { name: String(name).trim() };
+      if (typeof waNumber === "string") updateData.waNumber = waNumber.trim();
+      await db.update(mahjongPlayers).set(updateData).where(eq(mahjongPlayers.id, playerId));
+      const refreshed = await db.select().from(mahjongPlayers).where(eq(mahjongPlayers.gameId, game.id));
+      refreshed.sort((a: any, b: any) => a.seatNumber - b.seatNumber);
+      const { scoreboard } = await loadSessionAccumulated(game, refreshed);
+      return Response.json({ players: refreshed, scoreboard }, { status: 201 });
     }
 
     return Response.json({ error: "Unknown action" }, { status: 400 });
