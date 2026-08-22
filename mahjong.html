@@ -193,6 +193,8 @@ function init(){
   if (code) { qs("content").innerHTML = "<div class=\"muted\">Memuat booking kamu...</div>"; loadBooking(code.toUpperCase()); }
   else { renderCodeScreen(); }
     if (params.get("leaderboard")) { openLeaderboard(); }
+    if (params.get("riwayat")) { openHistory(); }
+    if (params.get("statistik")) { openStats(); }
 }
 function renderCodeScreen(err){
   var h = "";
@@ -202,6 +204,8 @@ function renderCodeScreen(err){
   if (err) h += "<div class=\"error-msg\">" + esc(err) + "</div>";
   h += "<button class=\"btn btn-primary\" onclick=\"submitCode()\">Lanjut &#8594;</button>";
     h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; Lihat Peringkat</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"openHistory()\">&#x1F4DC; Riwayat Saya</button>";
+    h += "<button class=\"btn btn-outline\" onclick=\"openStats()\">&#x1F4CA; Statistik Saya</button>";
   h += "</div>";
   qs("content").innerHTML = h;
   qs("bottomNav").style.display = "none";
@@ -215,6 +219,13 @@ function loadBooking(code){
   apiGet("/api/bookings?code=" + encodeURIComponent(code)).then(function(res){
     if (!res.ok || res.data.error) { renderCodeScreen("Kode booking tidak ditemukan. Periksa lalu coba lagi."); return; }
     S.booking = res.data; S.code = code;
+    // Simpan kode booking ke URL (kalau belum ada) supaya kalau halaman di-refresh,
+    // tidak balik ke layar "masukkan kode booking" — langsung lanjut ke state yang sama.
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("code") !== code) {
+      var newUrl = window.location.pathname + "?code=" + encodeURIComponent(code);
+      window.history.replaceState({}, "", newUrl);
+    }
     var locationName = S.booking.location === "denpasar" ? "Denpasar, Bali" : "Surabaya";
     qs("headerSub").textContent = "📍 " + locationName + " · " + S.booking.tableName;
     if (S.booking.status !== "checked_in") { renderNotCheckedIn(); return; }
@@ -227,6 +238,8 @@ function renderNotCheckedIn(){
   h += "<div class=\"muted\">Pencatatan skor tersedia setelah meja kamu di-check-in oleh staff. Silakan check-in terlebih dahulu, lalu kembali ke sini.</div>";
   h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Cek Status Booking</a>";
   h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; Lihat Peringkat</button>";
+  h += "<button class=\"btn btn-outline\" onclick=\"openHistory()\">&#x1F4DC; Riwayat Saya</button>";
+  h += "<button class=\"btn btn-outline\" onclick=\"openStats()\">&#x1F4CA; Statistik Saya</button>";
   h += "</div>";
   qs("content").innerHTML = h;
   qs("bottomNav").style.display = "none";
@@ -239,11 +252,42 @@ function loadGameForBooking(){
   });
 }
 function routeByStatus(){
+  stopLobbyPolling();
   if (!S.game) { renderLobbyNoGame(); return; }
   var st = S.game.status;
   if (st === "waiting_for_players" || st === "ready") { renderLobbyGame(); }
   else if (st === "active") { loadActiveFull(); }
   else { loadFinishedFull(); }
+}
+// Polling ringan selagi di lobi (nunggu pemain gabung), supaya semua HP otomatis
+// update tanpa perlu refresh manual. Berhenti otomatis begitu status game berubah
+// (misal host sudah mulai permainan) atau saat pindah ke layar lain.
+var _lobbyPollTimer = null;
+function startLobbyPolling(){
+  stopLobbyPolling();
+  _lobbyPollTimer = setInterval(pollLobbyState, 3000);
+}
+function stopLobbyPolling(){
+  if (_lobbyPollTimer) { clearInterval(_lobbyPollTimer); _lobbyPollTimer = null; }
+}
+function pollLobbyState(){
+  if (!S.booking || !S.game) { return; }
+  apiGet("/api/mahjong/games?bookingId=" + S.booking.id).then(function(res){
+    if (!res.ok || !res.data.game) return;
+    var newGame = res.data.game, newPlayers = res.data.players || [];
+    var statusChanged = newGame.status !== S.game.status;
+    var playersChanged = newPlayers.length !== S.players.length ||
+      newPlayers.some(function(p, i){ return !S.players[i] || S.players[i].id !== p.id; });
+    if (!statusChanged && !playersChanged) return; // tidak ada yang baru, jangan ganggu tampilan (misal lagi ngetik nama)
+    // Simpan input yang mungkin sedang diketik user (form join belum disubmit) biar tidak hilang saat re-render
+    var savedJoinName = qs("joinName") ? qs("joinName").value : null;
+    var savedJoinWa = qs("joinWa") ? qs("joinWa").value : null;
+    S.game = newGame; S.players = newPlayers;
+    if (statusChanged) { routeByStatus(); return; } // status berubah (misal game sudah dimulai) — pindah layar otomatis
+    renderLobbyGame();
+    if (savedJoinName !== null && qs("joinName")) qs("joinName").value = savedJoinName;
+    if (savedJoinWa !== null && qs("joinWa")) qs("joinWa").value = savedJoinWa;
+  }).catch(function(){});
 }
 function myPlayerId(){ return parseInt(localStorage.getItem("mj_player_" + S.game.id) || "0"); }
 function renderLobbyNoGame(){
@@ -351,6 +395,7 @@ function renderLobbyGame(){
     }
     h += "<button class=\"btn btn-danger btn-sm\" onclick=\"cancelGame()\">Batalkan Permainan</button>";
   qs("content").innerHTML = h;
+  startLobbyPolling();
 }
 function joinGame(){
   var name = qs("joinName").value.trim();
@@ -377,6 +422,7 @@ function joinGame(){
 function startGame(){
   apiSend("/api/mahjong/games?id=" + S.game.id + "&action=start", "PATCH").then(function(res){
     if (!res.ok) { alert(res.data.error || "Could not start game"); return; }
+    stopLobbyPolling();
     loadActiveFull();
   });
 }

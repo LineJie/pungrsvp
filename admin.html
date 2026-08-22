@@ -665,7 +665,7 @@
   <!-- VIEW TABS -->
   <div style="display:flex;gap:8px;margin-bottom:14px;">
     <button id="tabTimeline" class="btn btn-primary" onclick="switchTab('timeline')" style="flex:1">📅 Timeline</button>
-    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button><button id="tabStaff" class="btn" onclick="switchTab('staff')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🛡️ Kelola Staff</button><button id="tabPromo" class="btn" onclick="switchTab('promo')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🎁 Kelola Promo</button>
+    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button><button id="tabStaff" class="btn" onclick="switchTab('staff')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🛡️ Kelola Staff</button><button id="tabPromo" class="btn" onclick="switchTab('promo')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🎁 Kelola Promo</button><button id="tabClosing" class="btn" onclick="switchTab('closing')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">🌙 Tutup Kasir</button>
   </div>
 
   <!-- TIMELINE VIEW -->
@@ -701,7 +701,21 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div class="toast" id="toast"></div>
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewClosing" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
+  <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:160px;">
+        <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:4px;">Tanggal Closing</label>
+        <input type="date" id="closingDate" onchange="loadClosingReport()" style="width:100%;padding:10px 12px;border:1.5px solid rgba(28,58,46,0.15);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;">
+      </div>
+      <button class="btn btn-primary" onclick="printClosingReport()" style="margin-top:20px;white-space:nowrap;">🖨️ Print Laporan</button>
+    </div>
+    <div id="closingSummary">
+      <div class="loading" style="text-align:center;padding:30px;color:var(--text-muted);">Memuat data…</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
   let allBookings = [];
@@ -771,6 +785,112 @@
       document.getElementById('tabPromo').className = tab === 'promo' ? 'btn btn-primary' : 'btn';
       document.getElementById('tabPromo').style = (tab === 'promo' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)') + (isSuperAdmin ? '' : ';display:none');
       if (tab === 'promo') loadPromoManager();
+      document.getElementById('viewClosing').style.display = tab === 'closing' ? 'block' : 'none';
+      document.getElementById('tabClosing').className = tab === 'closing' ? 'btn btn-primary' : 'btn';
+      document.getElementById('tabClosing').style = tab === 'closing' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+      if (tab === 'closing') loadClosingReport();
+  }
+
+  // === TUTUP KASIR (LAPORAN CLOSING HARIAN) ===
+  let _closingData = [];
+  const PAY_LABELS_CLOSING = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit', gratis: '🎁 Gratis (Owner)' };
+
+  async function loadClosingReport() {
+    const date = document.getElementById('closingDate').value;
+    if (!date) return;
+    document.getElementById('closingSummary').innerHTML = '<div class="loading" style="text-align:center;padding:30px;color:var(--text-muted);">Memuat data…</div>';
+    const locParam = (_viewLocation && _viewLocation !== 'all') ? `&location=${_viewLocation}` : '';
+    try {
+      const res = await fetch(`/api/admin/bookings?date=${date}${locParam}`);
+      const data = await res.json();
+      // Cuma sesi yang sudah checkout & lunas yang dihitung sebagai omset closing —
+      // booking pending/cancelled/confirmed belum ada uang masuk, jadi tidak relevan buat laporan kas.
+      _closingData = (Array.isArray(data) ? data : []).filter(b => b.status === 'completed');
+      renderClosingSummary(date);
+    } catch (e) {
+      document.getElementById('closingSummary').innerHTML = '<div class="empty-state">Gagal memuat data.</div>';
+    }
+  }
+
+  function computeClosingBreakdown() {
+    const breakdown = { tunai: {count:0, total:0}, qris: {count:0, total:0}, debit: {count:0, total:0}, gratis: {count:0, total:0} };
+    let totalOmset = 0;
+    _closingData.forEach(b => {
+      if (breakdown[b.paymentMethod]) {
+        breakdown[b.paymentMethod].count++;
+        breakdown[b.paymentMethod].total += (b.totalPaid || 0);
+      }
+      totalOmset += (b.totalPaid || 0);
+    });
+    return { breakdown, totalOmset, totalSesi: _closingData.length };
+  }
+
+  function closingLocLabel() {
+    return _viewLocation === 'denpasar' ? 'Denpasar, Bali' : _viewLocation === 'surabaya' ? 'Surabaya' : 'Semua Cabang';
+  }
+
+  function renderClosingSummary(date) {
+    const { breakdown, totalOmset, totalSesi } = computeClosingBreakdown();
+    let rows = '';
+    ['tunai','qris','debit','gratis'].forEach(k => {
+      const item = breakdown[k];
+      rows += `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(28,58,46,0.06);font-size:14px;">
+        <span>${PAY_LABELS_CLOSING[k]}</span>
+        <span style="text-align:right;color:var(--green-dark);font-weight:600;">${item.count}&times; &nbsp; Rp ${item.total.toLocaleString('id-ID')}</span>
+      </div>`;
+    });
+    document.getElementById('closingSummary').innerHTML = `
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">${closingLocLabel()} &middot; ${formatDate(date)}</div>
+      <div style="background:var(--green-dark);border-radius:14px;padding:18px;text-align:center;margin-bottom:16px;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Total Omset</div>
+        <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--gold-light);">Rp ${totalOmset.toLocaleString('id-ID')}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">${totalSesi} sesi selesai</div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Rincian per Metode Bayar</div>
+      ${rows}
+      ${totalSesi === 0 ? '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px 0 0;">Belum ada sesi selesai di tanggal ini.</div>' : ''}
+    `;
+  }
+
+  function printClosingReport() {
+    const date = document.getElementById('closingDate').value;
+    const { breakdown, totalOmset, totalSesi } = computeClosingBreakdown();
+    const printedAt = new Date().toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Jakarta' });
+    let rows = '';
+    ['tunai','qris','debit','gratis'].forEach(k => {
+      const item = breakdown[k];
+      if (item.count === 0) return; // sembunyikan metode yang tidak dipakai hari itu biar struk ringkas
+      rows += `<div class="row"><span>${PAY_LABELS_CLOSING[k]}</span><span>${item.count}&times; Rp ${item.total.toLocaleString('id-ID')}</span></div>`;
+    });
+    const w = window.open('', '_blank', 'width=400,height=600');
+    w.document.write(`<html><head><title>Laporan Closing</title><style>
+      @media print { body { margin: 0; } }
+      body { font-family: 'Courier New', monospace; font-size: 16px; font-weight: 900; -webkit-text-stroke: 0.4px currentColor; width: 280px; margin: 0 auto; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .center { text-align: center; }
+      .bold { font-weight: 900; -webkit-text-stroke: 0.6px currentColor; }
+      .line { border-top: 2px dashed #000; margin: 8px 0; }
+      .row { display: flex; justify-content: space-between; margin: 4px 0; }
+      .logo { font-size: 20px; font-weight: 900; -webkit-text-stroke: 0.6px currentColor; text-align: center; margin-bottom: 2px; }
+    </style></head><body>
+    <div class="logo">🀄 PUNG PUNG MAHJONG</div>
+    <div class="center bold" style="margin-top:6px;">LAPORAN TUTUP KASIR</div>
+    <div class="center">${closingLocLabel()}</div>
+    <div class="line"></div>
+    <div class="row"><span>Tanggal</span><span>${formatDate(date)}</span></div>
+    <div class="row"><span>Dicetak</span><span style="font-size:13px;">${printedAt}</span></div>
+    <div class="line"></div>
+    <div class="row bold" style="font-size:18px;"><span>TOTAL OMSET</span><span>Rp ${totalOmset.toLocaleString('id-ID')}</span></div>
+    <div class="row"><span>Jumlah Sesi</span><span>${totalSesi}</span></div>
+    <div class="line"></div>
+    <div class="center" style="font-size:14px;margin-bottom:4px;">Rincian per Metode Bayar</div>
+    ${rows || '<div class="center">Tidak ada transaksi.</div>'}
+    <div class="line"></div>
+    <div class="center" style="margin-top:8px;">Ditandatangani oleh:</div>
+    <div class="center" style="margin-top:30px;">( _________________ )</div>
+    <br><br>
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 500);
   }
 
   function renderTable(data) {
@@ -1985,12 +2105,12 @@ async function loadStaff() {
     w.document.write(`<!DOCTYPE html><html><head><title>Struk Pung Pung</title>
     <style>
       @media print { body { margin: 0; } }
-      body { font-family: 'Courier New', monospace; font-size: 16px; width: 280px; margin: 0 auto; padding: 10px; }
+      body { font-family: 'Courier New', monospace; font-size: 16px; font-weight: 900; -webkit-text-stroke: 0.4px currentColor; width: 280px; margin: 0 auto; padding: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .center { text-align: center; }
-      .bold { font-weight: bold; }
-      .line { border-top: 1px dashed #000; margin: 8px 0; }
+      .bold { font-weight: 900; -webkit-text-stroke: 0.6px currentColor; }
+      .line { border-top: 2px dashed #000; margin: 8px 0; }
       .row { display: flex; justify-content: space-between; margin: 4px 0; }
-      .logo { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+      .logo { font-size: 20px; font-weight: 900; -webkit-text-stroke: 0.6px currentColor; text-align: center; margin-bottom: 2px; }
     </style></head><body>
     <div class="logo">🀄 PUNG PUNG MAHJONG</div>
     ${receiptLocationLines}
@@ -2071,6 +2191,7 @@ async function loadStaff() {
   const m = String(today.getMonth()+1).padStart(2,'0');
   const d = String(today.getDate()).padStart(2,'0');
   document.getElementById('filterDate').value = `${y}-${m}-${d}`;
+  document.getElementById('closingDate').value = `${y}-${m}-${d}`;
 
   // === WALK-IN FORM ===
   function toggleWalkin() {
@@ -2275,6 +2396,7 @@ async function loadStaff() {
     _viewLocation = sel.value;
     filterWalkinTableOptions();
     loadBookings(true);
+    if (currentView === 'closing') loadClosingReport();
   }
   // === PASSWORD GATE ===
   async function checkPassword() {
