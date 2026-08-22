@@ -82,3 +82,14 @@ export async function ensureScoringSystemColumn(db: any) {
     await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS scoring_system text NOT NULL DEFAULT 'hongkong'`);
 }
 
+// Additive safety net: groups every event inserted by a single scoring
+// action (recordWin can insert many rows -- fan breakdown + one payment per
+// loser -- recordKong/correction insert 1+ too) under one shared id, so
+// "Undo aksi terakhir" can find and reverse the WHOLE action atomically
+// instead of just the last single row. NULL for any pre-existing event
+// rows -- those are simply not undo-able, which is fine (they predate the
+// feature and staff can still use manual correction on them).
+export async function ensureActionGroupColumn(db: any) {
+    await db.execute(sql`ALTER TABLE mahjong_events ADD COLUMN IF NOT EXISTS action_group text`);
+}
+
