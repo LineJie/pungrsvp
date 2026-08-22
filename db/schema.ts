@@ -104,5 +104,6 @@ export const mahjongEvents = pgTable("mahjong_events", {
   points: integer().notNull(),
   relatedPlayerId: integer("related_player_id"), // e.g. the discarder in a KONG_FROM_DISCARD event
   metadata: text(), // JSON-encoded string with event-specific details (tile numbers, honour tile, notes, etc.)
+  actionGroup: text("action_group"), // shared id across every row inserted by one scoring action (recordWin/recordKong/correction/undo) -- lets "Undo last action" reverse the whole thing at once. NULL for rows inserted before this feature.
   createdAt: timestamp("created_at").defaultNow(),
 });
