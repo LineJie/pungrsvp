@@ -60,6 +60,12 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 .player-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--cream);border-radius:12px;margin-bottom:8px;}
 .player-row .pname{font-weight:600;color:var(--green-dark);font-size:14px;}
 .player-row .pseat{font-size:11px;color:var(--text-muted);}
+.staff-link{position:absolute;right:16px;top:20px;color:rgba(255,255,255,0.6);text-decoration:none;font-size:13px;background:none;border:none;font-family:"DM Sans",sans-serif;cursor:pointer;}
+.staff-panel{background:rgba(28,58,46,0.05);border:1.5px dashed rgba(28,58,46,0.2);border-radius:16px;padding:14px;margin-bottom:16px;}
+.staff-panel-title{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.staff-panel-title .logout-link{color:var(--red);font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;}
+.staff-rename-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--warm-white);border-radius:10px;margin-bottom:6px;font-size:13px;color:var(--green-dark);}
+.staff-rename-row .edit-pencil{cursor:pointer;color:var(--text-muted);font-size:13px;}
 .you-badge{font-size:10px;background:var(--gold);color:var(--green-dark);padding:2px 7px;border-radius:8px;margin-left:6px;font-weight:700;}
 .error-msg{text-align:center;color:var(--red);font-size:13px;padding:16px;}
 .muted{color:var(--text-muted);font-size:12px;text-align:center;padding:12px;}
@@ -130,6 +136,7 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 <div class="phone-frame" id="phoneFrame">
 <div class="header">
 <a href="/" class="back-link">← Booking</a>
+<button type="button" class="staff-link" id="staffLink" onclick="openStaffLogin()">🔒 Staff</button>
 <div class="header-title">Pung Pung <span>Mahjong</span></div>
 <div class="header-sub">Mahjong Playroom</div>
 <div class="page-label">🀄 Catat Skor Permainan</div>
@@ -151,8 +158,30 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 <div class="modal-overlay" id="modalHistory"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalHistory')">&#x2715;</button><div class="modal-title">Riwayat Mahjong Saya</div><div id="histBody"></div></div></div>
 <div class="modal-overlay" id="modalStats"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStats')">&#x2715;</button><div class="modal-title">Statistik Mahjong Saya</div><div id="statsBody"></div></div></div>
 <div class="modal-overlay" id="modalLeaderboard"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalLeaderboard')">&#x2715;</button><div class="modal-title">Peringkat Pung Pung</div><div id="lbBody"></div></div></div>
+<div class="modal-overlay" id="modalStaffLogin"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStaffLogin')">&#x2715;</button><div class="modal-title">🔒 Login Staff</div>
+  <div class="muted" style="text-align:left;padding:0 0 10px;">Buat koreksi skor, undo, atau perbaiki nama pemain yang salah ketik.</div>
+  <div class="label">Username</div><input class="field" id="staffLoginUser" placeholder="Username staff">
+  <div class="label">Password</div><input class="field" id="staffLoginPass" type="password" placeholder="Password">
+  <div class="muted" id="staffLoginErr" style="color:var(--red);display:none;"></div>
+  <button class="btn btn-primary" onclick="submitStaffLogin()">Masuk</button>
+</div></div>
+<div class="modal-overlay" id="modalStaffCorrection"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStaffCorrection')">&#x2715;</button><div class="modal-title">✏️ Koreksi Skor</div>
+  <div class="muted" style="text-align:left;padding:0 0 10px;">Koreksi bersifat tambahan (dicatat di riwayat), bukan menimpa skor lama.</div>
+  <div class="label">Pemain</div><select class="field" id="corrPlayer"></select>
+  <div class="label">Poin (boleh negatif, misal -10)</div><input class="field" id="corrPoints" type="number" placeholder="mis. 10 atau -10">
+  <div class="label">Alasan (wajib)</div><input class="field" id="corrNote" placeholder="mis. salah hitung Kong">
+  <div class="muted" id="corrErr" style="color:var(--red);display:none;"></div>
+  <button class="btn btn-gold" onclick="submitStaffCorrection()">Simpan Koreksi</button>
+</div></div>
+<div class="modal-overlay" id="modalStaffRename"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStaffRename')">&#x2715;</button><div class="modal-title">✏️ Edit Nama Pemain</div>
+  <input type="hidden" id="renamePlayerId">
+  <div class="label">Nama</div><input class="field" id="renameName" placeholder="Nama pemain">
+  <div class="label">Nomor WhatsApp (opsional)</div><input class="field" id="renameWa" placeholder="08xxxxxxxxxx">
+  <div class="muted" id="renameErr" style="color:var(--red);display:none;"></div>
+  <button class="btn btn-gold" onclick="submitStaffRename()">Simpan</button>
+</div></div>
 <script>
-var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score", lastPlayers:[], lastMyIndex:-1, lastSessionId:null, lastScoringSystem:null, sessionGamesCount:1, pickedScoringSystem:"hongkong" };
+var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score", lastPlayers:[], lastMyIndex:-1, lastSessionId:null, lastScoringSystem:null, sessionGamesCount:1, pickedScoringSystem:"hongkong", staffUser:null, staffPass:null, staffName:null };
 var SCORING_SYSTEM_LABELS = { china: "China", hongkong: "Hongkong (Fan)" };
 var HONOURS = [["east","East"],["south","South"],["west","West"],["north","North"],["green_dragon","Green Dragon"],["white_dragon","White Dragon"],["zhong","Zhong / Red Dragon"]];
 // Hong Kong Old Style fan table -- keep in sync with db/mahjongScoring.ts
@@ -185,8 +214,124 @@ function qs(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function apiGet(url){ return fetch(url).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); }); }
 function apiSend(url, method, body){ var opts={method:method, headers:{"Content-Type":"application/json"}}; if(body) opts.body=JSON.stringify(body); return fetch(url, opts).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, data:d}; }); }); }
+// Same as apiSend but attaches the logged-in staff's credentials -- used for
+// the staff-only actions (correction / undo / renamePlayer). Session lives
+// only in memory (S.staffUser/staffPass), same as admin.html's login: a
+// page reload logs staff out again, on purpose.
+function apiSendAuth(url, method, body){
+  var opts={method:method, headers:{"Content-Type":"application/json", "x-auth-username":S.staffUser||"", "x-auth-password":S.staffPass||""}};
+  if(body) opts.body=JSON.stringify(body);
+  return fetch(url, opts).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, data:d}; }); });
+}
 function showModal(id){ qs(id).classList.add("open"); }
 function closeModal(id){ qs(id).classList.remove("open"); }
+function toast(msg){
+  var t = document.createElement("div");
+  t.textContent = msg;
+  t.style.cssText = "position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--green-dark);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:999;max-width:320px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.25);";
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3200);
+}
+
+// === STAFF PANEL ===
+function openStaffLogin(){
+  if (S.staffUser) { staffLogout(); return; }
+  qs("staffLoginUser").value = ""; qs("staffLoginPass").value = "";
+  qs("staffLoginErr").style.display = "none";
+  showModal("modalStaffLogin");
+}
+function submitStaffLogin(){
+  var user = qs("staffLoginUser").value.trim();
+  var pass = qs("staffLoginPass").value.trim();
+  var err = qs("staffLoginErr");
+  if (!user || !pass) { err.textContent = "Isi username dan password."; err.style.display = "block"; return; }
+  apiSend("/api/auth", "POST", {username:user, password:pass}).then(function(res){
+    if (!res.ok) { err.textContent = res.data.error || "Username atau password salah."; err.style.display = "block"; return; }
+    S.staffUser = user; S.staffPass = pass;
+    S.staffName = res.data.role === "superadmin" ? "Super Admin" : res.data.name;
+    closeModal("modalStaffLogin");
+    qs("staffLink").textContent = "🔓 " + S.staffName;
+    toast("Login berhasil sebagai " + S.staffName);
+    if (S.game && (S.game.status === "active" || S.game.status !== "waiting_for_players")) { routeByStatus(); }
+  });
+}
+function staffLogout(){
+  S.staffUser = null; S.staffPass = null; S.staffName = null;
+  qs("staffLink").textContent = "🔒 Staff";
+  toast("Staff logout");
+  if (S.game) routeByStatus();
+}
+// Rendered under the scoreboard on the Active/Finished screens whenever a
+// staff member is logged in. Kept out of the normal player-facing flow --
+// players never see this unless a staff member has logged in on this device.
+function staffPanelHtml(){
+  if (!S.staffUser || !S.game) return "";
+  var h = "<div class=\"staff-panel\">";
+  h += "<div class=\"staff-panel-title\"><span>🔓 Panel Staff — " + esc(S.staffName) + "</span><span class=\"logout-link\" onclick=\"staffLogout()\">Keluar</span></div>";
+  h += "<button class=\"btn btn-outline btn-sm\" onclick=\"doUndo()\">↩️ Undo Aksi Terakhir</button>";
+  h += "<button class=\"btn btn-outline btn-sm\" onclick=\"openStaffCorrection()\">✏️ Koreksi Skor</button>";
+  h += "<div class=\"label\" style=\"margin-top:10px;\">Perbaiki Nama Pemain</div>";
+  S.players.slice().sort(function(a,b){ return a.seatNumber-b.seatNumber; }).forEach(function(p){
+    h += "<div class=\"staff-rename-row\"><span>" + esc(p.name) + " (Seat " + p.seatNumber + ")</span><span class=\"edit-pencil\" onclick=\"openStaffRename(" + p.id + ")\">✏️ Edit</span></div>";
+  });
+  h += "</div>";
+  return h;
+}
+function doUndo(){
+  if (!confirm("Undo aksi terakhir? Ini membalikkan skor dari aksi TERAKHIR yang tercatat (kemenangan/kong/koreksi terbaru). Riwayat sebelumnya tetap kesimpen untuk audit, dan kalau ternyata game ini baru saja selesai gara-gara aksi itu, game-nya bakal dibuka lagi jadi aktif.")) return;
+  apiSendAuth("/api/mahjong/events", "POST", {gameId:S.game.id, action:"undo"}).then(function(res){
+    if (!res.ok) { toast(res.data.error || "Gagal undo"); return; }
+    var lbl = (res.data.undone && res.data.undone.label) || "aksi terakhir";
+    toast("Berhasil di-undo: " + lbl + (res.data.undone && res.data.undone.reopened ? " (game dibuka lagi)" : ""));
+    loadGameForBooking();
+  });
+}
+function openStaffCorrection(){
+  var sel = qs("corrPlayer"); sel.innerHTML = "";
+  S.players.slice().sort(function(a,b){ return a.seatNumber-b.seatNumber; }).forEach(function(p){
+    var opt = document.createElement("option"); opt.value = p.id; opt.textContent = p.name + " (Seat " + p.seatNumber + ")";
+    sel.appendChild(opt);
+  });
+  qs("corrPoints").value = ""; qs("corrNote").value = "";
+  qs("corrErr").style.display = "none";
+  showModal("modalStaffCorrection");
+}
+function submitStaffCorrection(){
+  var playerId = parseInt(qs("corrPlayer").value);
+  var points = parseInt(qs("corrPoints").value, 10);
+  var note = qs("corrNote").value.trim();
+  var err = qs("corrErr");
+  if (!playerId || isNaN(points) || points === 0) { err.textContent = "Isi poin koreksi (bukan 0)."; err.style.display = "block"; return; }
+  if (!note) { err.textContent = "Alasan koreksi wajib diisi."; err.style.display = "block"; return; }
+  apiSendAuth("/api/mahjong/events", "POST", {gameId:S.game.id, action:"correction", playerId:playerId, points:points, note:note}).then(function(res){
+    if (!res.ok) { err.textContent = res.data.error || "Gagal menyimpan koreksi."; err.style.display = "block"; return; }
+    closeModal("modalStaffCorrection");
+    toast("Koreksi tersimpan (" + (points>0?"+":"") + points + " poin)");
+    loadGameForBooking();
+  });
+}
+function openStaffRename(pid){
+  var p = S.players.find(function(x){ return x.id === pid; });
+  if (!p) return;
+  qs("renamePlayerId").value = p.id;
+  qs("renameName").value = p.name;
+  qs("renameWa").value = p.waNumber || "";
+  qs("renameErr").style.display = "none";
+  showModal("modalStaffRename");
+}
+function submitStaffRename(){
+  var playerId = parseInt(qs("renamePlayerId").value);
+  var name = qs("renameName").value.trim();
+  var wa = qs("renameWa").value.trim();
+  var err = qs("renameErr");
+  if (!name) { err.textContent = "Nama tidak boleh kosong."; err.style.display = "block"; return; }
+  apiSendAuth("/api/mahjong/events", "POST", {gameId:S.game.id, action:"renamePlayer", playerId:playerId, name:name, waNumber:wa}).then(function(res){
+    if (!res.ok) { err.textContent = res.data.error || "Gagal menyimpan nama."; err.style.display = "block"; return; }
+    closeModal("modalStaffRename");
+    toast("Nama pemain diperbarui");
+    loadGameForBooking();
+  });
+}
 function init(){
   var params = new URLSearchParams(window.location.search);
   var code = params.get("code");
@@ -460,6 +605,7 @@ function renderActive(){
   h += "<button class=\"btn btn-gold\" onclick=\"openZimo()\">&#x1F004; Ada yang Menang!</button>";
   h += "<button class=\"btn btn-outline\" onclick=\"openKong()\">+ KONG</button>";
   h += "<button class=\"btn btn-danger btn-sm\" onclick=\"markDraw()\">Tembok Habis — Catat Seri</button>";
+  h += staffPanelHtml();
   qs("content").innerHTML = h;
 }
 function markDraw(){
@@ -484,6 +630,7 @@ function renderFinished(){
   var h = "<div class=\"card\"><div class=\"card-title\">" + label + "</div></div>";
   h += scoreboardHtml();
   h += "<button class=\"btn btn-gold\" onclick=\"resetForNewGame()\">Mulai Permainan Baru di Meja Ini</button>";
+  h += staffPanelHtml();
   qs("content").innerHTML = h;
 }
 function resetForNewGame(){ var mine = myPlayerId(); var idx = S.players.findIndex(function(p){ return p.id === mine; }); S.lastPlayers = (S.players.length === 4) ? S.players.slice() : []; S.lastMyIndex = idx; S.lastSessionId = (S.players.length === 4 && S.game) ? (S.game.sessionId || S.game.id) : null; S.lastScoringSystem = S.game ? (S.game.scoringSystem || "hongkong") : "hongkong"; S.game = null; S.players = []; S.events = []; renderLobbyNoGame(); }
