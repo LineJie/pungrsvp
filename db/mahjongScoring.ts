@@ -11,14 +11,14 @@
 //
 // - "china": the original flat house-rules system. Only Zimo (self-draw)
 //   wins are valid. See the CHINA STYLE section below.
-// - "hongkong" (default): the Hong Kong Old Style fan table. Both Zimo
-//   (self-draw) and Hu (win off a discard) are valid. See the HONG KONG
-//   STYLE section below.
+// - "taiwan" (default): a simplified Taiwanese-style point table. Both Zimo
+//   (self-draw) and Hu (win off a discard) are valid. See the TAIWAN STYLE
+//   section below.
 //
 // Kong scoring (calculateKongScore) is shared by both systems — Kong is an
 // immediate in-play bonus independent of which win-scoring style is used.
 
-export type ScoringSystem = "china" | "hongkong";
+export type ScoringSystem = "china" | "taiwan";
 
 export type EventType =
     | "ZIMO"
@@ -278,107 +278,89 @@ export function calculateAllLoserPayments(baseAmount: number, defenses: LoserDef
     return { results, winnerGain };
 }
 
-// ─── HONG KONG OLD STYLE (fan table) ───────────────────────────────────
-// - A winning hand is scored by picking every pattern ("fan") it matches
-//   from FAN_TABLE below and summing the fan values. No upper cap — fan
-//   keeps stacking. Minimum to win is 1 fan (see calculateHandFan).
-// - Conversion: 1 fan = 1 point. (Was 1 fan = 10 points during design —
-//   changed to 1:1 for the Aug 17 "81 poin" promo period; revisit later.)
-// - Zimo (self-draw win): all 3 opponents each pay the full point total
-//   to the winner (winner collects 3x the point total).
-// - Hu (win off another player's discard): only the discarder pays the
-//   full point total to the winner; the other two players pay nothing.
-// - Pong of Seat Wind / Prevailing Wind: the host must also record which
-//   wind (East/South/West/North) applies — this is purely informational
-//   (does not change the fan value) but keeps the "bandar" / seat-wind
-//   basis auditable in history. No automatic dealer/round rotation yet.
+// ─── TAIWAN STYLE (simplified point table) ──────────────────────────────
+// - Every win is worth a base Wu (1 point), plus whichever of these apply:
+//     Zimo (self-draw)         +2
+//     Pong of Naga (Dragon)    +2 each  (up to 3 — Red/Green/White)
+//     Kong of Naga (Dragon)    +4 each
+//     Pong of Angin (Wind)     +2 each  (up to 4 — E/S/W/N)
+//     Kong of Angin (Wind)     +4 each
+//   No other patterns are scored in this house system (deliberately much
+//   simpler than the old Hong Kong fan table it replaced).
+// - Payment mechanic is the same as before: Zimo (self-draw) — all 3
+//   opponents each pay the full point total; Hu (win off a discard) — only
+//   the discarder pays the full point total. See calculateFanWinPayments
+//   below, unchanged.
 
-export type FanComboKey =
-    | "REGULAR_WIN" | "CONCEALED_HAND" | "PONG_DRAGON" | "PONG_SEAT_WIND" | "PONG_PREVAILING_WIND"
-  | "ALL_SIMPLES" | "KONG_IN_HAND" | "ALL_CHI" | "ALL_TYPES" | "HALF_OUTSIDE" | "ALL_PONG"
-  | "MIXED_STRAIGHT" | "FULL_OUTSIDE" | "HALF_FLUSH" | "PURE_STRAIGHT" | "SHIFTED_SEQUENCES"
-  | "THREE_CONCEALED_PONG" | "SEVEN_PAIRS" | "FULL_FLUSH" | "FOUR_CONCEALED_PONG" | "THIRTEEN_ORPHANS";
+export const TAIWAN_WU_POINTS = 1;
+export const TAIWAN_ZIMO_BONUS = 2;
+export const TAIWAN_NAGA_PONG_POINTS = 2;
+export const TAIWAN_NAGA_KONG_POINTS = 4;
+export const TAIWAN_ANGIN_PONG_POINTS = 2;
+export const TAIWAN_ANGIN_KONG_POINTS = 4;
 
-export interface FanComboInfo { label: string; fan: number; }
+export interface TaiwanHandInput {
+    mode: WinMode;
+    pongNaga: number;  // count of Dragon triplets in the hand, 0-3 (Red/Green/White)
+    kongNaga: number;  // count of Dragon quads in the hand, 0-3
+    pongAngin: number; // count of Wind triplets in the hand, 0-4 (E/S/W/N)
+    kongAngin: number; // count of Wind quads in the hand, 0-4
+}
 
-// Keep in sync with the Fan Guide page (kombinasi.html) — same 21 patterns,
-// same fan values. That page is the player-facing reference for this table.
-export const FAN_TABLE: Record<FanComboKey, FanComboInfo> = {
-    REGULAR_WIN: { label: "Regular Win", fan: 1 },
-    CONCEALED_HAND: { label: "Concealed Hand", fan: 1 },
-    PONG_DRAGON: { label: "Pong of Dragon", fan: 1 },
-    PONG_SEAT_WIND: { label: "Pong of Seat Wind", fan: 1 },
-    PONG_PREVAILING_WIND: { label: "Pong of Prevailing Wind", fan: 1 },
-    ALL_SIMPLES: { label: "All Simples", fan: 1 },
-    KONG_IN_HAND: { label: "Kong", fan: 1 },
-    ALL_CHI: { label: "All Chi / Sequences", fan: 1 },
-    ALL_TYPES: { label: "All Types", fan: 2 },
-    HALF_OUTSIDE: { label: "Half Outside", fan: 2 },
-    ALL_PONG: { label: "All Pong / Triplets", fan: 3 },
-    MIXED_STRAIGHT: { label: "Mixed Straight", fan: 3 },
-    FULL_OUTSIDE: { label: "Full Outside", fan: 3 },
-    HALF_FLUSH: { label: "Half Flush", fan: 4 },
-    PURE_STRAIGHT: { label: "Pure Straight", fan: 4 },
-    SHIFTED_SEQUENCES: { label: "Shifted Sequences", fan: 4 },
-    THREE_CONCEALED_PONG: { label: "Three Concealed Pong", fan: 4 },
-    SEVEN_PAIRS: { label: "Seven Pairs", fan: 5 },
-    FULL_FLUSH: { label: "Full Flush", fan: 6 },
-    FOUR_CONCEALED_PONG: { label: "Four Concealed Pong", fan: 11 },
-    THIRTEEN_ORPHANS: { label: "Thirteen Orphans", fan: 13 },
-};
+function assertCount(n: unknown, max: number, label: string): number {
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > max) {
+          throw new Error(`${label} harus angka bulat 0-${max}`);
+    }
+    return n;
+}
 
-// 1 fan = 1 point (Aug 2026 "81 poin" promo period).
-export const POINTS_PER_FAN = 1;
+/**
+ * Full win calculation (Taiwan style): base Wu (+1), Zimo bonus (+2, only
+ * if self-draw), plus every Naga/Angin Pong/Kong the host counted in the
+ * winning hand. Each component is recorded as its own 0-point FAN_COMBO
+ * event (so the breakdown stays visible in history) — the real point
+ * movement happens via calculateFanWinPayments() downstream, same as
+ * before.
+ */
+export function calculateTaiwanHandScore(input: TaiwanHandInput): { events: FanComboEvent[]; totalPoints: number } {
+    const pongNaga = assertCount(input.pongNaga, 3, "Pong Naga");
+    const kongNaga = assertCount(input.kongNaga, 3, "Kong Naga");
+    const pongAngin = assertCount(input.pongAngin, 4, "Pong Mata Angin");
+    const kongAngin = assertCount(input.kongAngin, 4, "Kong Mata Angin");
+    if (pongNaga + kongNaga > 3) throw new Error("Total Pong + Kong Naga maksimal 3 (cuma ada 3 jenis Naga)");
+    if (pongAngin + kongAngin > 4) throw new Error("Total Pong + Kong Mata Angin maksimal 4 (cuma ada 4 arah mata angin)");
 
-export type SeatWind = "east" | "south" | "west" | "north";
-export const SEAT_WIND_LABELS: Record<SeatWind, string> = {
-    east: "Timur", south: "Selatan", west: "Barat", north: "Utara",
-};
-// Fan patterns that require a wind to be specified alongside them.
-const WIND_COMBO_KEYS: FanComboKey[] = ["PONG_SEAT_WIND", "PONG_PREVAILING_WIND"];
+  const events: FanComboEvent[] = [
+        { eventType: "FAN_COMBO", points: 0, label: "Wu (Menang)", metadata: { comboKey: "WU" as FanComboKey, fan: TAIWAN_WU_POINTS } },
+  ];
+    if (input.mode === "ZIMO") {
+          events.push({ eventType: "FAN_COMBO", points: 0, label: "Zimo (Tarik Sendiri)", metadata: { comboKey: "ZIMO" as FanComboKey, fan: TAIWAN_ZIMO_BONUS } });
+    }
+    for (let i = 0; i < pongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Pong Naga", metadata: { comboKey: "PONG_NAGA" as FanComboKey, fan: TAIWAN_NAGA_PONG_POINTS } });
+    for (let i = 0; i < kongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Naga", metadata: { comboKey: "KONG_NAGA" as FanComboKey, fan: TAIWAN_NAGA_KONG_POINTS } });
+    for (let i = 0; i < pongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Pong Mata Angin", metadata: { comboKey: "PONG_ANGIN" as FanComboKey, fan: TAIWAN_ANGIN_PONG_POINTS } });
+    for (let i = 0; i < kongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Mata Angin", metadata: { comboKey: "KONG_ANGIN" as FanComboKey, fan: TAIWAN_ANGIN_KONG_POINTS } });
+
+  const totalPoints = TAIWAN_WU_POINTS
+        + (input.mode === "ZIMO" ? TAIWAN_ZIMO_BONUS : 0)
+        + pongNaga * TAIWAN_NAGA_PONG_POINTS
+        + kongNaga * TAIWAN_NAGA_KONG_POINTS
+        + pongAngin * TAIWAN_ANGIN_PONG_POINTS
+        + kongAngin * TAIWAN_ANGIN_KONG_POINTS;
+
+  return { events, totalPoints };
+}
+
+export type WinMode = "ZIMO" | "HU";
 
 export interface FanComboEvent {
     eventType: "FAN_COMBO";
     points: 0;
     label: string;
-    metadata: { comboKey: FanComboKey; fan: number; wind?: SeatWind };
+    metadata: { comboKey: FanComboKey; fan: number };
 }
 
-/**
- * Sum the fan value of every selected pattern for a winning hand (Hong
- * Kong style). Throws if nothing is selected — minimum to win is 1 fan, so
- * the host must tick at least one pattern (usually "Regular Win" if
- * nothing fancier applies). Also throws if "Pong of Seat Wind" and/or
- * "Pong of Prevailing Wind" is selected without its matching wind.
- */
-export function calculateHandFan(
-    comboKeys: FanComboKey[],
-    windSelections?: Partial<Record<FanComboKey, SeatWind>>
-  ): { events: FanComboEvent[]; totalFan: number; totalPoints: number } {
-    const uniq = Array.from(new Set(comboKeys || []));
-    if (!uniq.length) {
-          throw new Error("Pilih minimal 1 pola (minimal 1 fan) untuk menang");
-    }
-    const events: FanComboEvent[] = uniq.map((key) => {
-          const info = FAN_TABLE[key];
-          if (!info) {
-                  throw new Error(`Pola tidak dikenal: ${key}`);
-          }
-          const metadata: FanComboEvent["metadata"] = { comboKey: key, fan: info.fan };
-          if (WIND_COMBO_KEYS.includes(key)) {
-                  const wind = windSelections ? windSelections[key] : undefined;
-                  if (!wind) {
-                            throw new Error(`Pilih arah angin untuk ${info.label} (mata angin bandar/duduk)`);
-                  }
-                  metadata.wind = wind;
-          }
-          return { eventType: "FAN_COMBO", points: 0, label: info.label, metadata };
-    });
-    const totalFan = events.reduce((sum, e) => sum + e.metadata.fan, 0);
-    return { events, totalFan, totalPoints: totalFan * POINTS_PER_FAN };
-}
-
-export type WinMode = "ZIMO" | "HU";
+export type FanComboKey = "WU" | "ZIMO" | "PONG_NAGA" | "KONG_NAGA" | "PONG_ANGIN" | "KONG_ANGIN";
 
 export interface FanWinPaymentResult {
     playerId: number;
@@ -387,9 +369,11 @@ export interface FanWinPaymentResult {
 }
 
 /**
- * Who pays what once the winning hand's point total is known (Hong Kong
- * style). Zimo (self-draw): all 3 opponents each pay the full amount.
- * Hu (win off a discard): only the discarder pays the full amount.
+ * Who pays what once the winning hand's point total is known. Zimo
+ * (self-draw): all 3 opponents each pay the full amount. Hu (win off a
+ * discard): only the discarder pays the full amount. This mechanic is
+ * shared by every scoring system that produces a single totalPoints number
+ * (unchanged from before the Taiwan-style switch).
  */
 export function calculateFanWinPayments(
     mode: WinMode,
