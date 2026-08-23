@@ -70,11 +70,27 @@ function isSuperAdminReq(req: Request): boolean {
   return !!superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw;
 }
 
-async function getLeaderboardSeasonStart(): Promise<number | null> {
-  const rows = await db.select().from(mahjongSettings).where(eq(mahjongSettings.key, "leaderboard_season_start"));
-  if (!rows.length || !rows[0].value) return null;
-  const t = new Date(rows[0].value).getTime();
-  return isNaN(t) ? null : t;
+const LEADERBOARD_BRANCHES = ["surabaya", "denpasar"] as const;
+function leaderboardSeasonKey(location: string): string {
+  return "leaderboard_season_start_" + location;
+}
+
+// Per-branch season cutoff. `location` = "surabaya" | "denpasar" reads that
+// branch's own cutoff. Anything else (absent / "all") reads BOTH branch
+// cutoffs and returns the EARLIEST (min) of the two -- so a combined "Semua"
+// view never silently drops games just because one branch was reset; the
+// combined cutoff only advances once every branch has been reset past it.
+async function getLeaderboardSeasonStart(location?: string | null): Promise<number | null> {
+  const branches = location && (LEADERBOARD_BRANCHES as readonly string[]).includes(location) ? [location] : LEADERBOARD_BRANCHES;
+  const rows = await db.select().from(mahjongSettings).where(inArray(mahjongSettings.key, branches.map(leaderboardSeasonKey)));
+  const times = branches.map((b) => {
+    const row = rows.find((r) => r.key === leaderboardSeasonKey(b));
+    if (!row || !row.value) return null;
+    const t = new Date(row.value).getTime();
+    return isNaN(t) ? null : t;
+  }).filter((t): t is number => t !== null);
+  if (!times.length) return null;
+  return Math.min(...times);
 }
 
 // All scoring math lives in db/mahjongScoring.ts (the single authoritative
@@ -147,23 +163,31 @@ export default async (req: Request) => {
     const leaderboardSeasonInfo = url.searchParams.get("leaderboardSeasonInfo");
     const resetLeaderboard = url.searchParams.get("resetLeaderboard");
 
-    // Superadmin-only: bump the leaderboard season cutoff to now. This is
-    // NON-DESTRUCTIVE -- no game/event/player row is ever touched or
+    // Superadmin-only: bump ONE branch's leaderboard season cutoff to now.
+    // This is NON-DESTRUCTIVE -- no game/event/player row is ever touched or
     // deleted. Personal riwayat/statistik (historyWa/statsWa above) always
     // show a player's full history regardless of season resets; only the
-    // public cross-branch leaderboard ranking is bounded by the cutoff.
+    // public leaderboard ranking is bounded by the cutoff. Always scoped to
+    // a single branch -- resetting Surabaya must never touch Denpasar's
+    // ranking, and vice versa, so `location` is required here.
     if (resetLeaderboard) {
       if (!isSuperAdminReq(req)) {
         return Response.json({ error: "Hanya Super Admin yang bisa reset leaderboard" }, { status: 403 });
       }
+      const location = url.searchParams.get("location") || "";
+      if (!(LEADERBOARD_BRANCHES as readonly string[]).includes(location)) {
+        return Response.json({ error: "Pilih cabang (surabaya/denpasar) dulu -- reset harus per cabang" }, { status: 400 });
+      }
       const now = new Date();
-      await db.insert(mahjongSettings).values({ key: "leaderboard_season_start", value: now.toISOString(), updatedAt: now })
+      const key = leaderboardSeasonKey(location);
+      await db.insert(mahjongSettings).values({ key, value: now.toISOString(), updatedAt: now })
         .onConflictDoUpdate({ target: mahjongSettings.key, set: { value: now.toISOString(), updatedAt: now } });
-      return Response.json({ ok: true, seasonStart: now.toISOString() });
+      return Response.json({ ok: true, location, seasonStart: now.toISOString() });
     }
 
     if (leaderboardSeasonInfo) {
-      const seasonStart = await getLeaderboardSeasonStart();
+      const location = url.searchParams.get("location");
+      const seasonStart = await getLeaderboardSeasonStart(location);
       return Response.json({ seasonStart: seasonStart ? new Date(seasonStart).toISOString() : null });
     }
 
@@ -244,7 +268,7 @@ export default async (req: Request) => {
       // above). week/month already have a tighter window in virtually every
       // real case, but we still take the later (larger) of the two cutoffs
       // to be correct even right after a reset.
-      const seasonStart = await getLeaderboardSeasonStart();
+      const seasonStart = await getLeaderboardSeasonStart(location);
       const cutoff = Math.max(periodCutoff, seasonStart || 0);
       if (cutoff) games = games.filter((g) => new Date((g.endedAt || g.createdAt) as any).getTime() >= cutoff);
 
