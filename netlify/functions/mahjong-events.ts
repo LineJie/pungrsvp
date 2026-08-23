@@ -1,20 +1,19 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { mahjongGames, mahjongPlayers, mahjongEvents, staff } from "../../db/schema.js";
+import { mahjongGames, mahjongPlayers, mahjongEvents, mahjongSettings, staff } from "../../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 import { verifyPassword } from "../../db/authUtils.js";
-import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn, ensureMahjongSettingsTable } from "../../db/mahjongUtils.js";
 import { randomUUID } from "node:crypto";
 import {
   calculateWinScore,
   calculateAllLoserPayments,
-  calculateHandFan,
+  calculateTaiwanHandScore,
   calculateFanWinPayments,
   calculateKongScore,
   type LastCardDraw,
   type LoserDefenseInput,
   type FanComboKey,
-  type SeatWind,
   type WinMode,
   type KongType,
 } from "../../db/mahjongScoring.js";
@@ -59,6 +58,23 @@ async function checkStaffReq(req: Request): Promise<{ ok: boolean; name: string 
     return { ok: true, name: rows[0].name || u };
   }
   return { ok: false, name: "" };
+}
+
+// Stricter than checkStaffReq() above -- Super Admin ONLY. Used to gate
+// resetting the whole cross-branch public leaderboard, which is a bigger
+// business decision than fixing one table's score (that's staff-manapun).
+function isSuperAdminReq(req: Request): boolean {
+  const u = req.headers.get("x-auth-username") || "";
+  const p = req.headers.get("x-auth-password") || "";
+  const superadminPw = process.env.SUPERADMIN_PASSWORD;
+  return !!superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw;
+}
+
+async function getLeaderboardSeasonStart(): Promise<number | null> {
+  const rows = await db.select().from(mahjongSettings).where(eq(mahjongSettings.key, "leaderboard_season_start"));
+  if (!rows.length || !rows[0].value) return null;
+  const t = new Date(rows[0].value).getTime();
+  return isNaN(t) ? null : t;
 }
 
 // All scoring math lives in db/mahjongScoring.ts (the single authoritative
@@ -119,6 +135,7 @@ export default async (req: Request) => {
     await ensureSessionIdColumn(db);
     await ensureScoringSystemColumn(db);
     await ensureActionGroupColumn(db);
+    await ensureMahjongSettingsTable(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
@@ -127,6 +144,28 @@ export default async (req: Request) => {
     const historyWa = url.searchParams.get("historyWa");
     const statsWa = url.searchParams.get("statsWa");
     const leaderboard = url.searchParams.get("leaderboard");
+    const leaderboardSeasonInfo = url.searchParams.get("leaderboardSeasonInfo");
+    const resetLeaderboard = url.searchParams.get("resetLeaderboard");
+
+    // Superadmin-only: bump the leaderboard season cutoff to now. This is
+    // NON-DESTRUCTIVE -- no game/event/player row is ever touched or
+    // deleted. Personal riwayat/statistik (historyWa/statsWa above) always
+    // show a player's full history regardless of season resets; only the
+    // public cross-branch leaderboard ranking is bounded by the cutoff.
+    if (resetLeaderboard) {
+      if (!isSuperAdminReq(req)) {
+        return Response.json({ error: "Hanya Super Admin yang bisa reset leaderboard" }, { status: 403 });
+      }
+      const now = new Date();
+      await db.insert(mahjongSettings).values({ key: "leaderboard_season_start", value: now.toISOString(), updatedAt: now })
+        .onConflictDoUpdate({ target: mahjongSettings.key, set: { value: now.toISOString(), updatedAt: now } });
+      return Response.json({ ok: true, seasonStart: now.toISOString() });
+    }
+
+    if (leaderboardSeasonInfo) {
+      const seasonStart = await getLeaderboardSeasonStart();
+      return Response.json({ seasonStart: seasonStart ? new Date(seasonStart).toISOString() : null });
+    }
 
     if (gameId) {
       const data = await loadGame(parseInt(gameId));
@@ -172,7 +211,7 @@ export default async (req: Request) => {
       const wins = finished.filter((g) => g.status === "finished_win" && myPlayers.some((p) => p.gameId === g.id && p.id === g.winnerPlayerId)).length;
       const draws = finished.filter((g) => g.status === "draw").length;
       // Zimo count spans both scoring systems: China style records a plain
-      // "ZIMO" event; Hong Kong style records "WIN_MODE" with mode=ZIMO.
+      // "ZIMO" event; Taiwan style records "WIN_MODE" with mode=ZIMO.
       const zimoCount = events.filter((e) => e.eventType === "ZIMO").length
         + events.filter((e) => e.eventType === "WIN_MODE" && parseMeta(e).mode === "ZIMO").length;
       const kongCount = events.filter((e) => e.eventType === "KONG_FROM_DISCARD" || e.eventType === "KONG_FROM_WALL").length;
@@ -197,9 +236,16 @@ export default async (req: Request) => {
       if (location && location !== "all") games = games.filter((g) => g.location === location);
 
       const now = Date.now();
-      const cutoff = period === "week" ? now - 7 * 24 * 60 * 60 * 1000
+      const periodCutoff = period === "week" ? now - 7 * 24 * 60 * 60 * 1000
         : period === "month" ? now - 30 * 24 * 60 * 60 * 1000
         : 0;
+      // "Semua Waktu" (period=all) is bounded by the last superadmin reset,
+      // if any -- that's the whole point of the reset (see resetLeaderboard
+      // above). week/month already have a tighter window in virtually every
+      // real case, but we still take the later (larger) of the two cutoffs
+      // to be correct even right after a reset.
+      const seasonStart = await getLeaderboardSeasonStart();
+      const cutoff = Math.max(periodCutoff, seasonStart || 0);
       if (cutoff) games = games.filter((g) => new Date((g.endedAt || g.createdAt) as any).getTime() >= cutoff);
 
       const gameIds = games.map((g) => g.id);
@@ -325,14 +371,14 @@ export default async (req: Request) => {
       return Response.json({ error: "This game is not active — scoring is not allowed" }, { status: 409 });
     }
     const allPlayerIds = players.map((p) => p.id);
-    const scoringSystem = game.scoringSystem === "china" ? "china" : "hongkong";
+    const scoringSystem = game.scoringSystem === "china" ? "china" : "taiwan";
 
     // Record a win. Branches on this game's scoring_system:
     // - "china": legacy flat house rules -- Zimo (self-draw) only, plus
     //   Joker/Flower/Season/Last-Card bonuses and per-loser defense tiles.
-    // - "hongkong" (default): Hong Kong Old Style fan table -- host picks
-    //   the winner, ZIMO or HU (+ discarder if HU), and every fan pattern
-    //   that applies (including which wind for the two wind patterns).
+    // - "taiwan" (default): simplified point table -- host picks the
+    //   winner, ZIMO or HU (+ discarder if HU), and counts how many
+    //   Naga/Angin Pong/Kong are in the winning hand.
     if (action === "recordWin") {
       const actionGroup = randomUUID();
       if (scoringSystem === "china") {
@@ -388,13 +434,15 @@ export default async (req: Request) => {
         return Response.json({ events: inserted, total: winnerGain, scoreboard }, { status: 201 });
       }
 
-      // Hong Kong Old Style
-      const { winnerPlayerId, mode, comboKeys = [], discarderId, windSelections = {} } = body as {
+      // Taiwan style
+      const { winnerPlayerId, mode, discarderId, pongNaga = 0, kongNaga = 0, pongAngin = 0, kongAngin = 0 } = body as {
         winnerPlayerId: number;
         mode: WinMode;
-        comboKeys: FanComboKey[];
         discarderId?: number;
-        windSelections?: Partial<Record<FanComboKey, SeatWind>>;
+        pongNaga?: number;
+        kongNaga?: number;
+        pongAngin?: number;
+        kongAngin?: number;
       };
       if (!allPlayerIds.includes(winnerPlayerId)) {
         return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
@@ -402,9 +450,9 @@ export default async (req: Request) => {
 
       let hand;
       try {
-        hand = calculateHandFan(comboKeys, windSelections);
+        hand = calculateTaiwanHandScore({ mode, pongNaga, kongNaga, pongAngin, kongAngin });
       } catch (e: any) {
-        return Response.json({ error: e.message || "Invalid combo selection" }, { status: 400 });
+        return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
       }
 
       const opponents = players.filter((p) => p.id !== winnerPlayerId);
@@ -415,8 +463,8 @@ export default async (req: Request) => {
         return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
       }
 
-      // Each selected pattern (and the win mode itself) is recorded at 0
-      // points -- purely informational, so the winning hand's fan breakdown
+      // Each selected component (and the win mode itself) is recorded at 0
+      // points -- purely informational, so the winning hand's breakdown
       // and Zimo/Hu mode stay visible in history/stats. The actual score
       // movement comes from the LOSER_PAYMENT events below.
       const inserted = [];
@@ -434,7 +482,7 @@ export default async (req: Request) => {
         }
       }
       inserted.push(await insertEvent(game.id, winnerPlayerId, "LOSER_PAYMENT", payment.winnerGain, null, {
-        label: `Menang ${hand.totalFan} fan (${hand.totalPoints} poin) via ${mode === "ZIMO" ? "Zimo" : "Hu"}`,
+        label: `Menang ${hand.totalPoints} poin via ${mode === "ZIMO" ? "Zimo" : "Hu"}`,
       }, actionGroup));
 
       await db.update(mahjongGames)
@@ -442,7 +490,7 @@ export default async (req: Request) => {
         .where(eq(mahjongGames.id, game.id));
 
       const { scoreboard } = await loadSessionAccumulated(game, players);
-      return Response.json({ events: inserted, totalFan: hand.totalFan, total: payment.winnerGain, scoreboard }, { status: 201 });
+      return Response.json({ events: inserted, totalPoints: hand.totalPoints, total: payment.winnerGain, scoreboard }, { status: 201 });
     }
 
     // Record a Kong (from discard or from wall) during active play. Shared

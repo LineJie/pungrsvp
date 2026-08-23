@@ -100,7 +100,7 @@ export default async (req: Request) => {
     if (!bookingId || !hostName) {
       return Response.json({ error: "bookingId and hostName are required" }, { status: 400 });
     }
-    const resolvedScoringSystem = scoringSystem === "china" ? "china" : "hongkong";
+    const resolvedScoringSystem = scoringSystem === "china" ? "china" : "taiwan";
 
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, parseInt(bookingId)));
     if (!booking) return Response.json({ error: "Booking not found" }, { status: 404 });
