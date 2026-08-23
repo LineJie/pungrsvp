@@ -76,7 +76,7 @@ export const mahjongGames = pgTable("mahjong_games", {
   tableId: text("table_id").notNull(),
   tableName: text("table_name").notNull(),
   location: text().notNull().default("surabaya"),
-  scoringSystem: text("scoring_system").notNull().default("hongkong"), // china (legacy flat rules) | hongkong (fan table) -- chosen by the host when the game is created
+  scoringSystem: text("scoring_system").notNull().default("taiwan"), // china (legacy flat rules) | taiwan (simplified point table) -- chosen by the host when the game is created
   status: text().notNull().default("waiting_for_players"),
   // waiting_for_players | ready | active | finished_win | draw | cancelled
   winnerPlayerId: integer("winner_player_id"), // FK -> mahjong_players.id, set only when status = finished_win
@@ -106,4 +106,13 @@ export const mahjongEvents = pgTable("mahjong_events", {
   metadata: text(), // JSON-encoded string with event-specific details (tile numbers, honour tile, notes, etc.)
   actionGroup: text("action_group"), // shared id across every row inserted by one scoring action (recordWin/recordKong/correction/undo) -- lets "Undo last action" reverse the whole thing at once. NULL for rows inserted before this feature.
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Tiny generic key/value settings store for the Mahjong module. Currently
+// only holds "leaderboard_season_start" (see ensureMahjongSettingsTable in
+// mahjongUtils.ts for the reasoning behind a non-destructive reset).
+export const mahjongSettings = pgTable("mahjong_settings", {
+  key: text().primaryKey(),
+  value: text(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });

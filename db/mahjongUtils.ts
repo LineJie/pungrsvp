@@ -74,12 +74,15 @@ export async function ensureSessionIdColumn(db: any) {
 }
 
 // Additive safety net: adds the scoring_system column so hosts can choose,
-// per game, between the legacy "china" flat house rules and the newer
-// "hongkong" fan-table system. Existing rows (all pre-dating this feature)
-// default to 'hongkong' going forward; the column default also covers any
-// environment where the migration runs before a Drizzle push.
+// per game, between the legacy "china" flat house rules and the "taiwan"
+// simplified point-table system (formerly "hongkong" fan table -- replaced
+// Aug 2026). Existing rows created before this rename still literally say
+// 'hongkong' in the database; that's fine, the application code treats any
+// value that isn't "china" as the Taiwan-style system, so old rows keep
+// working with no data migration needed. New rows default to 'taiwan'.
 export async function ensureScoringSystemColumn(db: any) {
-    await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS scoring_system text NOT NULL DEFAULT 'hongkong'`);
+    await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS scoring_system text NOT NULL DEFAULT 'taiwan'`);
+    await db.execute(sql`ALTER TABLE mahjong_games ALTER COLUMN scoring_system SET DEFAULT 'taiwan'`);
 }
 
 // Additive safety net: groups every event inserted by a single scoring
@@ -91,5 +94,21 @@ export async function ensureScoringSystemColumn(db: any) {
 // feature and staff can still use manual correction on them).
 export async function ensureActionGroupColumn(db: any) {
     await db.execute(sql`ALTER TABLE mahjong_events ADD COLUMN IF NOT EXISTS action_group text`);
+}
+
+// Additive safety net: tiny generic key/value settings table. First (and so
+// far only) use: "leaderboard_season_start" -- the ISO timestamp of the
+// last superadmin-triggered leaderboard reset. Resetting NEVER deletes any
+// game/event/player row (that would also wipe personal riwayat/statistik,
+// which pull from the same tables) -- it only moves this cutoff forward so
+// the public leaderboard's "Semua Waktu" view starts counting from here.
+export async function ensureMahjongSettingsTable(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS mahjong_settings (
+            key text PRIMARY KEY,
+            value text,
+            updated_at timestamp DEFAULT now()
+        )
+    `);
 }
 
