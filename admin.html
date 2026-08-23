@@ -697,6 +697,7 @@
     <button id="tabCustomers" class="btn view-tab-btn" onclick="switchTab('customers')">👤 Data Customer</button>
     <button id="tabStaff" class="btn view-tab-btn" onclick="switchTab('staff')" style="display:none">🛡️ Kelola Staff</button>
     <button id="tabPromo" class="btn view-tab-btn" onclick="switchTab('promo')" style="display:none">🎁 Kelola Promo</button>
+    <button id="tabCommunity" class="btn view-tab-btn" onclick="switchTab('community')">🎉 Acara Bareng</button>
     <button id="tabClosing" class="btn view-tab-btn" onclick="switchTab('closing')">🌙 Tutup Kasir</button>
   </div>
 
@@ -733,7 +734,72 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewClosing" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
+  <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+    <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🎉 Buat Acara Main Bareng</h3>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Meja di-share, tiap orang/rombongan daftar & bayar sendiri per jam. Meja tetap jalan walau belum penuh 4 orang.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tanggal</label>
+        <input type="date" id="cs_date">
+      </div>
+      <div class="form-group">
+        <label>Jam Mulai</label>
+        <select id="cs_time">
+          <option value="">Pilih jam</option>
+          <option>10:00</option><option>11:00</option><option>12:00</option>
+          <option>13:00</option><option>14:00</option><option>15:00</option>
+          <option>16:00</option><option>17:00</option><option>18:00</option>
+          <option>19:00</option><option>20:00</option><option>21:00</option>
+          <option>22:00</option><option>23:00</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Durasi (jam)</label>
+        <select id="cs_duration">
+          <option value="1">1 jam</option><option value="2" selected>2 jam</option>
+          <option value="3">3 jam</option><option value="4">4 jam</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Meja</label>
+        <select id="cs_table">
+          <option value="">Pilih meja</option>
+          <option value="1|Bamboo Table|Lantai 2|surabaya">🎋 Bamboo — Lt.2 (Sby)</option>
+          <option value="2|Orchid Table|Lantai 2|surabaya">🌸 Orchid — Lt.2 (Sby)</option>
+          <option value="3|Lotus Table|Lantai 2|surabaya">🪷 Lotus — Lt.2 (Sby)</option>
+          <option value="4|Sakura Table|Lantai 2|surabaya">🌺 Sakura — Lt.2 (Sby)</option>
+          <option value="5|Dragon Table|Lantai 1|surabaya">🐉 Dragon — Lt.1 (Sby)</option>
+          <option value="b1|Spring Table|Denpasar, Bali|denpasar">🌱 Spring — Bali</option>
+          <option value="b2|Winter Table|Denpasar, Bali|denpasar">❄️ Winter — Bali</option>
+          <option value="b3|Autumn Table|Denpasar, Bali|denpasar">🍂 Autumn — Bali (Manual Mahjong)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Harga / orang / jam (Rp)</label>
+        <input type="number" id="cs_price" value="15000" min="1000" step="1000">
+      </div>
+      <div class="form-group">
+        <label>Catatan</label>
+        <input type="text" id="cs_notes" placeholder="Opsional">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="createCommunitySession()" style="width:100%;padding:12px;font-size:14px;">Buat Sesi</button>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:160px;">
+      <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:4px;">Filter Tanggal</label>
+      <input type="date" id="cs_filterDate" onchange="loadCommunitySessions()" style="width:100%;padding:10px 12px;border:1.5px solid rgba(28,58,46,0.15);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;">
+    </div>
+    <button class="btn" onclick="document.getElementById('cs_filterDate').value='';loadCommunitySessions()" style="margin-top:20px;background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">Semua</button>
+  </div>
+
+  <div id="communitySessionsList">
+    <div class="loading" style="text-align:center;padding:30px;color:var(--text-muted);">Memuat data…</div>
+  </div>
+</div>
+<div id="viewClosing" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
   <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
       <div style="flex:1;min-width:160px;">
@@ -814,6 +880,9 @@
       document.getElementById('tabPromo').classList.toggle('active', tab === 'promo');
       document.getElementById('tabPromo').style.display = isSuperAdmin ? '' : 'none';
       if (tab === 'promo') loadPromoManager();
+      document.getElementById('viewCommunity').style.display = tab === 'community' ? 'block' : 'none';
+      document.getElementById('tabCommunity').classList.toggle('active', tab === 'community');
+      if (tab === 'community') { filterCommunityTableOptions(); loadCommunitySessions(); }
       document.getElementById('viewClosing').style.display = tab === 'closing' ? 'block' : 'none';
       document.getElementById('tabClosing').classList.toggle('active', tab === 'closing');
       if (tab === 'closing') loadClosingReport();
@@ -1131,6 +1200,24 @@
         }
       }
 
+      // Reminder checkout berbasis jam CHECK-IN AKTUAL + durasi booking —
+      // bukan jam jadwal. Misal check-in 18:01, durasi 2 jam → harusnya
+      // checkout 20:01. Ini cuma reminder visual buat staff, TIDAK
+      // memblokir apa pun di sistem booking (itu tetap pakai jam
+      // terjadwal, lihat updateTableAvailability).
+      let checkoutDueWarning = '';
+      if (b.status === 'checked_in' && b.checkinAt) {
+        const expectedCheckoutMs = new Date(b.checkinAt).getTime() + (b.duration || 1) * 60 * 60000;
+        const minsPastExpected = Math.floor((Date.now() - expectedCheckoutMs) / 60000);
+        if (minsPastExpected >= 0) {
+          const expTime = fmtWIB(new Date(expectedCheckoutMs).toISOString());
+          checkoutDueWarning = `<br><span style="font-size:11px;color:#c0392b;font-weight:700;">
+            ⏰ Harusnya checkout ${expTime} (${minsPastExpected}m lewat)
+          </span>`;
+        }
+      }
+
+
       const badgeLabel = (isOwnerFree && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main Gratis (Owner)${longPlayWarning}` : '🎁 Main Gratis (Owner)')
         : (isOwnerFree && b.status === 'completed') ? '🎁 Selesai (Gratis)'
         : (isPayLater && b.status === 'confirmed') ? '🕐 Bayar Saat Checkout'
@@ -1186,6 +1273,7 @@
                 🎮 masuk ${checkinTime || b.time + ' (est.)'}
                </span>`
             : ''}
+          ${checkoutDueWarning}
           ${checkoutTime
             ? `<br><span style="font-size:11px;color:var(--green-mid);font-weight:600;">
                 🏁 keluar ${checkoutTime}
@@ -1405,7 +1493,184 @@ async function loadStaff() {
       loadPromoManager();
     } catch (e) { showToast('Gagal mengubah status promo'); }
   }
-  
+
+  // === ACARA MAIN BARENG (community sessions, per-seat pricing) ===
+  let _communitySessions = [];
+
+  async function createCommunitySession() {
+    const date = document.getElementById('cs_date').value;
+    const time = document.getElementById('cs_time').value;
+    const duration = document.getElementById('cs_duration').value;
+    const tableVal = document.getElementById('cs_table').value;
+    const price = document.getElementById('cs_price').value;
+    const notes = document.getElementById('cs_notes').value.trim();
+    if (!date || !time || !tableVal) { showToast('Lengkapi tanggal, jam, dan meja dulu ya!'); return; }
+    const [tableId, tableName, floor, location] = tableVal.split('|');
+    try {
+      const res = await fetch('/api/community-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ date, time, duration, tableId, tableName, floor, location, pricePerPerson: price, notes })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal membuat sesi'); return; }
+      showToast('🎉 Sesi acara berhasil dibuat!');
+      document.getElementById('cs_notes').value = '';
+      document.getElementById('cs_filterDate').value = date;
+      loadCommunitySessions();
+    } catch (e) { showToast('Gagal membuat sesi'); }
+  }
+
+  async function loadCommunitySessions() {
+    const date = document.getElementById('cs_filterDate').value;
+    const locParam = (_viewLocation && _viewLocation !== 'all') ? `&location=${_viewLocation}` : '';
+    const url = '/api/community-sessions' + (date ? `?date=${date}${locParam}` : (locParam ? `?${locParam.slice(1)}` : ''));
+    const wrap = document.getElementById('communitySessionsList');
+    wrap.innerHTML = '<div class="loading" style="text-align:center;padding:30px;color:var(--text-muted);">Memuat data…</div>';
+    try {
+      const res = await fetch(url);
+      _communitySessions = await res.json();
+      // Muat peserta tiap sesi sekalian, biar total & daftar langsung kelihatan
+      await Promise.all(_communitySessions.map(async s => {
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        s.participants = await r.json().catch(() => []);
+      }));
+      renderCommunitySessions();
+    } catch (e) {
+      wrap.innerHTML = '<div class="empty-state">Gagal memuat data.</div>';
+    }
+  }
+
+  function renderCommunitySessions() {
+    const wrap = document.getElementById('communitySessionsList');
+    if (!_communitySessions.length) {
+      wrap.innerHTML = '<div class="empty-state" style="text-align:center;padding:30px;color:var(--text-muted);">Belum ada acara main bareng.</div>';
+      return;
+    }
+    const sorted = [...(_communitySessions || [])].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    wrap.innerHTML = sorted.map(s => {
+      const seats = (s.participants || []).reduce((sum, p) => sum + (p.numPeople || 1), 0);
+      const revenue = (s.participants || []).reduce((sum, p) => sum + (p.numPeople || 1) * s.pricePerPerson * s.duration, 0);
+      const paidRevenue = (s.participants || []).filter(p => p.paid).reduce((sum, p) => sum + (p.numPeople || 1) * s.pricePerPerson * s.duration, 0);
+      const endHour = String(parseInt(s.time) + s.duration).padStart(2, '0');
+      const statusBadge = s.status === 'open'
+        ? `<span style="background:rgba(52,120,246,0.12);color:#1a5fc8;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">🟢 Berjalan</span>`
+        : s.status === 'completed'
+        ? `<span style="background:rgba(28,58,46,0.08);color:var(--green-dark);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">🏁 Selesai</span>`
+        : `<span style="background:rgba(200,50,50,0.1);color:#c83232;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">❌ Batal</span>`;
+      const seatWarn = seats > s.maxSeats ? ` <span style="color:#c9a03a;">(over kapasitas!)</span>` : '';
+      const participantsHtml = (s.participants || []).length
+        ? (s.participants || []).map(p => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(28,58,46,0.1);font-size:13px;">
+              <div>
+                <strong>${escHtml(p.name)}</strong>
+                <span style="color:var(--text-muted);"> · ${p.numPeople} orang</span>
+                ${p.contact ? `<br><a href="${waLink(p.contact)}" target="_blank" style="font-size:11px;color:#1a6635;text-decoration:none;">📱 ${escHtml(p.contact)}</a>` : ''}
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span style="font-size:12px;color:var(--text-muted);">Rp ${((p.numPeople||1)*s.pricePerPerson*s.duration).toLocaleString('id-ID')}</span>
+                <button class="btn btn-sm" onclick="toggleParticipantPaid(${p.id}, ${p.paid}, ${s.id})"
+                  style="background:${p.paid ? 'rgba(74,140,104,0.15)' : '#fff8e1'};color:${p.paid ? '#1a6635' : '#7a5c00'};border:1.5px solid ${p.paid ? '#1a6635' : '#f0d98c'};font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">
+                  ${p.paid ? '💰 Lunas' : '🕐 Belum'}
+                </button>
+                ${s.status === 'open' ? `<button class="btn btn-sm" onclick="deleteParticipant(${p.id}, ${s.id})" style="background:#fde8e8;color:#a83232;border:1.5px solid #a83232;font-size:11px;padding:4px 6px;border-radius:8px;cursor:pointer;">✕</button>` : ''}
+              </div>
+            </div>`).join('')
+        : '<div style="font-size:12px;color:var(--text-muted);padding:6px 0;">Belum ada yang gabung.</div>';
+
+      return `
+      <div style="background:white;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+          <div>
+            <strong style="font-size:15px;color:var(--green-dark);">${escHtml(s.tableName)}</strong>
+            <span style="font-size:12px;color:var(--text-muted);"> · ${escHtml(s.floor)}</span><br>
+            <span style="font-size:13px;">${formatDate(s.date)} · ${s.time}–${endHour}:00</span>
+          </div>
+          ${statusBadge}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+          Rp ${s.pricePerPerson.toLocaleString('id-ID')}/orang/jam · ${seats}/${s.maxSeats} kursi${seatWarn} ·
+          <strong style="color:var(--green-dark);">Rp ${revenue.toLocaleString('id-ID')}</strong> total
+          ${paidRevenue !== revenue ? ` (Rp ${paidRevenue.toLocaleString('id-ID')} sudah lunas)` : ' — semua lunas'}
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:10px 12px;margin-bottom:10px;">${participantsHtml}</div>
+        ${s.status === 'open' ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          <input type="text" id="cp_name_${s.id}" placeholder="Nama" style="flex:2;min-width:100px;padding:8px 10px;border:1.5px solid rgba(28,58,46,0.15);border-radius:8px;font-size:13px;">
+          <input type="number" id="cp_num_${s.id}" value="1" min="1" style="width:56px;padding:8px 8px;border:1.5px solid rgba(28,58,46,0.15);border-radius:8px;font-size:13px;" title="Jumlah orang">
+          <input type="text" id="cp_contact_${s.id}" placeholder="WA (opsional)" style="flex:1;min-width:90px;padding:8px 10px;border:1.5px solid rgba(28,58,46,0.15);border-radius:8px;font-size:13px;">
+          <button class="btn btn-primary btn-sm" onclick="addParticipant(${s.id})">➕ Gabung</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" onclick="setSessionStatus(${s.id}, 'completed')" style="background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.15);font-weight:600;">🏁 Tutup Sesi</button>
+          <button class="btn btn-sm" onclick="setSessionStatus(${s.id}, 'cancelled')" style="background:#fde8e8;color:#a83232;border:1.5px solid #a83232;font-weight:600;">❌ Batalkan</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  async function addParticipant(sessionId) {
+    const nameEl = document.getElementById(`cp_name_${sessionId}`);
+    const numEl = document.getElementById(`cp_num_${sessionId}`);
+    const contactEl = document.getElementById(`cp_contact_${sessionId}`);
+    const name = nameEl.value.trim();
+    const numPeople = parseInt(numEl.value) || 1;
+    const contact = contactEl.value.trim();
+    if (!name) { showToast('Isi nama dulu ya!'); return; }
+    try {
+      const res = await fetch('/api/community-sessions?resource=participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ sessionId, name, numPeople, contact })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal menambah peserta'); return; }
+      showToast('✅ Peserta ditambahkan!');
+      loadCommunitySessions();
+    } catch (e) { showToast('Gagal menambah peserta'); }
+  }
+
+  async function toggleParticipantPaid(id, currentlyPaid, sessionId) {
+    try {
+      const res = await fetch(`/api/community-sessions?resource=participants&id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ paid: !currentlyPaid })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal update status bayar'); return; }
+      loadCommunitySessions();
+    } catch (e) { showToast('Gagal update status bayar'); }
+  }
+
+  async function deleteParticipant(id, sessionId) {
+    if (!confirm('Hapus peserta ini dari sesi?')) return;
+    try {
+      const res = await fetch(`/api/community-sessions?resource=participants&id=${id}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass }
+      });
+      if (!res.ok) { showToast('Gagal menghapus peserta'); return; }
+      loadCommunitySessions();
+    } catch (e) { showToast('Gagal menghapus peserta'); }
+  }
+
+  async function setSessionStatus(id, status) {
+    const msg = status === 'completed' ? 'Tutup sesi ini? Meja bakal available lagi buat booking biasa.' : 'Batalkan sesi ini?';
+    if (!confirm(msg)) return;
+    try {
+      const res = await fetch(`/api/community-sessions?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal mengubah status sesi'); return; }
+      showToast(status === 'completed' ? '🏁 Sesi ditutup' : '❌ Sesi dibatalkan');
+      loadCommunitySessions();
+    } catch (e) { showToast('Gagal mengubah status sesi'); }
+  }
+
   function fmtWIB(isoStr) {
     if (!isoStr) return null;
     const d = new Date(isoStr);
@@ -1623,10 +1888,15 @@ async function loadStaff() {
     document.getElementById('editTime').value = b.time;
     document.getElementById('editDuration').value = b.duration;
     document.getElementById('editNotes').value = b.notes || '';
-    // Set table select
+    // Set table select — sembunyikan meja dari lokasi lain, tampilkan cuma
+    // meja di lokasi booking ini (booking gak pindah lokasi lewat edit).
     const tableSelect = document.getElementById('editTable');
     for (let opt of tableSelect.options) {
-      if (opt.value.startsWith(b.tableId + '|')) { tableSelect.value = opt.value; break; }
+      const optLoc = opt.value.split('|')[3];
+      const show = optLoc === b.location;
+      opt.hidden = !show;
+      opt.disabled = !show;
+      if (opt.value.startsWith(b.tableId + '|')) tableSelect.value = opt.value;
     }
     document.getElementById('editModal').classList.add('open');
   }
@@ -2220,6 +2490,8 @@ async function loadStaff() {
   const d = String(today.getDate()).padStart(2,'0');
   document.getElementById('filterDate').value = `${y}-${m}-${d}`;
   document.getElementById('closingDate').value = `${y}-${m}-${d}`;
+  document.getElementById('cs_date').value = `${y}-${m}-${d}`;
+  document.getElementById('cs_filterDate').value = `${y}-${m}-${d}`;
 
   // === WALK-IN FORM ===
   function toggleWalkin() {
@@ -2271,10 +2543,14 @@ async function loadStaff() {
 
     if (!date || startHour === null || isNaN(startHour)) { resetAll(); return; }
 
-    let dayBookings;
+    let dayBookings, daySessions;
     try {
-      const res = await fetch('/api/bookings?date=' + date);
+      const [res, res2] = await Promise.all([
+        fetch('/api/bookings?date=' + date),
+        fetch('/api/community-sessions?date=' + date)
+      ]);
       dayBookings = await res.json();
+      daySessions = await res2.json();
     } catch (e) { return; } // gagal fetch: jangan blokir semua meja, biarkan seperti semula
 
     const endHour = startHour + duration;
@@ -2283,13 +2559,25 @@ async function loadStaff() {
         .filter(b => b.status !== 'cancelled')
         .filter(b => {
           const bStart = parseInt(b.time);
-          // Kalau lagi checked_in dan belum checkout, anggap bisa sampai jam tutup
-          // (belum tahu kapan selesai — sama seperti logika di halaman booking customer)
-          const bEnd = b.status === 'checked_in' ? 23 : bStart + (b.duration || 1);
+          // Pakai jam selesai TERJADWAL (bStart + duration), bukan asumsi
+          // "sampai jam tutup" walau statusnya masih checked_in — supaya
+          // begitu jam booking itu lewat, mejanya langsung kelihatan
+          // available lagi buat slot berikutnya.
+          const bEnd = bStart + (b.duration || 1);
           return startHour < bEnd && endHour > bStart;
         })
         .map(b => b.tableId)
     );
+    // Meja yang lagi dipakai Acara Main Bareng (per-seat) juga dianggap
+    // bentrok buat booking meja biasa di jam yang sama.
+    (Array.isArray(daySessions) ? daySessions : [])
+      .filter(s => s.status === 'open')
+      .filter(s => {
+        const sStart = parseInt(s.time);
+        const sEnd = sStart + s.duration;
+        return startHour < sEnd && endHour > sStart;
+      })
+      .forEach(s => conflictIds.add(s.tableId));
 
     Array.from(sel.options).forEach(opt => {
       if (!opt.value) return;
@@ -2383,6 +2671,7 @@ async function loadStaff() {
       if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
     setupLocationSwitcher();
     filterWalkinTableOptions();
+    filterCommunityTableOptions();
   }
 
   // Sembunyikan pilihan meja dari lokasi lain di form Walk-in / Input Manual
@@ -2407,6 +2696,24 @@ async function loadStaff() {
     });
   }
 
+  // Sama seperti filterWalkinTableOptions() tapi buat dropdown meja di form
+  // "Buat Acara Main Bareng" — staff/superadmin cuma lihat meja lokasinya.
+  function filterCommunityTableOptions() {
+    const relevantLoc = isSuperAdmin
+      ? (_viewLocation === 'all' ? null : _viewLocation)
+      : _authLocation;
+    const sel = document.getElementById('cs_table');
+    if (!sel) return;
+    Array.from(sel.options).forEach(opt => {
+      if (!opt.value) return;
+      const optLoc = opt.value.split('|')[3];
+      const show = !relevantLoc || optLoc === relevantLoc;
+      opt.hidden = !show;
+      opt.disabled = !show;
+    });
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value = '';
+  }
+
   function setupLocationSwitcher() {
     const sel = document.getElementById('locationSwitcher');
     if (!sel) return;
@@ -2423,8 +2730,10 @@ async function loadStaff() {
     if (!sel) return;
     _viewLocation = sel.value;
     filterWalkinTableOptions();
+    filterCommunityTableOptions();
     loadBookings(true);
     if (currentView === 'closing') loadClosingReport();
+    if (currentView === 'community') loadCommunitySessions();
   }
   // === PASSWORD GATE ===
   async function checkPassword() {
