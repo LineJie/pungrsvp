@@ -223,6 +223,13 @@ function apiSendAuth(url, method, body){
   if(body) opts.body=JSON.stringify(body);
   return fetch(url, opts).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, data:d}; }); });
 }
+// GET version of apiSendAuth -- used for resetLeaderboard, which is a GET
+// with query params (matches the rest of this endpoint's GET-based reads)
+// but still needs Super Admin credentials attached.
+function apiGetAuth(url){
+  var opts={headers:{"x-auth-username":S.staffUser||"", "x-auth-password":S.staffPass||""}};
+  return fetch(url, opts).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, data:d}; }); });
+}
 function showModal(id){ qs(id).classList.add("open"); }
 function closeModal(id){ qs(id).classList.remove("open"); }
 function toast(msg){
@@ -1018,7 +1025,7 @@ function openLeaderboard(){
   h += "<button class=\"chip-btn\" id=\"lbLocSurabaya\" onclick=\"setLbLocation('surabaya')\">Surabaya</button>";
   h += "<button class=\"chip-btn\" id=\"lbLocDenpasar\" onclick=\"setLbLocation('denpasar')\">Bali</button>";
   h += "</div>";
-  h += "<div class=\"filter-row\"><button class=\"chip-btn\" id=\"lbWeek\" onclick=\"setLbPeriod('week')\">Minggu Ini</button><button class=\"chip-btn\" id=\"lbMonth\" onclick=\"setLbPeriod('month')\">Bulan Ini</button><button class=\"chip-btn\" id=\"lbAll\" onclick=\"setLbPeriod('all')\">Semua Waktu</button></div><div id=\"lbList\"></div>";
+  h += "<div class=\"filter-row\"><button class=\"chip-btn\" id=\"lbWeek\" onclick=\"setLbPeriod('week')\">Minggu Ini</button><button class=\"chip-btn\" id=\"lbMonth\" onclick=\"setLbPeriod('month')\">Bulan Ini</button><button class=\"chip-btn\" id=\"lbAll\" onclick=\"setLbPeriod('all')\">Semua Waktu</button></div><div id=\"lbResetRow\"></div><div id=\"lbList\"></div>";
   qs("lbBody").innerHTML = h;
   showModal("modalLeaderboard");
   loadLeaderboard();
@@ -1101,6 +1108,7 @@ function loadLeaderboard(){
   ["All","Surabaya","Denpasar"].forEach(function(k){ var el = qs("lbLoc"+k); if (el) el.classList.remove("selected"); });
   var locIdMap = {all:"lbLocAll", surabaya:"lbLocSurabaya", denpasar:"lbLocDenpasar"};
   if (qs(locIdMap[location])) qs(locIdMap[location]).classList.add("selected");
+  renderLbResetRow();
   qs("lbList").innerHTML = "<div class=\"muted\">Memuat...</div>";
   var locParam = (location && location !== "all") ? ("&location=" + location) : "";
   apiGet("/api/mahjong/events?leaderboard=1&includeStats=1&period=" + period + locParam).then(function(res){
@@ -1108,6 +1116,29 @@ function loadLeaderboard(){
     var list = data.players || [];
     var stats = data.stats || null;
     qs("lbList").innerHTML = renderLeaderboardBody(list, stats);
+  });
+}
+// Reset Musim -- Super Admin only, and only shown once a single branch is
+// selected (not "Semua"). Reset is always scoped to that one branch on the
+// backend too, so there's no way to accidentally wipe both branches'
+// rankings from one click.
+var LB_BRANCH_LABEL = { surabaya: "Surabaya", denpasar: "Bali (Denpasar)" };
+function renderLbResetRow(){
+  var row = qs("lbResetRow");
+  if (!row) return;
+  var isSuperAdmin = S.staffName === "Super Admin";
+  var loc = S.lbLocation;
+  if (!isSuperAdmin || !loc || loc === "all") { row.innerHTML = ""; return; }
+  row.innerHTML = "<button class=\"btn btn-outline\" style=\"margin:6px 0 4px;\" onclick=\"resetLeaderboardSeason('" + loc + "')\">&#x1F504; Reset Musim &mdash; " + LB_BRANCH_LABEL[loc] + "</button>";
+}
+function resetLeaderboardSeason(location){
+  var label = LB_BRANCH_LABEL[location] || location;
+  var ok = confirm("Reset leaderboard cabang " + label + "?\n\nIni CUMA reset peringkat musim ini (tampilan 'Semua Waktu'). Riwayat & statistik pribadi tiap pemain TETAP utuh, gak ada yang dihapus. Cabang lain tidak ikut kereset.");
+  if (!ok) return;
+  apiGetAuth("/api/mahjong/events?resetLeaderboard=1&location=" + location).then(function(res){
+    if (!res.ok) { alert((res.data && res.data.error) || "Gagal reset leaderboard"); return; }
+    toast("Leaderboard " + label + " sudah direset");
+    loadLeaderboard();
   });
 }
 init();
