@@ -110,6 +110,34 @@
   .btn:hover { opacity: 0.85; }
   .btn-primary { background: var(--green-dark); color: white; }
   .btn-danger { background: var(--red); color: white; }
+
+  /* View tabs (Timeline/Daftar/Data Customer/Kelola Staff/Kelola Promo/Tutup
+     Kasir) -- scrolls horizontally on narrow screens instead of squishing
+     every label into an unreadable sliver, but on wide screens (tablet/
+     laptop) everything just fits in one row with no scrollbar needed since
+     overflow-x:auto only kicks in once content is wider than the container. */
+  .view-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .view-tabs::-webkit-scrollbar { display: none; }
+  .view-tab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    background: var(--warm-white);
+    color: var(--green-dark);
+    border: 1.5px solid rgba(28,58,46,0.12);
+  }
+  .view-tab-btn.active {
+    background: var(--green-dark);
+    color: white;
+    border-color: var(--green-dark);
+  }
   .btn-sm { padding: 5px 10px; font-size: 12px; }
 
   .stats-row {
@@ -663,9 +691,13 @@
   </div>
 
   <!-- VIEW TABS -->
-  <div style="display:flex;gap:8px;margin-bottom:14px;">
-    <button id="tabTimeline" class="btn btn-primary" onclick="switchTab('timeline')" style="flex:1">📅 Timeline</button>
-    <button id="tabList" class="btn" onclick="switchTab('list')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Daftar</button><button id="tabCustomers" class="btn" onclick="switchTab('customers')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">👤 Data Customer</button><button id="tabStaff" class="btn" onclick="switchTab('staff')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🛡️ Kelola Staff</button><button id="tabPromo" class="btn" onclick="switchTab('promo')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12);display:none">🎁 Kelola Promo</button><button id="tabClosing" class="btn" onclick="switchTab('closing')" style="flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">🌙 Tutup Kasir</button>
+  <div class="view-tabs">
+    <button id="tabTimeline" class="btn view-tab-btn active" onclick="switchTab('timeline')">📅 Timeline</button>
+    <button id="tabList" class="btn view-tab-btn" onclick="switchTab('list')">📋 Daftar</button>
+    <button id="tabCustomers" class="btn view-tab-btn" onclick="switchTab('customers')">👤 Data Customer</button>
+    <button id="tabStaff" class="btn view-tab-btn" onclick="switchTab('staff')" style="display:none">🛡️ Kelola Staff</button>
+    <button id="tabPromo" class="btn view-tab-btn" onclick="switchTab('promo')" style="display:none">🎁 Kelola Promo</button>
+    <button id="tabClosing" class="btn view-tab-btn" onclick="switchTab('closing')">🌙 Tutup Kasir</button>
   </div>
 
   <!-- TIMELINE VIEW -->
@@ -769,25 +801,21 @@
     currentView = tab;
     document.getElementById('viewTimeline').style.display = tab === 'timeline' ? 'block' : 'none';
     document.getElementById('viewList').style.display = tab === 'list' ? 'block' : 'none';
-    document.getElementById('tabTimeline').className = tab === 'timeline' ? 'btn btn-primary' : 'btn';
-    document.getElementById('tabTimeline').style = tab === 'timeline' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
-    document.getElementById('tabList').className = tab === 'list' ? 'btn btn-primary' : 'btn';
-    document.getElementById('tabList').style = tab === 'list' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+    document.getElementById('tabTimeline').classList.toggle('active', tab === 'timeline');
+    document.getElementById('tabList').classList.toggle('active', tab === 'list');
           document.getElementById('viewCustomers').style.display = tab === 'customers' ? 'block' : 'none';
-          document.getElementById('tabCustomers').className = tab === 'customers' ? 'btn btn-primary' : 'btn';
-          document.getElementById('tabCustomers').style = tab === 'customers' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+          document.getElementById('tabCustomers').classList.toggle('active', tab === 'customers');
           if (tab === 'customers') loadCustomers();
       document.getElementById('viewStaff').style.display = tab === 'staff' ? 'block' : 'none';
-      document.getElementById('tabStaff').className = tab === 'staff' ? 'btn btn-primary' : 'btn';
-      document.getElementById('tabStaff').style = (tab === 'staff' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)') + (isSuperAdmin ? '' : ';display:none');
+      document.getElementById('tabStaff').classList.toggle('active', tab === 'staff');
+      document.getElementById('tabStaff').style.display = isSuperAdmin ? '' : 'none';
       if (tab === 'staff') loadStaff();
       document.getElementById('viewPromo').style.display = tab === 'promo' ? 'block' : 'none';
-      document.getElementById('tabPromo').className = tab === 'promo' ? 'btn btn-primary' : 'btn';
-      document.getElementById('tabPromo').style = (tab === 'promo' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)') + (isSuperAdmin ? '' : ';display:none');
+      document.getElementById('tabPromo').classList.toggle('active', tab === 'promo');
+      document.getElementById('tabPromo').style.display = isSuperAdmin ? '' : 'none';
       if (tab === 'promo') loadPromoManager();
       document.getElementById('viewClosing').style.display = tab === 'closing' ? 'block' : 'none';
-      document.getElementById('tabClosing').className = tab === 'closing' ? 'btn btn-primary' : 'btn';
-      document.getElementById('tabClosing').style = tab === 'closing' ? 'flex:1' : 'flex:1;background:var(--warm-white);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
+      document.getElementById('tabClosing').classList.toggle('active', tab === 'closing');
       if (tab === 'closing') loadClosingReport();
   }
 
