@@ -1,8 +1,8 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings, promos } from "../../db/schema.js";
+import { bookings, promos, communitySessions } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { ensureLocationColumns, ensurePromosTable } from "../../db/authUtils.js";
+import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables } from "../../db/authUtils.js";
 
 // Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
 // to gate the admin-correction and void-transaction paths in PATCH below,
@@ -54,6 +54,7 @@ async function sendEmailNotification(booking: any) {
 export default async (req: Request) => {
     await ensureLocationColumns(db);
     await ensurePromosTable(db);
+    await ensureCommunityTables(db);
     const url = new URL(req.url);
 
     if (req.method === "GET") {
@@ -102,6 +103,22 @@ export default async (req: Request) => {
                                     conflictTime: conflict.time
                         }, { status: 409 });
               }
+
+        // Meja yang sedang dipakai sesi "Acara Main Bareng" (masih open) di
+        // jam yang tumpang tindih juga dianggap bentrok buat booking biasa.
+        const sessions = await db.select().from(communitySessions).where(and(eq(communitySessions.date, date), eq(communitySessions.location, loc)));
+        const sessionConflict = sessions.find(s => {
+                if (s.tableId !== tableId || s.status !== "open") return false;
+                const sStart = parseInt(s.time);
+                const sEnd = sStart + s.duration;
+                return startHour < sEnd && newEnd > sStart;
+        });
+        if (sessionConflict) {
+                return Response.json({
+                            error: "Meja sedang dipakai sesi Acara Main Bareng pada jam tersebut",
+                            conflictTime: sessionConflict.time
+                }, { status: 409 });
+        }
       }
 
       const bookingCode = generateCode();
@@ -200,6 +217,20 @@ export default async (req: Request) => {
                                     conflictTime: conflict.time
                         }, { status: 409 });
               }
+
+        const reschedSessions = await db.select().from(communitySessions).where(and(eq(communitySessions.date, newDate), eq(communitySessions.location, existing.location)));
+        const reschedSessionConflict = reschedSessions.find(s => {
+                if (s.tableId !== newTableId || s.status !== "open") return false;
+                const sStart = parseInt(s.time);
+                const sEnd = sStart + s.duration;
+                return startHour < sEnd && newEnd > sStart;
+        });
+        if (reschedSessionConflict) {
+                return Response.json({
+                            error: "Meja sedang dipakai sesi Acara Main Bareng pada jam tersebut",
+                            conflictTime: reschedSessionConflict.time
+                }, { status: 409 });
+        }
       }
 
       const updateData: any = {};

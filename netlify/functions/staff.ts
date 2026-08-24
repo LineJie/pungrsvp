@@ -45,6 +45,24 @@ export default async (req: Request) => {
               return Response.json({ id: row.id, name: row.name, username: row.username, role: row.role, location: row.location }, { status: 201 });
       }
 
+      if (req.method === "PATCH") {
+              const url = new URL(req.url);
+              const id = parseInt(url.searchParams.get("id") || "");
+              if (!id) return Response.json({ error: "id required" }, { status: 400 });
+              const body = await req.json();
+              const updateData: any = {};
+              if (body.name) updateData.name = body.name;
+              if (body.role === "admin" || body.role === "kasir") updateData.role = body.role;
+              if (body.location === "denpasar" || body.location === "surabaya") updateData.location = body.location;
+              if (body.password) updateData.passwordHash = hashPassword(body.password);
+              if (!Object.keys(updateData).length) {
+                        return Response.json({ error: "Tidak ada field yang diupdate" }, { status: 400 });
+              }
+              const [row] = await db.update(staff).set(updateData).where(eq(staff.id, id)).returning();
+              if (!row) return Response.json({ error: "Staff not found" }, { status: 404 });
+              return Response.json({ id: row.id, name: row.name, username: row.username, role: row.role, location: row.location });
+      }
+
       if (req.method === "DELETE") {
               const url = new URL(req.url);
               const id = parseInt(url.searchParams.get("id") || "");
