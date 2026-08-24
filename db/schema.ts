@@ -116,3 +116,40 @@ export const mahjongSettings = pgTable("mahjong_settings", {
   value: text(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// ─── Acara Main Bareng / Community Session module (additive) ─────────────
+// A "community session" reserves a table for a shared/drop-in game — instead
+// of one customer booking the whole table, several unrelated groups join the
+// SAME session and each pays per-person/per-hour (community_participants).
+// The session itself blocks the table for regular bookings (checked in
+// bookings.ts) for its date/time/duration while status = "open", exactly
+// like a normal booking would, but staff opens/adds participants throughout
+// instead of one checkout. maxSeats is informational capacity (default 4,
+// shown as a warning in the UI, NOT hard-enforced server-side) — Tere wants
+// sessions to still run even if under/over the "ideal" 4 pemain.
+export const communitySessions = pgTable("community_sessions", {
+  id: serial().primaryKey(),
+  date: text().notNull(),
+  time: text().notNull(),
+  duration: integer().notNull(),
+  tableId: text("table_id").notNull(),
+  tableName: text("table_name").notNull(),
+  floor: text().notNull(),
+  location: text().notNull().default("surabaya"),
+  pricePerPerson: integer("price_per_person").notNull(),
+  maxSeats: integer("max_seats").notNull().default(4),
+  notes: text().default(""),
+  status: text().notNull().default("open"), // open | completed | cancelled
+  createdBy: text("created_by").default(""), // staff username who created it, for audit trail
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const communityParticipants = pgTable("community_participants", {
+  id: serial().primaryKey(),
+  sessionId: integer("session_id").notNull(), // FK -> community_sessions.id
+  name: text().notNull(),
+  numPeople: integer("num_people").notNull().default(1),
+  contact: text().default(""),
+  paid: boolean().notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});

@@ -47,3 +47,38 @@ export async function ensureLocationColumns(db: any) {
         await db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
         await db.execute(sql`ALTER TABLE staff ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
 }
+
+// Bootstrap untuk fitur "Acara Main Bareng" (community sessions, per-seat
+// pricing). Dua tabel: sesi (meja + jam + harga/orang) dan peserta (nama +
+// jumlah orang + status bayar, banyak peserta per sesi).
+export async function ensureCommunityTables(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS community_sessions (
+            id serial PRIMARY KEY,
+            date text NOT NULL,
+            time text NOT NULL,
+            duration integer NOT NULL,
+            table_id text NOT NULL,
+            table_name text NOT NULL,
+            floor text NOT NULL,
+            location text NOT NULL DEFAULT 'surabaya',
+            price_per_person integer NOT NULL,
+            max_seats integer NOT NULL DEFAULT 4,
+            notes text DEFAULT '',
+            status text NOT NULL DEFAULT 'open',
+            created_by text DEFAULT '',
+            created_at timestamp DEFAULT now()
+        )
+    `);
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS community_participants (
+            id serial PRIMARY KEY,
+            session_id integer NOT NULL,
+            name text NOT NULL,
+            num_people integer NOT NULL DEFAULT 1,
+            contact text DEFAULT '',
+            paid boolean NOT NULL DEFAULT false,
+            created_at timestamp DEFAULT now()
+        )
+    `);
+}
