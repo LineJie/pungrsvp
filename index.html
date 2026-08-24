@@ -1093,9 +1093,17 @@
   let duration = 2;
 
   // === LOAD BOOKINGS FOR DATE ===
-  async function loadBookingsForDate(dateKey) {
+  // Cache TTL — data booking dianggap "segar" cuma 20 detik. Sebelumnya
+  // cache ini tidak pernah kadaluarsa selama halaman terbuka, jadi kalau
+  // customer lain booking meja yang sama sementara halaman kita sudah lama
+  // terbuka, meja itu masih kelihatan "Tersedia" padahal sudah kepakai.
+  const BOOKINGS_CACHE_TTL_MS = 20000;
+  let bookingsCacheTime = {};
+
+  async function loadBookingsForDate(dateKey, forceFresh) {
     const cacheKey = currentLocation + '|' + dateKey;
-    if (bookingsCache[cacheKey]) return;
+    const fresh = bookingsCache[cacheKey] && bookingsCacheTime[cacheKey] && (Date.now() - bookingsCacheTime[cacheKey] < BOOKINGS_CACHE_TTL_MS);
+    if (!forceFresh && fresh) return;
     try {
       const res = await fetch(`/api/bookings?date=${dateKey}&location=${currentLocation}`);
       const rows = await res.json();
@@ -1117,8 +1125,10 @@
         });
       });
       bookingsCache[cacheKey] = byTable;
+      bookingsCacheTime[cacheKey] = Date.now();
     } catch (e) {
       bookingsCache[cacheKey] = {};
+      bookingsCacheTime[cacheKey] = Date.now();
     }
   }
 
@@ -1443,34 +1453,52 @@ function closeCommunity() {
     if (!_pendingBookingData) return;
     const { customerName, customerPhone, d, t, tbs, notes, totalHarga, duration: bookingDuration, location: bookingLocation } = _pendingBookingData;
 
-    // Save to database
+    // Refresh data booking hari ini sebelum benar-benar submit — cache bisa
+    // sudah agak basi (sampai 20 detik) kalau customer sempat mikir lama di
+    // modal konfirmasi. Server tetap jadi penjaga akhir (409 di bawah), tapi
+    // ini mengurangi kemungkinan submit ke meja yang baru saja kepakai orang lain.
+    await loadBookingsForDate(d.dateKey, true);
+
+    // Save to database. Booking beberapa meja sekaligus dikirim satu per
+    // satu (bukan Promise.all paralel) supaya kalau salah satu meja bentrok,
+    // meja yang SUDAH berhasil dibuat sebelumnya bisa langsung di-rollback
+    // (dihapus) alih-alih diam-diam tersimpan padahal customer melihat pesan gagal.
     let bookingCode = '';
+    const createdIds = [];
     try {
-      const results = await Promise.all(tbs.map(tb => fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerName, customerContact: customerPhone,
-          date: d.dateKey, time: t.time, tableId: tb.id, tableName: tb.name,
-          floor: tb.floor, duration: bookingDuration, notes, location: bookingLocation })
-      }).then(async r => {
+      for (const tb of tbs) {
+        const r = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerName, customerContact: customerPhone,
+            date: d.dateKey, time: t.time, tableId: tb.id, tableName: tb.name,
+            floor: tb.floor, duration: bookingDuration, notes, location: bookingLocation })
+        });
         if (r.status === 409) {
-          const err = await r.json();
+          const err = await r.json().catch(() => ({}));
           throw new Error(`Meja ${tb.name} sudah dipesan jam ${err.conflictTime || t.time}. Pilih meja atau jam lain.`);
         }
-        return r.json();
-      })));
-      bookingCode = results[0]?.bookingCode || '';
+        if (!r.ok) throw new Error('Gagal menyimpan booking, coba lagi.');
+        const row = await r.json();
+        createdIds.push(row.id);
+        if (!bookingCode) bookingCode = row.bookingCode || '';
+      }
       delete bookingsCache[bookingLocation + '|' + d.dateKey];
     } catch (e) {
+      // Rollback meja yang sempat berhasil dibuat sebelum kegagalan ini,
+      // supaya tidak ada meja "nyangkut" ter-booking tanpa customer sadar.
+      await Promise.all(createdIds.map(id => fetch(`/api/bookings?id=${id}`, { method: 'DELETE' }).catch(() => {})));
       if (e.message && e.message.includes('sudah dipesan')) {
         alert('⚠️ ' + e.message);
         if (selectedDate !== null) {
           delete bookingsCache[currentLocation + '|' + dateData[selectedDate].dateKey];
-          await loadBookingsForDate(dateData[selectedDate].dateKey);
+          await loadBookingsForDate(dateData[selectedDate].dateKey, true);
           applyBookings(); renderTimes(); renderTables();
         }
         return;
       }
+      alert('⚠️ ' + (e.message || 'Gagal menyimpan booking, coba lagi.'));
+      return;
     }
 
     // Siapkan pesan WA pakai data dari _pendingBookingData (SEBELUM reset)

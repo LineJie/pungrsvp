@@ -1377,8 +1377,27 @@ async function loadStaff() {
                             <td>${s.role === 'admin' ? '👑 Admin' : '🧾 Kasir'}</td>
                             <td>${s.location === 'denpasar' ? 'Denpasar' : 'Surabaya'}</td>
                                   <td>${s.createdAt ? formatDate(String(s.createdAt).slice(0,10)) : '—'}</td>
-                                        <td><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
+                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${s.location === 'denpasar' ? 'denpasar' : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
                                             </tr>`).join('');
+  }
+
+  // Edit lokasi staff yang salah dipilih waktu dibuat — sebelumnya cuma
+  // bisa dibenerin dengan hapus + buat ulang akunnya.
+  async function editStaffLocation(id, name, currentLocation) {
+      const wantSwitch = confirm(`Staff "${name}" saat ini di cabang ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'}.\n\nKlik OK untuk pindah ke ${currentLocation === 'denpasar' ? 'Surabaya' : 'Denpasar, Bali'}, atau Cancel untuk batal.`);
+      if (!wantSwitch) return;
+      const newLoc = currentLocation === 'denpasar' ? 'surabaya' : 'denpasar';
+      try {
+            const res = await fetch(`/api/staff?id=${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+                    body: JSON.stringify({ location: newLoc })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { showToast(data.error || 'Gagal update lokasi'); return; }
+            showToast(`✅ Lokasi ${name} diubah ke ${newLoc === 'denpasar' ? 'Denpasar' : 'Surabaya'}`);
+            loadStaff();
+      } catch (e) { showToast('Gagal update lokasi'); }
   }
   
   async function submitStaff() {
@@ -2465,15 +2484,23 @@ async function loadStaff() {
     const notes = document.getElementById('editNotes').value;
     const [tableId, tableName, floor] = tableVal.split('|');
     try {
-      await fetch(`/api/bookings?id=${id}`, {
+      const res = await fetch(`/api/bookings?id=${id}`, {
         method: 'PATCH',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ date, time, tableId, tableName, floor, duration, notes })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Server menolak (mis. bentrok jadwal, 409) — JANGAN tutup modal
+        // atau tampilkan "berhasil", supaya admin sadar update-nya gagal
+        // dan meja/jam itu masih dipakai booking lain.
+        showToast(data.error ? `⚠️ ${data.error}` : 'Gagal mengupdate — coba lagi.');
+        return;
+      }
       showToast('✅ Booking berhasil diupdate!');
       closeEditModal();
       loadBookings(true);
-    } catch(e) { showToast('Gagal mengupdate'); }
+    } catch(e) { showToast('Gagal mengupdate — cek koneksi lalu coba lagi.'); }
   }
 
   function showToast(msg) {
@@ -2543,15 +2570,33 @@ async function loadStaff() {
 
     if (!date || startHour === null || isNaN(startHour)) { resetAll(); return; }
 
-    let dayBookings, daySessions;
+    // Lokasi yang relevan buat pengecekan ini — sama seperti dropdown meja
+    // yang sudah difilter per lokasi (filterWalkinTableOptions/filterCommunityTableOptions).
+    // WAJIB dikirim ke /api/bookings, kalau tidak, respons berisi booking dari
+    // SEMUA cabang tercampur (walau practically table ID beda per cabang jadi
+    // tidak salah tabrak, ini tetap best practice + hemat payload).
+    const relevantLoc = isSuperAdmin ? (_viewLocation === 'all' ? null : _viewLocation) : _authLocation;
+    const bookingsUrl = '/api/bookings?date=' + date + (relevantLoc ? '&location=' + relevantLoc : '');
+
+    let dayBookings = [];
     try {
-      const [res, res2] = await Promise.all([
-        fetch('/api/bookings?date=' + date),
-        fetch('/api/community-sessions?date=' + date)
-      ]);
+      const res = await fetch(bookingsUrl);
       dayBookings = await res.json();
-      daySessions = await res2.json();
-    } catch (e) { return; } // gagal fetch: jangan blokir semua meja, biarkan seperti semula
+      if (!Array.isArray(dayBookings)) dayBookings = [];
+    } catch (e) { return; } // gagal fetch booking utama: jangan blokir semua meja, biarkan seperti semula
+
+    // Sesi "Acara Main Bareng" (community-sessions) dicek TERPISAH dan tidak
+    // boleh menggagalkan pengecekan bentrok booking biasa di atas — kalau
+    // endpoint ini belum tersedia/gagal, kita tetap lanjut dengan dayBookings
+    // yang sudah berhasil didapat, bukannya membatalkan SELURUH pengecekan.
+    let daySessions = [];
+    try {
+      const res2 = await fetch('/api/community-sessions?date=' + date + (relevantLoc ? '&location=' + relevantLoc : ''));
+      if (res2.ok) {
+        const parsed = await res2.json();
+        if (Array.isArray(parsed)) daySessions = parsed;
+      }
+    } catch (e) { /* fitur Acara Main Bareng belum aktif — abaikan, jangan blokir pengecekan meja biasa */ }
 
     const endHour = startHour + duration;
     const conflictIds = new Set(
