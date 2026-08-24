@@ -785,7 +785,8 @@
   <!-- CONTENT -->
   <div class="content">
 
-    <!-- COMMUNITY STRIP -->
+    <!-- COMMUNITY STRIP — sementara dihapus dari tampilan, belum pede buat komunitas.
+         Modal & fungsi JS di bawah masih ada, tinggal aktifin lagi strip ini kalau sudah siap:
     <div class="member-strip" onclick="openCommunity()">
       <div class="member-icon">🎴</div>
       <div class="member-text">
@@ -794,6 +795,7 @@
       </div>
       <div class="member-arrow">›</div>
     </div>
+    -->
 
     <!-- QR MODAL -->
     <div id="qrModal" onclick="closeCommunity()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
@@ -826,18 +828,17 @@
       <div class="location-row selected" id="locBanana" onclick="selectLocation('surabaya')">
         <div class="loc-icon">📍</div>
         <div class="loc-text">
-          <strong>Banana Leaf, Graha Famili</strong>
-        <span>Lantai 1–2 — Surabaya Barat · Self check-in</span>
+          <strong>Graha Famili, Surabaya</strong>
+        <span>Banana Leaf, Jl. Mayjen Yonosewoyo, Plaza Graha Famili C12 · 5 Meja Automatic Table</span>
         </div>
       <div class="loc-check">✓</div>
       </div>
     <div class="location-row" id="locDenpasar" onclick="selectLocation('denpasar')" style="margin-top:10px;">
     <div class="loc-icon">📍</div>
     <div class="loc-text">
-    <div class="opening-badge">Opening Soon · Buka 23 Agustus</div>
     <strong>Denpasar, Bali</strong>
     <span>Lantai 2 The Magendra · Teuku Umar Barat No.888</span>
-    <span>3 Meja — Spring, Winter &amp; Autumn (Manual Mahjong)</span>
+    <span>3 Meja — Spring &amp; Winter (Automatic), Autumn (Manual Mahjong)</span>
     </div>
     <div class="loc-check" style="display:none;">✓</div>
     </div>
@@ -1057,8 +1058,8 @@
     { id: '5', name: 'Dragon Table', floor: 'Lantai 1', cap: '4 orang', rate: 50000, emoji: '🐉', avail: true, bookedBy: null },
   ];
   const tableDataDenpasar = [
-    { id: 'b1', name: 'Spring Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '🌱', avail: true, bookedBy: null },
-    { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', avail: true, bookedBy: null },
+    { id: 'b1', name: 'Spring Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '🌱', note: 'Automatic Table', avail: true, bookedBy: null },
+    { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', note: 'Automatic Table', avail: true, bookedBy: null },
     { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', note: 'Manual Mahjong', avail: true, bookedBy: null },
   ];
 
@@ -1353,7 +1354,7 @@ function closeCommunity() {
     // Header hanya menunjukkan cabang aktif. Nama brand tetap konsisten,
     // sedangkan alamat lengkap tersedia pada kartu pilihan lokasi di bawah.
     const headerLocation = document.getElementById('headerLocation');
-    if (headerLocation) headerLocation.textContent = loc === 'denpasar' ? 'Opening Soon · Denpasar, Bali' : 'Surabaya';
+    if (headerLocation) headerLocation.textContent = loc === 'denpasar' ? 'Denpasar, Bali' : 'Surabaya';
 
     // Update kartu lokasi (checkmark & border aktif)
     const bananaRow = document.getElementById('locBanana');
@@ -1373,7 +1374,7 @@ function closeCommunity() {
     const hint = document.getElementById('durationHint');
     if (hint) {
       hint.textContent = loc === 'denpasar'
-        ? 'Rp 50.000/jam (Spring & Winter) · Rp 30.000/jam (Autumn)'
+        ? 'Rp 50.000/jam · Spring & Winter (Automatic) · Rp 30.000/jam Autumn (Manual)'
         : 'Rp 50.000 / jam per meja';
     }
 
