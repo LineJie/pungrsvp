@@ -162,7 +162,22 @@ export default async (req: Request) => {
                 if (!voided) return Response.json({ error: "Booking not found" }, { status: 404 });
                 return Response.json(voided);
             }
+            const [existingForCorrection] = await db.select().from(bookings).where(eq(bookings.id, id));
+            if (!existingForCorrection) return Response.json({ error: "Booking not found" }, { status: 404 });
+
+            // Super Admin correction sekarang bisa ubah SEMUA field booking, bukan
+            // cuma data checkout — termasuk identitas tamu, jadwal, meja, lokasi,
+            // dan status. Kalau jadwal/meja/lokasi/durasi berubah, tetap dicek
+            // bentrok dulu (sama seperti reschedule biasa), supaya koreksi manual
+            // tidak diam-diam bikin double-booking.
             const correctionData: any = {};
+            if (body.customerName !== undefined) correctionData.customerName = body.customerName;
+            if (body.customerContact !== undefined) correctionData.customerContact = body.customerContact;
+            if (body.date) correctionData.date = body.date;
+            if (body.time) correctionData.time = body.time;
+            if (body.duration) correctionData.duration = body.duration;
+            if (body.location) correctionData.location = body.location;
+            if (body.status) correctionData.status = body.status;
             if (body.tableId) correctionData.tableId = body.tableId;
             if (body.tableName) correctionData.tableName = body.tableName;
             if (body.floor) correctionData.floor = body.floor;
@@ -172,6 +187,46 @@ export default async (req: Request) => {
             if (body.checkoutAt) correctionData.checkoutAt = new Date(body.checkoutAt);
             if (typeof body.totalPaid === "number") correctionData.totalPaid = Math.max(0, Math.round(body.totalPaid));
             if (typeof body.actualDuration === "number") correctionData.actualDuration = Math.max(0, Math.round(body.actualDuration));
+
+            const touchesSchedule = body.date || body.time || body.tableId || body.duration || body.location;
+            if (touchesSchedule && correctionData.status !== "cancelled") {
+                const newDate = correctionData.date || existingForCorrection.date;
+                const newTime = correctionData.time || existingForCorrection.time;
+                const newTableId = correctionData.tableId || existingForCorrection.tableId;
+                const newDuration = correctionData.duration || existingForCorrection.duration;
+                const newLocation = correctionData.location || existingForCorrection.location;
+                const sameSlot = await db.select().from(bookings).where(and(eq(bookings.date, newDate), eq(bookings.location, newLocation)));
+                const startHour = parseInt(newTime);
+                const newEnd = startHour + newDuration;
+                const conflict = sameSlot.find(b => {
+                    if (b.id === id) return false;
+                    if (b.tableId !== newTableId) return false;
+                    if (b.status === "cancelled") return false;
+                    const bStart = parseInt(b.time);
+                    const bEnd = bStart + (b.duration || 1);
+                    return startHour < bEnd && newEnd > bStart;
+                });
+                if (conflict) {
+                    return Response.json({
+                        error: "Meja sudah dipesan pada jam tersebut",
+                        conflictTime: conflict.time
+                    }, { status: 409 });
+                }
+                const sessions = await db.select().from(communitySessions).where(and(eq(communitySessions.date, newDate), eq(communitySessions.location, newLocation)));
+                const sessionConflict = sessions.find(s => {
+                    if (s.tableId !== newTableId || s.status !== "open") return false;
+                    const sStart = parseInt(s.time);
+                    const sEnd = sStart + s.duration;
+                    return startHour < sEnd && newEnd > sStart;
+                });
+                if (sessionConflict) {
+                    return Response.json({
+                        error: "Meja sedang dipakai sesi Acara Main Bareng pada jam tersebut",
+                        conflictTime: sessionConflict.time
+                    }, { status: 409 });
+                }
+            }
+
             const [corrected] = await db.update(bookings).set(correctionData).where(eq(bookings.id, id)).returning();
             if (!corrected) return Response.json({ error: "Booking not found" }, { status: 404 });
             return Response.json(corrected);
