@@ -876,6 +876,7 @@
           <button class="step-btn" onclick="changeDuration(1)">+</button>
         </div>
       </div>
+      <div id="durationClosingWarning" style="display:none;margin-top:10px;background:rgba(192,57,43,0.1);border:1.5px solid rgba(192,57,43,0.3);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#a83232;font-weight:600;"></div>
     </div>
 
     <!-- NAMA -->
@@ -1022,29 +1023,65 @@
       dayName: days[d.getDay()],
       dayNum: d.getDate(),
       month: months[d.getMonth()],
+      dayOfWeek: d.getDay(),
       isSaturday: d.getDay() === 6,
       full: false
     };
   });
 
-  // Tutup 22:00 hari biasa → slot terakhir 21:00
-  // Tutup 24:00 Sabtu → slot terakhir 23:00
+  // Tutup Surabaya: 22:00 hari biasa (slot terakhir 21:00), 24:00 Sabtu
+  // (slot terakhir 23:00). Tutup Denpasar: 21:00 Senin-Kamis (slot
+  // terakhir 20:00), 22:00 Jumat-Minggu (slot terakhir 21:00).
   const allTimeSlots = [
-    { time: '10:00', satOnly: false },
-    { time: '11:00', satOnly: false },
-    { time: '12:00', satOnly: false },
-    { time: '13:00', satOnly: false },
-    { time: '14:00', satOnly: false },
-    { time: '15:00', satOnly: false },
-    { time: '16:00', satOnly: false },
-    { time: '17:00', satOnly: false },
-    { time: '18:00', satOnly: false },
-    { time: '19:00', satOnly: false },
-    { time: '20:00', satOnly: false },
-    { time: '21:00', satOnly: false },
-    { time: '22:00', satOnly: true },
-    { time: '23:00', satOnly: true },
+    { time: '10:00' },
+    { time: '11:00' },
+    { time: '12:00' },
+    { time: '13:00' },
+    { time: '14:00' },
+    { time: '15:00' },
+    { time: '16:00' },
+    { time: '17:00' },
+    { time: '18:00' },
+    { time: '19:00' },
+    { time: '20:00' },
+    { time: '21:00' },
+    { time: '22:00' },
+    { time: '23:00' },
   ];
+
+  // Jam operasional per cabang — diambil dari /api/operating-hours (bisa
+  // diubah Super Admin di admin panel). Nilai di bawah cuma FALLBACK kalau
+  // fetch gagal, supaya halaman booking tetap bisa jalan.
+  //   Surabaya: Minggu-Kamis 10:00-22:00, Jumat-Sabtu 10:00-24:00
+  //   Denpasar: Senin-Kamis 10:00-21:00, Jumat-Minggu 10:00-22:00
+  let _operatingHours = {}; // key: "location|dayOfWeek" -> { openHour, closeHour }
+
+  function fallbackClosingHour(location, dayOfWeek) {
+    if (location === 'denpasar') {
+      return (dayOfWeek >= 1 && dayOfWeek <= 4) ? 21 : 22;
+    }
+    return (dayOfWeek === 5 || dayOfWeek === 6) ? 24 : 22;
+  }
+
+  async function loadOperatingHours() {
+    try {
+      const res = await fetch('/api/operating-hours');
+      const rows = await res.json();
+      if (Array.isArray(rows)) {
+        rows.forEach(r => { _operatingHours[`${r.location}|${r.dayOfWeek}`] = { openHour: r.openHour, closeHour: r.closeHour }; });
+      }
+    } catch (e) { /* pakai fallback */ }
+  }
+
+  // Jam tutup per cabang, tergantung hari dalam seminggu (0=Minggu..6=Sabtu).
+  function getClosingHour(location, dayOfWeek) {
+    const row = _operatingHours[`${location}|${dayOfWeek}`];
+    return row ? row.closeHour : fallbackClosingHour(location, dayOfWeek);
+  }
+  function getOpeningHour(location, dayOfWeek) {
+    const row = _operatingHours[`${location}|${dayOfWeek}`];
+    return row ? row.openHour : 10;
+  }
 
   // Dua set meja: Surabaya (Banana Leaf) dan Denpasar, Bali. Rate per meja
   // per jam disimpan di masing-masing (semua Rp 50rb/jam, KECUALI Autumn
@@ -1075,13 +1112,14 @@
   let tableData = tableDataSurabaya;
   let TOTAL_TABLES = tableData.length;
 
-  function getTimeData(isSaturday) {
+  function getTimeData(dayOfWeek, location) {
+    const closingHour = getClosingHour(location, dayOfWeek);
     return allTimeSlots
-      .filter(t => !t.satOnly || isSaturday)
+      .filter(t => parseInt(t.time) < closingHour)
       .map(t => ({ time: t.time, avail: TOTAL_TABLES, full: false }));
   }
 
-  let timeData = getTimeData(false);
+  let timeData = getTimeData(new Date().getDay(), 'surabaya');
 
   // Bookings per lokasi+tanggal: { [location|dateKey]: { [time]: { [tableId]: customerName } } }
   let bookingsCache = {};
@@ -1148,12 +1186,22 @@
   const CLOSING_HOUR = 23;       // jam tutup terakhir (Sabtu), batas atas aman
   const OVERRUN_BUFFER_HOURS = 1; // grace period di atas "sekarang" saat sedang extend
 
-  function getNowWIB() {
-    const now = new Date();
-    return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  // Zona waktu ikut cabang yang sedang dipilih: Surabaya = WIB
+  // (Asia/Jakarta), Denpasar = WITA (Asia/Makassar). Ini bukan cuma soal
+  // label tampilan — "jam berapa sekarang" dipakai juga untuk menentukan
+  // slot mana yang sudah lewat, jadi harus ikut waktu lokal cabang tsb.
+  function tzForLoc(location) {
+    return location === 'denpasar' ? 'Asia/Makassar' : 'Asia/Jakarta';
   }
-  function getTodayKeyWIB() {
-    const wib = getNowWIB();
+  function tzLabelForLoc(location) {
+    return location === 'denpasar' ? 'WITA' : 'WIB';
+  }
+  function getNowWIB(location) {
+    const now = new Date();
+    return new Date(now.toLocaleString('en-US', { timeZone: tzForLoc(location) }));
+  }
+  function getTodayKeyWIB(location) {
+    const wib = getNowWIB(location);
     return `${wib.getFullYear()}-${String(wib.getMonth()+1).padStart(2,'0')}-${String(wib.getDate()).padStart(2,'0')}`;
   }
 
@@ -1161,8 +1209,8 @@
     if (selectedDate === null) return;
     const dateKey = dateData[selectedDate].dateKey;
     const byTable = bookingsCache[currentLocation + '|' + dateKey] || {};
-    const isToday = dateKey === getTodayKeyWIB();
-    const nowHour = getNowWIB().getHours();
+    const isToday = dateKey === getTodayKeyWIB(currentLocation);
+    const nowHour = getNowWIB(currentLocation).getHours();
 
     // Build: for each 'HH:00' slot -> { tableId: customerName } yang ke-block
     const slotTableBlocked = {};
@@ -1221,7 +1269,7 @@
     if (dateData[i].full) return;
     selectedDate = i;
     selectedTime = null;
-    timeData = getTimeData(dateData[i].isSaturday);
+    timeData = getTimeData(dateData[i].dayOfWeek, currentLocation);
     tableData.forEach(t => { t.avail = true; t.bookedBy = null; });
     renderDates();
     renderTimes();
@@ -1257,6 +1305,7 @@
     renderTimes();
     renderTables();
     updateSummary();
+    validateDurationAgainstClosing();
   }
 
   // === RENDER TABLES ===
@@ -1316,6 +1365,41 @@
     document.getElementById('durationVal').textContent = duration;
     document.getElementById('durationLabel').textContent = duration + ' Jam';
     updateSummary();
+    validateDurationAgainstClosing();
+  }
+
+  // Cek apakah jam mulai + durasi yang dipilih melewati jam tutup cabang di
+  // hari itu. Kalau iya, tampilkan peringatan dan kunci tombol submit —
+  // supaya customer tidak bisa booking misal jam 20:00 durasi 3 jam padahal
+  // tutup jam 21:00.
+  function validateDurationAgainstClosing() {
+    const warnEl = document.getElementById('durationClosingWarning');
+    const ctaBtn = document.querySelector('.cta-btn');
+    if (selectedDate === null || selectedTime === null || !warnEl) {
+      if (warnEl) warnEl.style.display = 'none';
+      if (ctaBtn) { ctaBtn.disabled = false; ctaBtn.style.opacity = '1'; ctaBtn.style.cursor = 'pointer'; }
+      return true;
+    }
+    const d = dateData[selectedDate];
+    const t = timeData[selectedTime];
+    const closingHour = getClosingHour(currentLocation, d.dayOfWeek);
+    const startHour = parseInt(t.time);
+    const endHour = startHour + duration;
+    const tzLabel = tzLabelForLoc(currentLocation);
+    const closingLabel = closingHour === 24 ? '24:00 (tengah malam)' : `${String(closingHour).padStart(2,'0')}:00`;
+
+    if (endHour > closingHour) {
+      const maxDuration = closingHour - startHour;
+      warnEl.style.display = 'block';
+      warnEl.textContent = maxDuration > 0
+        ? `⚠️ ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'} tutup jam ${closingLabel} ${tzLabel}. Mulai jam ${t.time}, durasi maksimal ${maxDuration} jam.`
+        : `⚠️ ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'} tutup jam ${closingLabel} ${tzLabel}. Jam ${t.time} sudah tidak bisa booking, coba pilih jam lebih awal.`;
+      if (ctaBtn) { ctaBtn.disabled = true; ctaBtn.style.opacity = '0.5'; ctaBtn.style.cursor = 'not-allowed'; }
+      return false;
+    }
+    warnEl.style.display = 'none';
+    if (ctaBtn) { ctaBtn.disabled = false; ctaBtn.style.opacity = '1'; ctaBtn.style.cursor = 'pointer'; }
+    return true;
   }
 
   // === SUMMARY ===
@@ -1324,7 +1408,7 @@
     const t = selectedTime !== null ? timeData[selectedTime] : null;
 
     document.getElementById('sumDate').textContent = d ? `${d.dayName}, ${d.dayNum} ${d.month}` : 'Pilih tanggal';
-    document.getElementById('sumTime').textContent = t ? `${t.time} WIB` : 'Pilih waktu';
+    document.getElementById('sumTime').textContent = t ? `${t.time} ${tzLabelForLoc(currentLocation)}` : 'Pilih waktu';
 
     if (selectedTables.length === 0) {
       document.getElementById('sumTable').textContent = 'Pilih meja';
@@ -1391,11 +1475,12 @@ function closeCommunity() {
     // Reset pilihan meja/waktu — meja lokasi lama tidak berlaku di lokasi baru
     selectedTables = [];
     selectedTime = null;
-    timeData = selectedDate !== null ? getTimeData(dateData[selectedDate].isSaturday) : getTimeData(false);
+    timeData = selectedDate !== null ? getTimeData(dateData[selectedDate].dayOfWeek, currentLocation) : getTimeData(new Date().getDay(), currentLocation);
 
     renderTables();
     renderTimes();
     updateSummary();
+    validateDurationAgainstClosing();
 
     if (selectedDate !== null) {
       loadBookingsForDate(dateData[selectedDate].dateKey).then(() => {
@@ -1421,6 +1506,10 @@ function closeCommunity() {
       alert('Lengkapi pilihan tanggal, waktu, dan meja dulu ya! 😊');
       return;
     }
+    if (!validateDurationAgainstClosing()) {
+      alert('Durasi yang dipilih melewati jam tutup. Kurangi durasi atau pilih jam mulai lebih awal ya! 😊');
+      return;
+    }
     const customerPhone = document.getElementById('customerPhone').value.trim();
     const d = dateData[selectedDate];
     const t = timeData[selectedTime];
@@ -1438,7 +1527,7 @@ function closeCommunity() {
     document.getElementById('confirmSummary').innerHTML =
       `<b>👤</b> ${escHtml(customerName)}<br>` +
       `<b>📅</b> ${d.dayName}, ${d.dayNum} ${d.month}<br>` +
-      `<b>⏰</b> ${t.time} WIB &nbsp;·&nbsp; <b>⏱</b> ${duration} jam${mejaNota}<br>` +
+      `<b>⏰</b> ${t.time} ${tzLabelForLoc(currentLocation)} &nbsp;·&nbsp; <b>⏱</b> ${duration} jam${mejaNota}<br>` +
       tbs.map(tb => `<b>🀄</b> ${tb.name} (${tb.floor})`).join('<br>') +
       `<br><b>💰</b> Rp ${totalHarga}`;
     document.getElementById('confirmModal').style.display = 'flex';
@@ -1509,7 +1598,7 @@ function closeCommunity() {
     // Rekening tujuan mengikuti cabang booking (bookingLocation), bukan currentLocation,
     // supaya tetap akurat walau customer sempat ganti-ganti cabang di form.
     _pmRekening = REKENING[bookingLocation] || REKENING.surabaya;
-    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} WIB\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke ${_pmRekening.bank} ${_pmRekening.number} a.n. ${_pmRekening.name} dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
+    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} ${tzLabelForLoc(bookingLocation)}\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke ${_pmRekening.bank} ${_pmRekening.number} a.n. ${_pmRekening.name} dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
     const waUrl = `https://wa.me/${_pmRekening.wa}?text=${encodeURIComponent(waMsg)}`;
 
     // Tampilkan payment modal DULU sebelum reset form
@@ -1518,7 +1607,7 @@ function closeCommunity() {
     document.getElementById('pmSummary').innerHTML =
       `<b>👤</b> ${escHtml(customerName)}<br>` +
       `<b>📅</b> ${d.dayName}, ${d.dayNum} ${d.month}<br>` +
-      `<b>⏰</b> ${t.time} WIB &nbsp;·&nbsp; <b>⏱</b> ${bookingDuration} jam<br>` +
+      `<b>⏰</b> ${t.time} ${tzLabelForLoc(bookingLocation)} &nbsp;·&nbsp; <b>⏱</b> ${bookingDuration} jam<br>` +
       tbs.map(tb => `<b>🀄</b> ${tb.name} (${tb.floor})`).join('<br>');
     document.getElementById('pmTotal').textContent = 'Rp ' + totalHarga;
     document.getElementById('pmBankBadge').textContent = _pmRekening.bank;
@@ -1688,6 +1777,14 @@ function closeCommunity() {
   renderTimes();
   renderTables();
   updateSummary();
+  // Jam operasional dari server dimuat async — begitu selesai, render ulang
+  // supaya slot waktu yang ditampilkan langsung sesuai jam terbaru (bukan
+  // fallback bawaan), tanpa customer perlu refresh manual.
+  loadOperatingHours().then(() => {
+    timeData = selectedDate !== null ? getTimeData(dateData[selectedDate].dayOfWeek, currentLocation) : getTimeData(new Date().getDay(), currentLocation);
+    renderTimes();
+    validateDurationAgainstClosing();
+  });
 </script>
 </body>
 </html>

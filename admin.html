@@ -549,6 +549,7 @@
     <div style="display:flex;gap:8px;margin-bottom:14px;">
       <button id="wiTabCheckin" class="btn btn-primary" onclick="switchWiTab('checkin')" style="flex:1;font-size:12px;">⚡ Walk-in Sekarang</button>
       <button id="wiTabManual" class="btn" onclick="switchWiTab('manual')" style="flex:1;font-size:12px;background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">📋 Input Manual</button>
+      <button id="wiTabBlock" class="btn" onclick="switchWiTab('block')" style="flex:1;font-size:12px;background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)">🚫 Blokir Meja</button>
     </div>
 
     <!-- TAB WALK-IN LANGSUNG -->
@@ -647,6 +648,58 @@
       </div>
       <button class="btn btn-primary" onclick="submitManual()" style="width:100%;padding:12px;font-size:14px;">Simpan Booking Manual</button>
     </div>
+
+    <!-- TAB BLOKIR MEJA (ACARA) -->
+    <div id="wiBlockTab" style="display:none">
+      <div style="background:rgba(192,57,43,0.08);border-radius:12px;padding:10px 14px;font-size:12px;color:#a83232;margin-bottom:12px;">
+        🚫 Untuk menutup meja karena acara (misal tempat dipakai event Banana Leaf / The Magendra). Meja yang diblokir otomatis terkunci di halaman booking customer, sampai kamu buka blokirnya lagi.
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Cabang</label>
+          <select id="bl_location" onchange="renderBlockTableCheckboxes()">
+            <option value="surabaya">Surabaya</option>
+            <option value="denpasar">Denpasar, Bali</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="bl_date">
+        </div>
+        <div class="form-group">
+          <label>Jam Mulai</label>
+          <select id="bl_start">
+            <option>10:00</option><option>11:00</option><option>12:00</option>
+            <option>13:00</option><option>14:00</option><option>15:00</option>
+            <option>16:00</option><option>17:00</option><option>18:00</option>
+            <option>19:00</option><option>20:00</option><option>21:00</option>
+            <option>22:00</option><option>23:00</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Jam Selesai</label>
+          <select id="bl_end">
+            <option>11:00</option><option>12:00</option><option>13:00</option>
+            <option>14:00</option><option>15:00</option><option>16:00</option>
+            <option>17:00</option><option>18:00</option><option>19:00</option>
+            <option>20:00</option><option>21:00</option><option>22:00</option>
+            <option>23:00</option><option selected>24:00</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Alasan / Nama Acara</label>
+          <input type="text" id="bl_reason" placeholder="misal: Acara ulang tahun tempat sewa penuh">
+        </div>
+      </div>
+      <div style="margin:6px 0 14px;">
+        <label style="font-size:12px;font-weight:600;color:var(--green-dark);display:block;margin-bottom:8px;">Meja yang diblokir</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:6px;margin-bottom:8px;cursor:pointer;">
+          <input type="checkbox" id="bl_all" onchange="toggleAllBlockTables()"> <strong>Semua meja cabang ini</strong>
+        </label>
+        <div id="blockTableCheckboxes" style="display:flex;flex-direction:column;gap:6px;padding-left:4px;"></div>
+      </div>
+      <button class="btn btn-danger" onclick="submitTableBlock()" style="width:100%;padding:12px;font-size:14px;">🚫 Blokir Meja Terpilih</button>
+    </div>
   </div>
 </div>
 
@@ -697,6 +750,8 @@
     <button id="tabCustomers" class="btn view-tab-btn" onclick="switchTab('customers')">👤 Data Customer</button>
     <button id="tabStaff" class="btn view-tab-btn" onclick="switchTab('staff')" style="display:none">🛡️ Kelola Staff</button>
     <button id="tabPromo" class="btn view-tab-btn" onclick="switchTab('promo')" style="display:none">🎁 Kelola Promo</button>
+    <button id="tabPayMethods" class="btn view-tab-btn" onclick="switchTab('paymethods')" style="display:none">💳 Metode Bayar</button>
+    <button id="tabHours" class="btn view-tab-btn" onclick="switchTab('hours')" style="display:none">🕐 Jam Operasional</button>
     <button id="tabCommunity" class="btn view-tab-btn" onclick="switchTab('community')">🎉 Acara Bareng</button>
     <button id="tabClosing" class="btn view-tab-btn" onclick="switchTab('closing')">🌙 Tutup Kasir</button>
   </div>
@@ -734,7 +789,7 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar"></div></div></div><div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
   <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
     <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🎉 Buat Acara Main Bareng</h3>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Meja di-share, tiap orang/rombongan daftar & bayar sendiri per jam. Meja tetap jalan walau belum penuh 4 orang.</div>
@@ -830,6 +885,40 @@
   let _bookingsCacheTime = {};
   const CACHE_TTL_MS = 60000; // 60 detik
 
+  // Metode pembayaran — daftar diambil dari /api/payment-methods (dikelola
+  // Super Admin di tab Pengaturan), bukan hardcoded, supaya "tere" bisa
+  // nambah metode baru (misal Transfer) tanpa perlu deploy ulang.
+  let _paymentMethods = []; // semua metode (termasuk nonaktif), untuk layar pengaturan
+  let _activePaymentMethods = []; // hanya yang aktif, dipakai render tombol POS & dropdown koreksi
+
+  async function loadPaymentMethods() {
+    try {
+      const res = await fetch('/api/payment-methods');
+      _paymentMethods = await res.json();
+      _activePaymentMethods = (Array.isArray(_paymentMethods) ? _paymentMethods : []).filter(m => m.active);
+    } catch (e) {
+      _paymentMethods = [];
+      _activePaymentMethods = [];
+    }
+  }
+
+  function renderPayMethodButtons() {
+    const wrap = document.getElementById('payMethodButtons');
+    if (!wrap) return;
+    wrap.innerHTML = _activePaymentMethods.map(m => `
+      <button class="pay-btn" data-key="${m.key}" onclick="selectPayment('${m.key}')"
+        style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
+        ${m.emoji} ${escHtml(m.label)}
+      </button>`).join('');
+  }
+
+  function payMethodLabel(key) {
+    const m = _paymentMethods.find(x => x.key === key);
+    if (m) return `${m.emoji} ${m.label}`;
+    if (key === 'gratis') return '🎁 Gratis (Owner)';
+    return key || '—';
+  }
+
   async function loadBookings(forceFresh) {
     const dateVal = document.getElementById('filterDate').value;
     const cacheKey = (dateVal || '__all__') + '|' + _viewLocation;
@@ -880,6 +969,14 @@
       document.getElementById('tabPromo').classList.toggle('active', tab === 'promo');
       document.getElementById('tabPromo').style.display = isSuperAdmin ? '' : 'none';
       if (tab === 'promo') loadPromoManager();
+      document.getElementById('viewPayMethods').style.display = tab === 'paymethods' ? 'block' : 'none';
+      document.getElementById('tabPayMethods').classList.toggle('active', tab === 'paymethods');
+      document.getElementById('tabPayMethods').style.display = isSuperAdmin ? '' : 'none';
+      if (tab === 'paymethods') loadPaymentMethodsManager();
+      document.getElementById('viewHours').style.display = tab === 'hours' ? 'block' : 'none';
+      document.getElementById('tabHours').classList.toggle('active', tab === 'hours');
+      document.getElementById('tabHours').style.display = isSuperAdmin ? '' : 'none';
+      if (tab === 'hours') loadOperatingHoursManager();
       document.getElementById('viewCommunity').style.display = tab === 'community' ? 'block' : 'none';
       document.getElementById('tabCommunity').classList.toggle('active', tab === 'community');
       if (tab === 'community') { filterCommunityTableOptions(); loadCommunitySessions(); }
@@ -910,13 +1007,18 @@
   }
 
   function computeClosingBreakdown() {
-    const breakdown = { tunai: {count:0, total:0}, qris: {count:0, total:0}, debit: {count:0, total:0}, gratis: {count:0, total:0} };
+    // Dasarnya dari daftar metode yang tersimpan di server (termasuk yang
+    // sekarang nonaktif — supaya histori lama tetap kebaca), plus "gratis"
+    // yang statusnya bukan metode bayar sungguhan tapi tetap dilaporkan di sini.
+    const breakdown = {};
+    _paymentMethods.forEach(m => { breakdown[m.key] = { label: `${m.emoji} ${m.label}`, count: 0, total: 0 }; });
+    breakdown.gratis = breakdown.gratis || { label: '🎁 Gratis (Owner)', count: 0, total: 0 };
     let totalOmset = 0;
     _closingData.forEach(b => {
-      if (breakdown[b.paymentMethod]) {
-        breakdown[b.paymentMethod].count++;
-        breakdown[b.paymentMethod].total += (b.totalPaid || 0);
-      }
+      const key = b.paymentMethod || 'lainnya';
+      if (!breakdown[key]) breakdown[key] = { label: key, count: 0, total: 0 };
+      breakdown[key].count++;
+      breakdown[key].total += (b.totalPaid || 0);
       totalOmset += (b.totalPaid || 0);
     });
     return { breakdown, totalOmset, totalSesi: _closingData.length };
@@ -929,10 +1031,11 @@
   function renderClosingSummary(date) {
     const { breakdown, totalOmset, totalSesi } = computeClosingBreakdown();
     let rows = '';
-    ['tunai','qris','debit','gratis'].forEach(k => {
+    Object.keys(breakdown).forEach(k => {
       const item = breakdown[k];
+      if (item.count === 0 && k !== 'gratis') return; // sembunyikan metode yang tidak dipakai sama sekali hari itu
       rows += `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(28,58,46,0.06);font-size:14px;">
-        <span>${PAY_LABELS_CLOSING[k]}</span>
+        <span>${item.label}</span>
         <span style="text-align:right;color:var(--green-dark);font-weight:600;">${item.count}&times; &nbsp; Rp ${item.total.toLocaleString('id-ID')}</span>
       </div>`;
     });
@@ -952,12 +1055,14 @@
   function printClosingReport() {
     const date = document.getElementById('closingDate').value;
     const { breakdown, totalOmset, totalSesi } = computeClosingBreakdown();
-    const printedAt = new Date().toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Jakarta' });
+    // _viewLocation bisa 'surabaya'/'denpasar'/'all' — untuk 'all' default WIB
+    // karena laporan gabungan tidak terikat satu cabang.
+    const printedAt = new Date().toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:tzForLoc(_viewLocation) }) + ' ' + tzLabelForLoc(_viewLocation);
     let rows = '';
-    ['tunai','qris','debit','gratis'].forEach(k => {
+    Object.keys(breakdown).forEach(k => {
       const item = breakdown[k];
       if (item.count === 0) return; // sembunyikan metode yang tidak dipakai hari itu biar struk ringkas
-      rows += `<div class="row"><span>${PAY_LABELS_CLOSING[k]}</span><span>${item.count}&times; Rp ${item.total.toLocaleString('id-ID')}</span></div>`;
+      rows += `<div class="row"><span>${item.label}</span><span>${item.count}&times; Rp ${item.total.toLocaleString('id-ID')}</span></div>`;
     });
     const w = window.open('', '_blank', 'width=400,height=600');
     w.document.write(`<html><head><title>Laporan Closing</title><style>
@@ -1186,6 +1291,7 @@
       }
       const isPayLater = (b.status === 'confirmed' || b.status === 'checked_in') && b.notes && b.notes.includes('[BAYAR NANTI]');
       const isOwnerFree = b.notes && b.notes.includes('[OWNER GRATIS]');
+      const isEventBlock = b.notes && b.notes.includes('[EVENT BLOCK]');
       const promoTagMatch = (b.notes || '').match(/\[PROMO:([^\]]+)\]/);
 
       // Deteksi sudah main terlalu lama (>5 jam) tapi belum checkout
@@ -1210,15 +1316,16 @@
         const expectedCheckoutMs = new Date(b.checkinAt).getTime() + (b.duration || 1) * 60 * 60000;
         const minsPastExpected = Math.floor((Date.now() - expectedCheckoutMs) / 60000);
         if (minsPastExpected >= 0) {
-          const expTime = fmtWIB(new Date(expectedCheckoutMs).toISOString());
+          const expTime = fmtWIB(new Date(expectedCheckoutMs).toISOString(), b.location);
           checkoutDueWarning = `<br><span style="font-size:11px;color:#c0392b;font-weight:700;">
-            ⏰ Harusnya checkout ${expTime} (${minsPastExpected}m lewat)
+            ⏰ Harusnya checkout ${expTime} ${tzLabelForLoc(b.location)} (${minsPastExpected}m lewat)
           </span>`;
         }
       }
 
 
-      const badgeLabel = (isOwnerFree && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main Gratis (Owner)${longPlayWarning}` : '🎁 Main Gratis (Owner)')
+      const badgeLabel = isEventBlock ? '🚫 Meja Ditutup (Acara)'
+        : (isOwnerFree && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main Gratis (Owner)${longPlayWarning}` : '🎁 Main Gratis (Owner)')
         : (isOwnerFree && b.status === 'completed') ? '🎁 Selesai (Gratis)'
         : (isPayLater && b.status === 'confirmed') ? '🕐 Bayar Saat Checkout'
         : (isPayLater && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main, Bayar Nanti${longPlayWarning}` : '🎮 Main (Bayar Nanti)')
@@ -1227,18 +1334,20 @@
         : b.status === 'checked_in' ? (isLongPlay ? `⚠️ Sedang Main${longPlayWarning}` : '🎮 Sedang Main')
         : b.status === 'completed' ? (promoTagMatch ? `🏁 Selesai · 🎁 ${escHtml(promoTagMatch[1])}` : '🏁 Selesai')
         : '❌ Batal';
-      const badgeClassFinal = isOwnerFree ? 'badge-ownerfree' : isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
+      const badgeClassFinal = isEventBlock ? 'badge-cancelled' : isOwnerFree ? 'badge-ownerfree' : isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
       const endHour = String(parseInt(b.time) + b.duration).padStart(2,'0');
       const isAdmin = userRole === 'admin';
       // Checkin time display
-      const checkinTime = fmtWIB(b.checkinAt);
-      const checkoutTime = fmtWIB(b.checkoutAt);
+      const checkinTime = fmtWIB(b.checkinAt, b.location);
+      const checkoutTime = fmtWIB(b.checkoutAt, b.location);
       const excludeBtn = isAdmin
         ? `<button class="btn btn-sm" onclick="toggleExcludeAutoCancel(${b.id}, ${isExcluded})" title="${isExcluded ? 'Aktifkan kembali auto-cancel' : 'Kecualikan dari auto-cancel (misal: teman/langganan, bayar nanti di tempat)'}"
              style="background:${isExcluded ? '#fde8e8' : '#fff8e1'};color:${isExcluded ? '#a83232' : '#7a5c00'};border:1.5px solid ${isExcluded ? '#a83232' : '#f0d98c'};font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">
              ${isExcluded ? '🔓 Batal Kecualikan' : '🔒 Kecualikan'}</button>`
         : '';
-      const actions = b.status === 'confirmed'
+      const actions = isEventBlock
+        ? (isAdmin ? `<button class="btn btn-primary btn-sm" onclick="unblockTable(${b.id})" title="Buka blokir meja ini">🔓 Buka Blokir</button>` : '<span style="font-size:11px;color:var(--text-muted)">Meja ditutup admin</span>')
+        : b.status === 'confirmed'
         ? `<button class="btn btn-primary btn-sm" onclick="checkinBooking(${b.id})" title="Check-in tamu">🎮 Check-in</button>
            ${isAdmin ? `<button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
            <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>` : ''}`
@@ -1513,6 +1622,115 @@ async function loadStaff() {
     } catch (e) { showToast('Gagal mengubah status promo'); }
   }
 
+  // === SUPER ADMIN: KELOLA METODE PEMBAYARAN ===
+  async function loadPaymentMethodsManager() {
+    document.getElementById('paymethodsBody').innerHTML = '<tr><td colspan="4" class="loading">Memuat data…</td></tr>';
+    await loadPaymentMethods(); // refresh cache global (_paymentMethods / _activePaymentMethods)
+    renderPayMethodButtons();
+    if (!_paymentMethods.length) {
+      document.getElementById('paymethodsBody').innerHTML = '<tr><td colspan="4" class="empty-state">Belum ada metode pembayaran.</td></tr>';
+      return;
+    }
+    document.getElementById('paymethodsBody').innerHTML = _paymentMethods.map(m => `
+      <tr>
+        <td style="font-size:18px;">${m.emoji}</td>
+        <td class="name-cell">${escHtml(m.label)}</td>
+        <td>${m.active ? '<span style="color:#1a6635;font-weight:600;">🟢 Aktif</span>' : '<span style="color:#a83232;font-weight:600;">⚪ Nonaktif</span>'}</td>
+        <td><button class="btn btn-sm" style="background:${m.active ? '#fde8e8' : '#e8f4fd'};color:${m.active ? '#a83232' : '#1a6635'};border:1.5px solid ${m.active ? '#a83232' : '#1a6635'};font-weight:600;" onclick="togglePaymentMethodActive(${m.id}, ${m.active})">${m.active ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
+      </tr>`).join('');
+  }
+
+  async function submitPaymentMethod() {
+    const label = document.getElementById('pm_label').value.trim();
+    const emoji = document.getElementById('pm_emoji').value.trim();
+    if (!label) { showToast('Isi nama metode pembayaran dulu ya!'); return; }
+    try {
+      const res = await fetch('/api/payment-methods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ label, emoji })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal menyimpan metode pembayaran'); return; }
+      showToast(`✅ Metode pembayaran "${label}" ditambahkan!`);
+      document.getElementById('pm_label').value = '';
+      document.getElementById('pm_emoji').value = '';
+      loadPaymentMethodsManager();
+    } catch (e) { showToast('Gagal menyimpan metode pembayaran'); }
+  }
+
+  async function togglePaymentMethodActive(id, currentlyActive) {
+    try {
+      const res = await fetch(`/api/payment-methods?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ active: !currentlyActive })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal mengubah status'); return; }
+      showToast(currentlyActive ? '⚪ Metode dinonaktifkan' : '🟢 Metode diaktifkan');
+      loadPaymentMethodsManager();
+    } catch (e) { showToast('Gagal mengubah status'); }
+  }
+
+  // === SUPER ADMIN: KELOLA JAM OPERASIONAL ===
+  const HOUR_OPTIONS = Array.from({length: 15}, (_, i) => i + 10); // 10..24
+  const DAY_NAMES = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  let _operatingHoursData = [];
+
+  function fmtHourOpt(h) { return h === 24 ? '24:00 (tengah malam)' : `${String(h).padStart(2,'0')}:00`; }
+
+  async function loadOperatingHoursManager() {
+    document.getElementById('hoursSurabaya').innerHTML = '<div class="loading">Memuat data…</div>';
+    document.getElementById('hoursDenpasar').innerHTML = '';
+    try {
+      const res = await fetch('/api/operating-hours');
+      _operatingHoursData = await res.json();
+      renderOperatingHours();
+    } catch (e) {
+      document.getElementById('hoursSurabaya').innerHTML = '<div class="empty-state">Gagal memuat data.</div>';
+    }
+  }
+
+  function renderOperatingHours() {
+    ['surabaya', 'denpasar'].forEach(loc => {
+      const rows = _operatingHoursData.filter(r => r.location === loc).sort((a,b) => a.dayOfWeek - b.dayOfWeek);
+      const html = `
+        <div style="font-size:13px;font-weight:700;color:var(--green-dark);margin-bottom:10px;">${loc === 'denpasar' ? '📍 Denpasar, Bali' : '📍 Surabaya'}</div>
+        ${rows.map(r => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(28,58,46,0.06);">
+            <div style="width:70px;font-size:13px;font-weight:600;color:var(--green-dark);">${DAY_NAMES[r.dayOfWeek]}</div>
+            <select id="oh_open_${r.id}" style="flex:1;padding:6px 8px;border-radius:8px;border:1.5px solid rgba(28,58,46,0.15);font-size:12.5px;">
+              ${HOUR_OPTIONS.filter(h => h <= 23).map(h => `<option value="${h}" ${h === r.openHour ? 'selected' : ''}>${fmtHourOpt(h)}</option>`).join('')}
+            </select>
+            <span style="font-size:12px;color:var(--text-muted);">–</span>
+            <select id="oh_close_${r.id}" style="flex:1;padding:6px 8px;border-radius:8px;border:1.5px solid rgba(28,58,46,0.15);font-size:12.5px;">
+              ${HOUR_OPTIONS.map(h => `<option value="${h}" ${h === r.closeHour ? 'selected' : ''}>${fmtHourOpt(h)}</option>`).join('')}
+            </select>
+            <button class="btn btn-sm btn-primary" onclick="saveOperatingHour(${r.id})" style="padding:6px 12px;font-size:12px;">Simpan</button>
+          </div>`).join('')}
+      `;
+      document.getElementById(loc === 'denpasar' ? 'hoursDenpasar' : 'hoursSurabaya').innerHTML = html;
+    });
+  }
+
+  async function saveOperatingHour(id) {
+    const openHour = parseInt(document.getElementById(`oh_open_${id}`).value);
+    const closeHour = parseInt(document.getElementById(`oh_close_${id}`).value);
+    if (openHour >= closeHour) { showToast('Jam buka harus lebih awal dari jam tutup'); return; }
+    try {
+      const res = await fetch(`/api/operating-hours?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+        body: JSON.stringify({ openHour, closeHour })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showToast(data.error || 'Gagal menyimpan jam operasional'); return; }
+      showToast('✅ Jam operasional disimpan');
+      loadOperatingHoursManager();
+    } catch (e) { showToast('Gagal menyimpan jam operasional'); }
+  }
+
   // === ACARA MAIN BARENG (community sessions, per-seat pricing) ===
   let _communitySessions = [];
 
@@ -1690,18 +1908,29 @@ async function loadStaff() {
     } catch (e) { showToast('Gagal mengubah status sesi'); }
   }
 
-  function fmtWIB(isoStr) {
-    if (!isoStr) return null;
-    const d = new Date(isoStr);
-    if (isNaN(d)) return null;
-    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+  // Zona waktu & label ikut cabang: Surabaya = WIB (Asia/Jakarta),
+  // Denpasar = WITA (Asia/Makassar). Selalu pakai dua fungsi ini (bukan
+  // toLocaleTimeString/toLocaleDateString langsung) supaya struk & tampilan
+  // Denpasar tidak ketuker pakai WIB.
+  function tzForLoc(location) {
+    return location === 'denpasar' ? 'Asia/Makassar' : 'Asia/Jakarta';
+  }
+  function tzLabelForLoc(location) {
+    return location === 'denpasar' ? 'WITA' : 'WIB';
   }
 
-  function fmtDateWIB(isoStr) {
+  function fmtWIB(isoStr, location) {
     if (!isoStr) return null;
     const d = new Date(isoStr);
     if (isNaN(d)) return null;
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: tzForLoc(location) });
+  }
+
+  function fmtDateWIB(isoStr, location) {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', timeZone: tzForLoc(location) });
   }
 
   async function cancelBooking(id) {
@@ -1716,13 +1945,98 @@ async function loadStaff() {
   function switchWiTab(tab) {
     document.getElementById('wiCheckinTab').style.display = tab === 'checkin' ? 'block' : 'none';
     document.getElementById('wiManualTab').style.display = tab === 'manual' ? 'block' : 'none';
+    document.getElementById('wiBlockTab').style.display = tab === 'block' ? 'block' : 'none';
     const activeStyle = 'flex:1;font-size:12px';
     const inactiveStyle = 'flex:1;font-size:12px;background:var(--cream);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.12)';
     document.getElementById('wiTabCheckin').className = tab === 'checkin' ? 'btn btn-primary' : 'btn';
     document.getElementById('wiTabCheckin').style = tab === 'checkin' ? activeStyle : inactiveStyle;
     document.getElementById('wiTabManual').className = tab === 'manual' ? 'btn btn-primary' : 'btn';
     document.getElementById('wiTabManual').style = tab === 'manual' ? activeStyle : inactiveStyle;
-    updateTableAvailability(tab === 'checkin' ? 'ci' : 'mi');
+    document.getElementById('wiTabBlock').className = tab === 'block' ? 'btn btn-primary' : 'btn';
+    document.getElementById('wiTabBlock').style = tab === 'block' ? activeStyle.replace('flex:1', 'flex:1;background:#c0392b;border-color:#c0392b') : inactiveStyle;
+    if (tab === 'block') {
+      if (!document.getElementById('bl_date').value) document.getElementById('bl_date').value = document.getElementById('filterDate').value || new Date().toISOString().slice(0,10);
+      renderBlockTableCheckboxes();
+    } else {
+      updateTableAvailability(tab === 'checkin' ? 'ci' : 'mi');
+    }
+  }
+
+  // ── BLOKIR MEJA (ACARA) ──────────────────────────────────────
+  function renderBlockTableCheckboxes() {
+    const loc = document.getElementById('bl_location').value;
+    const wrap = document.getElementById('blockTableCheckboxes');
+    const tables = TABLES.filter(t => t.location === loc);
+    wrap.innerHTML = tables.map(t => `
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" class="bl-table-cb" value="${t.id}"> ${t.emoji} ${t.name} <span style="color:var(--text-muted);font-size:11px;">(${t.floor})</span>
+      </label>`).join('');
+    document.getElementById('bl_all').checked = false;
+  }
+
+  function toggleAllBlockTables() {
+    const checked = document.getElementById('bl_all').checked;
+    document.querySelectorAll('.bl-table-cb').forEach(cb => cb.checked = checked);
+  }
+
+  async function submitTableBlock() {
+    const location = document.getElementById('bl_location').value;
+    const date = document.getElementById('bl_date').value;
+    const startTime = document.getElementById('bl_start').value;
+    const endTime = document.getElementById('bl_end').value;
+    const reason = document.getElementById('bl_reason').value.trim();
+    const selectedIds = Array.from(document.querySelectorAll('.bl-table-cb:checked')).map(cb => cb.value);
+
+    if (!date) { showToast('Pilih tanggal dulu'); return; }
+    const duration = parseInt(endTime) - parseInt(startTime);
+    if (duration <= 0) { showToast('Jam selesai harus setelah jam mulai'); return; }
+    if (selectedIds.length === 0) { showToast('Pilih minimal satu meja'); return; }
+    if (!confirm(`Blokir ${selectedIds.length} meja pada ${date}, ${startTime}–${endTime}?${reason ? '\nAlasan: ' + reason : ''}`)) return;
+
+    const label = `🚫 Blokir Meja${reason ? ': ' + reason : ' (Acara)'}`;
+    let okCount = 0;
+    const failed = [];
+    for (const tableId of selectedIds) {
+      const t = TABLES.find(x => x.id === tableId);
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName: label,
+            date, time: startTime, tableId, tableName: t.name, floor: t.floor,
+            duration,
+            notes: `[EVENT BLOCK]${reason ? ' ' + reason : ''}`,
+            status: 'confirmed',
+            location,
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { failed.push(`${t.name} (${data.error || 'gagal'})`); continue; }
+        okCount++;
+      } catch (e) { failed.push(t ? t.name : tableId); }
+    }
+
+    if (okCount > 0) showToast(`🚫 ${okCount} meja diblokir` + (failed.length ? `, ${failed.length} gagal` : ''));
+    if (failed.length) alert('Gagal blokir:\n' + failed.join('\n') + '\n(kemungkinan sudah ada booking di jam itu)');
+
+    document.getElementById('bl_reason').value = '';
+    document.querySelectorAll('.bl-table-cb').forEach(cb => cb.checked = false);
+    document.getElementById('bl_all').checked = false;
+    document.getElementById('filterDate').value = date;
+    switchTab('timeline');
+    loadBookings(true);
+  }
+
+  // Buka blokir meja — pakai jalur cancel booking yang sudah ada, cukup
+  // ubah status jadi cancelled supaya slotnya lepas lagi di halaman customer.
+  async function unblockTable(id) {
+    if (!confirm('Buka blokir meja ini?')) return;
+    try {
+      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'cancelled'}) });
+      showToast('🔓 Blokir dibuka');
+      loadBookings(true);
+    } catch(e) { showToast('Gagal membuka blokir'); }
   }
 
   // === Status bayar (Walk-in / Input Manual) ===
@@ -1864,8 +2178,8 @@ async function loadStaff() {
     const b = allBookings.find(x => x.id === id);
     const name = b ? b.customerName.replace(' (walk-in)','').replace(' (manual)','') : '';
     const now = new Date();
-    const nowStr = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
-    if (!confirm(`Check-in tamu "${name}" sekarang?\nJam mulai dicatat: ${nowStr} WIB`)) return;
+    const nowStr = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tzForLoc(b && b.location)});
+    if (!confirm(`Check-in tamu "${name}" sekarang?\nJam mulai dicatat: ${nowStr} ${tzLabelForLoc(b && b.location)}`)) return;
     try {
       await fetch(`/api/bookings?id=${id}`, {
         method: 'PATCH',
@@ -1887,6 +2201,7 @@ async function loadStaff() {
     // Store selected booking for POS
     window._posBookingId = id;
     document.getElementById('posModal').style.display = 'flex';
+    renderPayMethodButtons();
     initPOS(b);
   }
 
@@ -1941,7 +2256,10 @@ async function loadStaff() {
       for (let opt of tableSelect.options) {
         if (opt.value.startsWith(b.tableId + '|')) { tableSelect.value = opt.value; break; }
       }
-      document.getElementById('corrPayment').value = b.paymentMethod || 'tunai';
+      const corrPaySelect = document.getElementById('corrPayment');
+      corrPaySelect.innerHTML = _paymentMethods.map(m => `<option value="${m.key}">${m.emoji} ${escHtml(m.label)}${m.active ? '' : ' (nonaktif)'}</option>`).join('')
+        + '<option value="gratis">🎁 Gratis (Owner)</option>';
+      corrPaySelect.value = b.paymentMethod || (_paymentMethods[0] ? _paymentMethods[0].key : 'gratis');
       document.getElementById('corrCheckin').value = toLocalInputValue(b.checkinAt);
       document.getElementById('corrCheckout').value = toLocalInputValue(b.checkoutAt);
       document.getElementById('corrTotal').value = b.totalPaid || 0;
@@ -2019,9 +2337,6 @@ async function loadStaff() {
   <div class="form-group">
   <label>Metode Pembayaran</label>
   <select id="corrPayment">
-  <option value="tunai">Tunai</option>
-  <option value="qris">QRIS</option>
-  <option value="debit">Debit</option>
   <option value="gratis">Gratis (Owner)</option>
   </select>
   </div>
@@ -2116,11 +2431,12 @@ async function loadStaff() {
     // bukan dibulatkan ulang di sini, supaya konsisten dengan apa yang dibayar.
     const billedH = Math.max(1, Math.round((b.totalPaid || 0) / 50000));
 
+    const tz = tzForLoc(b.location), tzLabel = tzLabelForLoc(b.location);
     document.getElementById('posCheckinTime').textContent = checkin
-      ? checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'}) + ' WIB' : '—';
+      ? checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tz}) + ' ' + tzLabel : '—';
     document.getElementById('posCheckoutTime').textContent = checkout
-      ? checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})
-        + ' · ' + checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:'Asia/Jakarta'}) + ' WIB' : '—';
+      ? checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tz})
+        + ' · ' + checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:tz}) + ' ' + tzLabel : '—';
     // Promo yang dulu dipakai (kalau ada) — dibaca dari tag [PROMO:nama] di
     // notes, yang ditempel SERVER saat checkout (lihat bookings.ts).
     const promoMatch = (b.notes || '').match(/\[PROMO:([^\]]+)\]/);
@@ -2133,7 +2449,7 @@ async function loadStaff() {
       `<b>👤</b> ${escHtml(b.customerName.replace(' (walk-in)',''))}<br>` +
       `<b>🀄</b> ${escHtml(b.tableName)} (${escHtml(b.floor)})<br>` +
       `<b>🎫</b> ${b.bookingCode || 'Walk-in'}<br>` +
-      `<b>💳</b> ${b.paymentMethod === 'tunai' ? 'Tunai' : b.paymentMethod === 'qris' ? 'QRIS' : b.paymentMethod === 'debit' ? 'Debit BCA' : b.paymentMethod === 'gratis' ? '🎁 Gratis (Owner)' : '—'}`;
+      `<b>💳</b> ${payMethodLabel(b.paymentMethod)}`;
 
     b._diffMins = mins;
     b._actualMins = mins;
@@ -2209,13 +2525,14 @@ async function loadStaff() {
     if (promoRow) promoRow.style.display = isOwnerFree ? 'none' : 'block';
 
     // Update UI
-    const checkinStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
-    const checkoutStr = _posCheckoutTime.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})
-      + ' · ' + _posCheckoutTime.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:'Asia/Jakarta'});
+    const tz = tzForLoc(b.location), tzLabel = tzLabelForLoc(b.location);
+    const checkinStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tz});
+    const checkoutStr = _posCheckoutTime.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tz})
+      + ' · ' + _posCheckoutTime.toLocaleDateString('id-ID',{day:'2-digit',month:'short',timeZone:tz});
     const durH = billableHours;
 
-    document.getElementById('posCheckinTime').textContent = checkinStr + ' WIB';
-    document.getElementById('posCheckoutTime').textContent = checkoutStr + ' WIB';
+    document.getElementById('posCheckinTime').textContent = checkinStr + ' ' + tzLabel;
+    document.getElementById('posCheckoutTime').textContent = checkoutStr + ' ' + tzLabel;
 
     // Tombol edit jam checkout hanya untuk admin
     const editBtn = document.getElementById('posEditCheckoutBtn');
@@ -2329,11 +2646,11 @@ async function loadStaff() {
 
   function selectPayment(method) {
     _posPayment = method;
-    ['tunai','qris','debit'].forEach(m => {
-      const btn = document.getElementById('pay' + m.charAt(0).toUpperCase() + m.slice(1));
-      if (btn) btn.style.background = m === method ? '#1C3A2E' : '#F5F0E8';
-      if (btn) btn.style.color = m === method ? '#E8C97A' : '#1C3A2E';
-      if (btn) btn.style.borderColor = m === method ? '#1C3A2E' : 'rgba(28,58,46,0.15)';
+    document.querySelectorAll('#payMethodButtons .pay-btn').forEach(btn => {
+      const m = btn.dataset.key;
+      btn.style.background = m === method ? '#1C3A2E' : '#F5F0E8';
+      btn.style.color = m === method ? '#E8C97A' : '#1C3A2E';
+      btn.style.borderColor = m === method ? '#1C3A2E' : 'rgba(28,58,46,0.15)';
     });
     document.getElementById('tunaiSection').style.display = method === 'tunai' ? 'block' : 'none';
     const btn = document.getElementById('posCompleteBtn');
@@ -2402,12 +2719,13 @@ async function loadStaff() {
     const actualM = (b._diffMins || 0) % 60;
     const actualStr = actualH > 0 ? `${actualH}j ${actualM}m` : `${actualM} mnt`;
     const durStr = `${billedHours} jam (aktual ${actualStr})`;
-    const payLabel = payMethod === 'tunai' ? 'Tunai' : payMethod === 'qris' ? 'QRIS' : payMethod === 'gratis' ? 'Gratis (Owner)' : 'Debit BCA';
+    const payLabel = payMethod === 'gratis' ? 'Gratis (Owner)' : (_paymentMethods.find(m => m.key === payMethod)?.label || payMethod || '—');
     const cashIn = receivedOverride != null ? receivedOverride : (parseInt(document.getElementById('cashReceived').value) || 0);
     const change = payMethod === 'tunai' ? cashIn - totalRp : 0;
-    const dateStr = checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric',timeZone:'Asia/Jakarta'});
-    const timeStr = checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
-    const checkinTimeStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
+    const receiptTz = tzForLoc(b.location), receiptTzLabel = tzLabelForLoc(b.location);
+    const dateStr = checkout.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric',timeZone:receiptTz});
+    const timeStr = checkout.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:receiptTz});
+    const checkinTimeStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:receiptTz});
     // Alamat pada struk mengikuti cabang booking. Jangan menampilkan alamat
     // Banana Leaf untuk permainan yang berlangsung di Denpasar.
     const receiptLocationLines = b.location === 'denpasar'
@@ -2433,14 +2751,14 @@ async function loadStaff() {
     ${receiptLocationLines}
     <div class="line"></div>
     <div class="center bold">${dateStr}</div>
-    <div class="center">${timeStr} WIB</div>
+    <div class="center">${timeStr} ${receiptTzLabel}</div>
     <div class="center" style="font-size:14px;">Kode: ${b.bookingCode || 'Walk-in'}</div>
     <div class="line"></div>
     <div class="row"><span>Nama</span><span>${b.customerName.replace(' (walk-in)','')}</span></div>
     <div class="row"><span>Meja</span><span>${b.tableName}</span></div>
     <div class="row"><span>Lantai</span><span>${b.floor}</span></div>
-    <div class="row"><span>Check-in</span><span>${checkinTimeStr} WIB</span></div>
-    <div class="row"><span>Checkout</span><span>${timeStr} WIB</span></div>
+    <div class="row"><span>Check-in</span><span>${checkinTimeStr} ${receiptTzLabel}</span></div>
+    <div class="row"><span>Checkout</span><span>${timeStr} ${receiptTzLabel}</span></div>
     <div class="row"><span>Durasi</span><span>${durStr}</span></div>
     ${(() => { const m = (b.notes || '').match(/\[PROMO:([^\]]+)\]/); return m ? `<div class="row"><span>🎁 Promo</span><span>${m[1]}</span></div>` : ''; })()}
     <div class="line"></div>
@@ -2818,6 +3136,7 @@ async function loadStaff() {
             applyRole();
             switchTab('timeline');
             loadBookings();
+            loadPaymentMethods().then(renderPayMethodButtons);
       } catch (e) {
             err.textContent = 'Gagal menghubungi server. Coba lagi.';
       }
@@ -2944,19 +3263,8 @@ async function loadStaff() {
       </div>
       <div id="posPaymentSection" style="margin-bottom:14px;">
         <div style="font-size:11px;font-weight:600;color:#7A7060;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Metode Pembayaran</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-          <button class="pay-btn" id="payTunai" onclick="selectPayment('tunai')"
-            style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
-            💵 Tunai
-          </button>
-          <button class="pay-btn" id="payQris" onclick="selectPayment('qris')"
-            style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
-            📱 QRIS
-          </button>
-          <button class="pay-btn" id="payDebit" onclick="selectPayment('debit')"
-            style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
-            💳 Debit BCA
-          </button>
+        <div id="payMethodButtons" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <!-- diisi renderPayMethodButtons() dari /api/payment-methods -->
         </div>
       </div>
 
