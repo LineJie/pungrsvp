@@ -50,6 +50,22 @@ export const promos = pgTable("promos", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Metode pembayaran yang bisa ditambah/nonaktifkan Super Admin (misal
+// menambah "Transfer") tanpa perlu deploy ulang kode. `key` adalah nilai
+// stabil yang disimpan di bookings.paymentMethod & dipakai closing report
+// untuk grouping; `label`/`emoji` boleh diedit kapan saja tanpa mengubah data
+// booking lama karena keduanya cuma tampilan.
+export const paymentMethods = pgTable("payment_methods", {
+  id: serial().primaryKey(),
+  key: text().notNull().unique(),
+  label: text().notNull(),
+  emoji: text().notNull().default("💳"),
+  active: boolean().notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdBy: text("created_by").default(""),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const staff = pgTable("staff", {
     id: serial().primaryKey(),
     name: text().notNull(),
@@ -152,4 +168,19 @@ export const communityParticipants = pgTable("community_participants", {
   contact: text().default(""),
   paid: boolean().notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Jam operasional per cabang, per hari (0=Minggu..6=Sabtu), dikelola Super
+// Admin lewat /api/operating-hours (pola sama seperti promos & payment_methods).
+// closeHour 24 berarti tutup jam 12 malam (tengah malam). Dibaca oleh
+// index.html untuk menentukan slot jam yang bisa dipilih customer, dan untuk
+// memvalidasi durasi booking supaya tidak melewati jam tutup.
+export const operatingHours = pgTable("operating_hours", {
+  id: serial().primaryKey(),
+  location: text().notNull(), // surabaya | denpasar
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Minggu..6=Sabtu
+  openHour: integer("open_hour").notNull().default(10),
+  closeHour: integer("close_hour").notNull().default(22), // 24 = tengah malam
+  updatedBy: text("updated_by").default(""),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });

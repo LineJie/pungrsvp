@@ -43,6 +43,67 @@ export async function ensurePromosTable(db: any) {
                                                               `);
 }
 
+// Metode pembayaran dikelola Super Admin saja (POST/PATCH digate di
+// payment-methods.ts, pola sama seperti promos.ts). Staff hanya baca (GET)
+// buat isi tombol pilihan bayar di POS. `key` dipakai sebagai value yang
+// disimpan di bookings.paymentMethod (jadi tidak berubah walau label diedit).
+export async function ensurePaymentMethodsTable(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS payment_methods (
+              id serial PRIMARY KEY,
+                    key text NOT NULL UNIQUE,
+                          label text NOT NULL,
+                                emoji text NOT NULL DEFAULT '💳',
+                                      active boolean NOT NULL DEFAULT true,
+                                            sort_order integer NOT NULL DEFAULT 0,
+                                                  created_by text DEFAULT '',
+                                                        created_at timestamp DEFAULT now()
+                                                            )
+                                                              `);
+    // Seed metode default sekali saja, supaya tunai/QRIS/debit yang sudah
+    // dipakai di data lama tetap konsisten dan tidak hilang dari daftar.
+    await db.execute(sql`
+        INSERT INTO payment_methods (key, label, emoji, sort_order)
+        VALUES ('tunai', 'Tunai', '💵', 1), ('qris', 'QRIS', '📱', 2), ('debit', 'Debit BCA', '💳', 3)
+        ON CONFLICT (key) DO NOTHING
+    `);
+}
+
+// Jam operasional per cabang per hari. Seed di bawah = jam yang berlaku saat
+// ini (Agustus 2026):
+//   Surabaya: Minggu-Kamis 10:00-22:00, Jumat-Sabtu 10:00-24:00
+//   Denpasar: Senin-Kamis 10:00-21:00, Jumat-Minggu 10:00-22:00
+// Super Admin bisa ubah kapan saja lewat tab "Jam Operasional" tanpa perlu
+// deploy ulang — ON CONFLICT DO NOTHING supaya seed tidak menimpa perubahan
+// yang sudah dibuat superadmin di run berikutnya.
+export async function ensureOperatingHoursTable(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS operating_hours (
+              id serial PRIMARY KEY,
+                    location text NOT NULL,
+                          day_of_week integer NOT NULL,
+                                open_hour integer NOT NULL DEFAULT 10,
+                                      close_hour integer NOT NULL DEFAULT 22,
+                                            updated_by text DEFAULT '',
+                                                  updated_at timestamp DEFAULT now(),
+                                                        UNIQUE(location, day_of_week)
+                                                            )
+                                                              `);
+    const rows: Array<[string, number, number, number]> = [
+        ['surabaya', 0, 10, 22], ['surabaya', 1, 10, 22], ['surabaya', 2, 10, 22],
+        ['surabaya', 3, 10, 22], ['surabaya', 4, 10, 22], ['surabaya', 5, 10, 24], ['surabaya', 6, 10, 24],
+        ['denpasar', 0, 10, 22], ['denpasar', 1, 10, 21], ['denpasar', 2, 10, 21],
+        ['denpasar', 3, 10, 21], ['denpasar', 4, 10, 21], ['denpasar', 5, 10, 22], ['denpasar', 6, 10, 22],
+    ];
+    for (const [location, dayOfWeek, openHour, closeHour] of rows) {
+        await db.execute(sql`
+            INSERT INTO operating_hours (location, day_of_week, open_hour, close_hour)
+            VALUES (${location}, ${dayOfWeek}, ${openHour}, ${closeHour})
+            ON CONFLICT (location, day_of_week) DO NOTHING
+        `);
+    }
+}
+
 export async function ensureLocationColumns(db: any) {
         await db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
         await db.execute(sql`ALTER TABLE staff ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
