@@ -183,6 +183,18 @@
 <script>
   const bookingId = new URLSearchParams(window.location.search).get('id');
   let booking = null;
+
+  // Tarif per jam per meja — HARUS sama persis dengan TABLE_RATES di
+  // netlify/functions/bookings.ts, supaya angka yang staff lihat & cetak di
+  // POS cocok dengan yang benar-benar dihitung & disimpan di server saat
+  // checkout. Kalau ada meja manual baru dengan tarif beda, tambahkan di
+  // KEDUA tempat.
+  const TABLE_RATES = {
+    b3: 30000, // Autumn Table (manual) — Denpasar, Bali
+  };
+  function getHourlyRate(tableId) {
+    return (tableId && TABLE_RATES[tableId] !== undefined) ? TABLE_RATES[tableId] : 50000;
+  }
   let selectedPayment = null;
   let timerInterval = null;
 
@@ -234,10 +246,11 @@
         String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
 
       // Price: round up to nearest hour, min 1 hour
+      const rate = getHourlyRate(booking.tableId);
       const billableHours = Math.max(1, Math.ceil(diffMins / 60));
-      const total = billableHours * 50000;
+      const total = billableHours * rate;
       document.getElementById('posTotal').textContent = 'Rp ' + total.toLocaleString('id-ID');
-      document.getElementById('priceFormula').textContent = `${billableHours} jam × Rp 50.000`;
+      document.getElementById('priceFormula').textContent = `${billableHours} jam × Rp ${rate.toLocaleString('id-ID')}`;
 
       updateCheckoutBtn(total, diffMins);
     }
@@ -267,7 +280,7 @@
     const diffMs = new Date() - checkinTime;
     const diffMins = Math.floor(diffMs / 60000);
     const billableHours = Math.max(1, Math.ceil(diffMins / 60));
-    updateCheckoutBtn(billableHours * 50000, diffMins);
+    updateCheckoutBtn(billableHours * getHourlyRate(booking.tableId), diffMins);
   }
 
   // ── CHECKOUT ──────────────────────────────────────────────
@@ -280,7 +293,8 @@
     const diffMs = now - checkinTime;
     const diffMins = Math.floor(diffMs / 60000);
     const billableHours = Math.max(1, Math.ceil(diffMins / 60));
-    const total = billableHours * 50000;
+    const rate = getHourlyRate(booking.tableId);
+    const total = billableHours * rate; // hanya estimasi lokal buat fallback; angka final dari server
 
     try {
       const res = await fetch(`/api/bookings?id=${booking.id}`, {
@@ -295,7 +309,11 @@
         })
       });
       const updated = await res.json();
-      booking = { ...booking, ...updated, checkoutAt: now, actualDuration: diffMins, totalPaid: total, paymentMethod: selectedPayment };
+      // JANGAN timpa updated.totalPaid dengan `total` lokal — server yang
+      // hitung angka final (rate per meja + promo + pembulatan durasi), jadi
+      // itu yang harus dipakai buat struk. `updated` di-spread TERAKHIR
+      // supaya totalPaid dari server yang menang.
+      booking = { ...booking, checkoutAt: now, actualDuration: diffMins, paymentMethod: selectedPayment, ...updated };
       showReceipt(booking);
     } catch(e) {
       alert('Gagal menyimpan checkout. Coba lagi.');
@@ -308,8 +326,11 @@
     const checkinTime = b.checkinAt ? new Date(b.checkinAt) : new Date();
     const checkoutTime = b.checkoutAt ? new Date(b.checkoutAt) : new Date();
     const diffMins = b.actualDuration || Math.floor((checkoutTime - checkinTime) / 60000);
+    const rate = getHourlyRate(b.tableId);
     const billableHours = Math.max(1, Math.ceil(diffMins / 60));
-    const total = b.totalPaid || billableHours * 50000;
+    // Selalu pakai b.totalPaid (angka final dari server) kalau ada — cuma
+    // fallback ke perhitungan lokal kalau field itu somehow kosong.
+    const total = (typeof b.totalPaid === 'number') ? b.totalPaid : billableHours * rate;
     const payLabel = b.paymentMethod === 'tunai' ? 'Tunai' : b.paymentMethod === 'qris' ? 'QRIS' : 'Debit BCA';
 
     const fmtTime = (d) => new Date(d).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
@@ -340,7 +361,7 @@
       <div class="r-row"><span>Ditagih</span><span>${billableHours} jam</span></div>
       <hr class="r-divider">
       <div class="r-total">
-        <div class="r-row"><span>Rp 50.000 × ${billableHours} jam</span><span></span></div>
+        <div class="r-row"><span>Rp ${rate.toLocaleString('id-ID')} × ${billableHours} jam</span><span></span></div>
         <div class="r-row bold"><span>TOTAL</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
       </div>
       <div class="r-row"><span>Pembayaran</span><span>${payLabel}</span></div>

@@ -1340,6 +1340,12 @@
       // Checkin time display
       const checkinTime = fmtWIB(b.checkinAt, b.location);
       const checkoutTime = fmtWIB(b.checkoutAt, b.location);
+      // Super Admin: tombol "Edit Semua" & "Void" muncul di SETIAP booking
+      // (apapun statusnya), bukan cuma yang sudah selesai — supaya Super
+      // Admin bisa koreksi identitas tamu/jadwal/meja/status kapan aja.
+      const superAdminExtra = isSuperAdmin
+        ? `<button class="btn btn-warning btn-sm" onclick="openCorrectionModal(${b.id})" title="Edit semua data booking (Super Admin)">🛠️ Edit</button><button class="btn btn-danger btn-sm" onclick="voidBooking(${b.id})" title="Void transaksi ini (Super Admin)">🚫 Void</button>`
+        : '';
       const excludeBtn = isAdmin
         ? `<button class="btn btn-sm" onclick="toggleExcludeAutoCancel(${b.id}, ${isExcluded})" title="${isExcluded ? 'Aktifkan kembali auto-cancel' : 'Kecualikan dari auto-cancel (misal: teman/langganan, bayar nanti di tempat)'}"
              style="background:${isExcluded ? '#fde8e8' : '#fff8e1'};color:${isExcluded ? '#a83232' : '#7a5c00'};border:1.5px solid ${isExcluded ? '#a83232' : '#f0d98c'};font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">
@@ -1350,21 +1356,21 @@
         : b.status === 'confirmed'
         ? `<button class="btn btn-primary btn-sm" onclick="checkinBooking(${b.id})" title="Check-in tamu">🎮 Check-in</button>
            ${isAdmin ? `<button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
-           <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>` : ''}`
+           <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>` : ''}${superAdminExtra}`
         : b.status === 'checked_in'
         ? `<button class="btn btn-success btn-sm" onclick="openPOS(${b.id})" title="Checkout & bayar">🧾 Checkout</button>
-           <button class="btn btn-sm" onclick="window.open('/mahjong.html?code=${encodeURIComponent(b.bookingCode || '')}', '_blank')" title="Bantu tamu input skor Mahjong untuk meja ini" style="background:rgba(28,58,46,0.06);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.15);font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">🀄 Input Skor</button>`
+           <button class="btn btn-sm" onclick="window.open('/mahjong.html?code=${encodeURIComponent(b.bookingCode || '')}', '_blank')" title="Bantu tamu input skor Mahjong untuk meja ini" style="background:rgba(28,58,46,0.06);color:var(--green-dark);border:1.5px solid rgba(28,58,46,0.15);font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">🀄 Input Skor</button>${superAdminExtra}`
         : b.status === 'pending' && isAdmin
         ? `<button class="btn btn-success btn-sm" onclick="confirmBooking(${b.id})" title="Sudah transfer">✓ Lunas</button>
            <button class="btn btn-sm" onclick="confirmPayLater(${b.id})" title="Bayar saat checkout" style="background:#e8f4fd;color:#1a6635;border:1.5px solid #1a6635;font-size:11px;padding:4px 8px;border-radius:8px;cursor:pointer;font-weight:600;">🕐 Bayar Nanti</button>
            ${excludeBtn}
            <button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
-           <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>`
+           <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>${superAdminExtra}`
         : b.status === 'pending' && !isAdmin
         ? '<span style="font-size:11px;color:var(--text-muted)">Menunggu admin</span>'
         : b.status === 'completed'
-        ? `<button class="btn btn-sm" style="background:var(--cream);color:var(--green-dark);border:1px solid rgba(28,58,46,0.15)" onclick="openPOS(${b.id})">🧾 Lihat Struk</button>${isSuperAdmin ? `<button class="btn btn-warning btn-sm" onclick="openCorrectionModal(${b.id})" title="Koreksi data checkout (Super Admin)">🛠️ Koreksi</button><button class="btn btn-danger btn-sm" onclick="voidBooking(${b.id})" title="Void transaksi ini (Super Admin)">🚫 Void</button>` : ''}`
-        : isAdmin ? `<button class="btn btn-primary btn-sm" onclick="restoreBooking(${b.id})">Aktifkan</button>` : '—';
+        ? `<button class="btn btn-sm" style="background:var(--cream);color:var(--green-dark);border:1px solid rgba(28,58,46,0.15)" onclick="openPOS(${b.id})">🧾 Lihat Struk</button>${superAdminExtra}`
+        : isAdmin ? `<button class="btn btn-primary btn-sm" onclick="restoreBooking(${b.id})">Aktifkan</button>${superAdminExtra}` : '—';
       return `
       <tr>
         <td>
@@ -2251,22 +2257,31 @@ async function loadStaff() {
       const pad = n => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
+    // Modal ini sekarang dipakai buat EDIT SEMUA FIELD booking (Super Admin
+    // only) — bukan cuma data checkout — dan bisa dibuka dari booking status
+    // apapun (pending/confirmed/checked_in/completed/cancelled).
     function openCorrectionModal(id) {
       const b = allBookings.find(x => x.id === id);
       if (!b) return;
       document.getElementById('corrId').value = id;
       document.getElementById('corrCode').textContent = b.bookingCode || '';
+      document.getElementById('corrName').value = (b.customerName || '').replace(' (walk-in)', '').replace(' (manual)', '');
+      document.getElementById('corrContact').value = b.customerContact || '';
+      document.getElementById('corrDate').value = b.date || '';
+      document.getElementById('corrTime').value = b.time || '';
+      document.getElementById('corrDuration').value = b.duration || 2;
+      document.getElementById('corrStatus').value = b.status || 'pending';
       const tableSelect = document.getElementById('corrTable');
       for (let opt of tableSelect.options) {
         if (opt.value.startsWith(b.tableId + '|')) { tableSelect.value = opt.value; break; }
       }
       const corrPaySelect = document.getElementById('corrPayment');
-      corrPaySelect.innerHTML = _paymentMethods.map(m => `<option value="${m.key}">${m.emoji} ${escHtml(m.label)}${m.active ? '' : ' (nonaktif)'}</option>`).join('')
+      corrPaySelect.innerHTML = '<option value="">— Belum dibayar —</option>' + _paymentMethods.map(m => `<option value="${m.key}">${m.emoji} ${escHtml(m.label)}${m.active ? '' : ' (nonaktif)'}</option>`).join('')
         + '<option value="gratis">🎁 Gratis (Owner)</option>';
-      corrPaySelect.value = b.paymentMethod || (_paymentMethods[0] ? _paymentMethods[0].key : 'gratis');
+      corrPaySelect.value = b.paymentMethod || '';
       document.getElementById('corrCheckin').value = toLocalInputValue(b.checkinAt);
       document.getElementById('corrCheckout').value = toLocalInputValue(b.checkoutAt);
-      document.getElementById('corrTotal').value = b.totalPaid || 0;
+      document.getElementById('corrTotal').value = (typeof b.totalPaid === 'number') ? b.totalPaid : '';
       document.getElementById('corrNotes').value = b.notes || '';
       document.getElementById('correctionModal').classList.add('open');
     }
@@ -2276,29 +2291,44 @@ async function loadStaff() {
     async function saveCorrection() {
       const id = document.getElementById('corrId').value;
       const tableVal = document.getElementById('corrTable').value;
-      const [tableId, tableName, floor] = tableVal.split('|');
+      const [tableId, tableName, floor, location] = tableVal.split('|');
+      const customerName = document.getElementById('corrName').value.trim();
+      const customerContact = document.getElementById('corrContact').value.trim();
+      const date = document.getElementById('corrDate').value;
+      const time = document.getElementById('corrTime').value;
+      const duration = parseInt(document.getElementById('corrDuration').value);
+      const status = document.getElementById('corrStatus').value;
       const paymentMethod = document.getElementById('corrPayment').value;
       const checkinVal = document.getElementById('corrCheckin').value;
       const checkoutVal = document.getElementById('corrCheckout').value;
-      const totalPaid = parseInt(document.getElementById('corrTotal').value) || 0;
+      const totalRaw = document.getElementById('corrTotal').value;
       const notes = document.getElementById('corrNotes').value;
-      if (!checkinVal || !checkoutVal) { showToast('Isi jam check-in dan checkout dulu ya!'); return; }
-      const checkinAt = new Date(checkinVal).toISOString();
-      const checkoutAt = new Date(checkoutVal).toISOString();
-      const actualDuration = Math.max(0, Math.round((new Date(checkoutAt) - new Date(checkinAt)) / 60000));
-      if (!confirm('Simpan koreksi data checkout ini? Perubahan ini langsung mempengaruhi laporan revenue.')) return;
+      if (!customerName || !date || !time) { showToast('Nama, tanggal, dan jam wajib diisi!'); return; }
+      const payload = {
+        adminCorrection: true,
+        customerName, customerContact, date, time, duration,
+        tableId, tableName, floor, location, status, notes,
+      };
+      if (paymentMethod) payload.paymentMethod = paymentMethod;
+      if (checkinVal) payload.checkinAt = new Date(checkinVal).toISOString();
+      if (checkoutVal) payload.checkoutAt = new Date(checkoutVal).toISOString();
+      if (checkinVal && checkoutVal) {
+        payload.actualDuration = Math.max(0, Math.round((new Date(payload.checkoutAt) - new Date(payload.checkinAt)) / 60000));
+      }
+      if (totalRaw !== '') payload.totalPaid = parseInt(totalRaw) || 0;
+      if (!confirm('Simpan perubahan booking ini? Ini bisa mempengaruhi jadwal dan laporan revenue.')) return;
       try {
         const res = await fetch(`/api/bookings?id=${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
-          body: JSON.stringify({ adminCorrection: true, tableId, tableName, floor, paymentMethod, checkinAt, checkoutAt, totalPaid, actualDuration, notes })
+          body: JSON.stringify(payload)
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { showToast(data.error || 'Gagal menyimpan koreksi'); return; }
-        showToast('✅ Data checkout berhasil dikoreksi!');
+        if (!res.ok) { showToast(data.error || 'Gagal menyimpan perubahan'); return; }
+        showToast('✅ Booking berhasil diedit!');
         closeCorrectionModal();
         loadBookings(true);
-      } catch (e) { showToast('Gagal menyimpan koreksi'); }
+      } catch (e) { showToast('Gagal menyimpan perubahan'); }
     }
     async function voidBooking(id) {
       const b = allBookings.find(x => x.id === id);
@@ -2322,9 +2352,49 @@ async function loadStaff() {
   document.body.insertAdjacentHTML('beforeend', `
   <div class="edit-modal-overlay" id="correctionModal" onclick="closeCorrectionModal()">
   <div class="edit-modal" onclick="event.stopPropagation()">
-  <h3>🛠️ Koreksi Checkout <span class="code-badge" id="corrCode"></span></h3>
+  <h3>🛠️ Edit Booking (Super Admin) <span class="code-badge" id="corrCode"></span></h3>
   <input type="hidden" id="corrId">
   <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+  <div class="form-group" style="grid-column:1/-1">
+  <label>Nama Tamu</label>
+  <input type="text" id="corrName" placeholder="Nama tamu">
+  </div>
+  <div class="form-group" style="grid-column:1/-1">
+  <label>Kontak</label>
+  <input type="text" id="corrContact" placeholder="No. HP / kontak (opsional)">
+  </div>
+  <div class="form-group">
+  <label>Tanggal</label>
+  <input type="date" id="corrDate">
+  </div>
+  <div class="form-group">
+  <label>Jam Mulai</label>
+  <select id="corrTime">
+  <option>10:00</option><option>11:00</option><option>12:00</option>
+  <option>13:00</option><option>14:00</option><option>15:00</option>
+  <option>16:00</option><option>17:00</option><option>18:00</option>
+  <option>19:00</option><option>20:00</option><option>21:00</option>
+  <option>22:00</option><option>23:00</option>
+  </select>
+  </div>
+  <div class="form-group">
+  <label>Durasi (jam)</label>
+  <select id="corrDuration">
+  <option value="1">1 jam</option><option value="2">2 jam</option>
+  <option value="3">3 jam</option><option value="4">4 jam</option>
+  <option value="5">5 jam</option><option value="6">6 jam</option>
+  </select>
+  </div>
+  <div class="form-group">
+  <label>Status</label>
+  <select id="corrStatus">
+  <option value="pending">Pending (menunggu transfer)</option>
+  <option value="confirmed">Confirmed (lunas, belum main)</option>
+  <option value="checked_in">Checked-in (sedang main)</option>
+  <option value="completed">Completed (selesai)</option>
+  <option value="cancelled">Cancelled (batal)</option>
+  </select>
+  </div>
   <div class="form-group">
   <label>Meja</label>
   <select id="corrTable">
@@ -2337,11 +2407,11 @@ async function loadStaff() {
   <option value="b2|Winter Table|Denpasar, Bali|denpasar">Winter Table — Denpasar, Bali</option>
   <option value="b3|Autumn Table|Denpasar, Bali|denpasar">Autumn Table — Denpasar, Bali (Manual Mahjong)</option>
   </select>
+  <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Pindah meja di sini otomatis pindah lokasi booking juga.</div>
   </div>
   <div class="form-group">
   <label>Metode Pembayaran</label>
   <select id="corrPayment">
-  <option value="gratis">Gratis (Owner)</option>
   </select>
   </div>
   <div class="form-group">
@@ -2354,7 +2424,7 @@ async function loadStaff() {
   </div>
   <div class="form-group">
   <label>Total Dibayar (Rp)</label>
-  <input type="number" id="corrTotal">
+  <input type="number" id="corrTotal" placeholder="Kosongkan kalau belum dibayar">
   </div>
   <div class="form-group" style="grid-column:1/-1">
   <label>Catatan</label>
@@ -2362,7 +2432,7 @@ async function loadStaff() {
   </div>
   </div>
   <div style="display:flex;gap:8px;">
-  <button class="btn btn-warning" style="flex:1" onclick="saveCorrection()">Simpan Koreksi</button>
+  <button class="btn btn-warning" style="flex:1" onclick="saveCorrection()">Simpan Perubahan</button>
   <button class="btn" style="flex:1;background:#eee;color:#333" onclick="closeCorrectionModal()">Batal</button>
   </div>
   </div>
