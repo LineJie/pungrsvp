@@ -2194,13 +2194,17 @@ async function loadStaff() {
     } catch(e) { showToast('Gagal check-in'); }
   }
 
-  function openPOS(id) {
-    // POS will be implemented next
+  async function openPOS(id) {
     const b = allBookings.find(x => x.id === id);
     if (!b) return;
     // Store selected booking for POS
     window._posBookingId = id;
     document.getElementById('posModal').style.display = 'flex';
+    // Pastikan cache metode pembayaran terisi dulu — sebelumnya tombol
+    // pembayaran bisa kosong kalau staff belum pernah buka tab Pengaturan
+    // di sesi itu, karena _activePaymentMethods baru terisi lewat
+    // loadPaymentMethods() yang dipanggil dari sana.
+    await loadPaymentMethods();
     renderPayMethodButtons();
     initPOS(b);
   }

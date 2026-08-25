@@ -182,7 +182,10 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 </div></div>
 <script>
 var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score", lastPlayers:[], lastMyIndex:-1, lastSessionId:null, lastScoringSystem:null, sessionGamesCount:1, pickedScoringSystem:"hongkong", staffUser:null, staffPass:null, staffName:null };
-var SCORING_SYSTEM_LABELS = { china: "China", hongkong: "Hongkong (Fan)" };
+// Catatan: key internal "hongkong" TETAP dipertahankan (dipakai sebagai value
+// scoringSystem yang sudah tersimpan di data lama), cuma LABEL yang ditampilkan
+// ke user diganti jadi "Taiwan" sesuai house rules yang sebenarnya dipakai.
+var SCORING_SYSTEM_LABELS = { china: "China", hongkong: "Taiwan (Fan)" };
 var HONOURS = [["east","East"],["south","South"],["west","West"],["north","North"],["green_dragon","Green Dragon"],["white_dragon","White Dragon"],["zhong","Zhong / Red Dragon"]];
 // Hong Kong Old Style fan table -- keep in sync with db/mahjongScoring.ts
 // (FAN_TABLE) and kombinasi.html (the player-facing Fan Guide page).
@@ -451,10 +454,10 @@ function renderLobbyNoGame(){
   h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">Belum ada permainan di " + esc(S.booking.tableName) + ". Jadilah host dan undang tiga pemain lainnya.</div>";
   h += "<div class=\"label\">Sistem Skor</div>";
   h += "<div class=\"grid2\" style=\"margin-bottom:12px;\">";
-  h += "<button type=\"button\" class=\"chip-btn" + (S.pickedScoringSystem!=="china"?" selected":"") + "\" onclick=\"pickScoringSystem('hongkong')\">Hongkong (Fan)</button>";
+  h += "<button type=\"button\" class=\"chip-btn" + (S.pickedScoringSystem!=="china"?" selected":"") + "\" onclick=\"pickScoringSystem('hongkong')\">Taiwan (Fan)</button>";
   h += "<button type=\"button\" class=\"chip-btn" + (S.pickedScoringSystem==="china"?" selected":"") + "\" onclick=\"pickScoringSystem('china')\">China</button>";
   h += "</div>";
-  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">" + (S.pickedScoringSystem==="china" ? "Sistem lama: Zimo saja, poin flat + bonus Bunga/Musim/Kartu Terakhir." : "Sistem baru: 21 pola fan Hong Kong, bisa Zimo atau Hu.") + "</div>";
+  h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 12px;\">" + (S.pickedScoringSystem==="china" ? "Sistem lama: Zimo saja, poin flat + bonus Bunga/Musim/Kartu Terakhir." : "Sistem baru: 21 pola fan Taiwan, bisa Zimo atau Hu.") + "</div>";
   h += "<div class=\"label\">Nama Kamu</div><input class=\"field\" id=\"hostName\" value=\"" + esc(name) + "\" placeholder=\"Nama kamu\">";
   h += "<div class=\"label\">Nomor WhatsApp</div><input class=\"field\" id=\"hostWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\">";
   h += "<button class=\"btn btn-gold\" onclick=\"createGame()\">Buat Permainan</button>";
