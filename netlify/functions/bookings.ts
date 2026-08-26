@@ -1,8 +1,8 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings, promos, communitySessions } from "../../db/schema.js";
+import { bookings, promos, communitySessions, venueTables } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables } from "../../db/authUtils.js";
+import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables, ensureVenueTablesTable } from "../../db/authUtils.js";
 
 // Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
 // to gate the admin-correction and void-transaction paths in PATCH below,
@@ -15,16 +15,15 @@ function isSuperAdminReq(req: Request): boolean {
     return !!superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw;
 }
 
-// Tarif per jam per meja. Default Rp 50.000/jam untuk semua meja (Surabaya +
-// meja otomatis Denpasar), KECUALI meja manual Denpasar ('b3' / Autumn Table)
-// yang tarifnya Rp 30.000/jam. Dihitung di SERVER saat checkout (bukan
-// dipercaya dari klien) supaya tidak bisa dimanipulasi.
-const TABLE_RATES: Record<string, number> = {
-    b3: 30000, // Autumn Table (manual) — Denpasar, Bali
-};
-function getHourlyRate(tableId: string | null | undefined): number {
-    if (tableId && TABLE_RATES[tableId] !== undefined) return TABLE_RATES[tableId];
-    return 50000;
+// Tarif per jam per meja SEKARANG DIBACA DARI DATABASE (tabel venue_tables,
+// dikelola Super Admin lewat /api/tables), bukan hardcode di sini lagi — ini
+// yang dulu jadi penyebab Autumn Table (meja manual) kena tagih tarif salah,
+// karena tarifnya harus disalin manual ke banyak file. Fallback 50.000 cuma
+// buat jaga-jaga kalau ada tableId lama yang somehow belum ada di DB.
+async function getHourlyRate(tableId: string | null | undefined): Promise<number> {
+    if (!tableId) return 50000;
+    const [row] = await db.select().from(venueTables).where(eq(venueTables.tableKey, tableId));
+    return row ? row.hourlyRate : 50000;
 }
 
 function generateCode(): string {
@@ -39,7 +38,8 @@ async function sendEmailNotification(booking: any) {
     const SENDGRID_KEY = process.env.SENDGRID_API_KEY;
     if (!SENDGRID_KEY) return;
     const subject = `[Pung Pung] Booking Baru: ${booking.customerName} — ${booking.date} ${booking.time}`;
-    const body = `Booking baru masuk!\n\nKode : ${booking.bookingCode}\nNama : ${booking.customerName}\nTanggal : ${booking.date}\nJam : ${booking.time} WIB\nMeja : ${booking.tableName} (${booking.floor})\nDurasi : ${booking.duration} jam\nTotal Est: Rp ${(getHourlyRate(booking.tableId) * booking.duration).toLocaleString('id-ID')}\nStatus : MENUNGGU PEMBAYARAN`;
+    const rate = await getHourlyRate(booking.tableId);
+    const body = `Booking baru masuk!\n\nKode : ${booking.bookingCode}\nNama : ${booking.customerName}\nTanggal : ${booking.date}\nJam : ${booking.time} WIB\nMeja : ${booking.tableName} (${booking.floor})\nDurasi : ${booking.duration} jam\nTotal Est: Rp ${(rate * booking.duration).toLocaleString('id-ID')}\nStatus : MENUNGGU PEMBAYARAN`;
     await fetch("https://api.sendgrid.com/v3/mail/send", {
           method: "POST",
           headers: { "Authorization": `Bearer ${SENDGRID_KEY}`, "Content-Type": "application/json" },
@@ -55,6 +55,7 @@ export default async (req: Request) => {
     await ensureLocationColumns(db);
     await ensurePromosTable(db);
     await ensureCommunityTables(db);
+    await ensureVenueTablesTable(db);
     const url = new URL(req.url);
 
     if (req.method === "GET") {
@@ -328,7 +329,7 @@ export default async (req: Request) => {
                   appliedPromo = promo;
           }
 
-      const rate = getHourlyRate(existing?.tableId);
+      const rate = await getHourlyRate(existing?.tableId);
           let totalRp = isOwnerFree ? 0 : billableHours * rate;
           if (appliedPromo && !isOwnerFree) {
                   if (appliedPromo.type === "free_hours") {

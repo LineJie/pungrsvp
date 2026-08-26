@@ -1,7 +1,14 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings } from "../../db/schema.js";
+import { bookings, venueTables } from "../../db/schema.js";
 import { eq, and, lt, sql } from "drizzle-orm";
+import { ensureVenueTablesTable } from "../../db/authUtils.js";
+
+async function getHourlyRate(tableId: string | null | undefined): Promise<number> {
+  if (!tableId) return 50000;
+  const [row] = await db.select().from(venueTables).where(eq(venueTables.tableKey, tableId));
+  return row ? row.hourlyRate : 50000;
+}
 
 // Scheduled function: auto-checkout sesi yang kasir lupa checkout
 // dan sudah lewat hari (checkinAt bukan hari ini lagi).
@@ -15,6 +22,7 @@ import { eq, and, lt, sql } from "drizzle-orm";
 // supaya admin tahu ini perlu dicek/dikoreksi manual lewat "Lihat Struk".
 export default async (req: Request) => {
   const now = new Date();
+  await ensureVenueTablesTable(db);
 
   try {
     // Ambil semua booking checked_in yang checkinAt-nya BUKAN hari ini (WIB)
@@ -50,7 +58,8 @@ export default async (req: Request) => {
 
       const diffMins = Math.round((estimatedCheckout.getTime() - checkinWIB.getTime()) / 60000);
       const billableHours = Math.max(1, Math.ceil((diffMins - 10) / 60));
-      const totalRp = billableHours * 50000;
+      const rate = await getHourlyRate(b.tableId);
+      const totalRp = billableHours * rate;
 
       const existingNotes = b.notes || "";
       const newNotes = existingNotes
