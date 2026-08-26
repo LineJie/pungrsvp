@@ -738,6 +738,83 @@
 
   /* BOTTOM SAFE AREA */
   .safe-bottom { height: 20px; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     TAMPILAN DESKTOP/WEB — halaman ini awalnya cuma didesain sebagai
+     mockup "kartu HP" (.phone-frame lebar tetap 390px) yang di layar
+     lebar cuma numpuk kecil di tengah background gelap. Media query di
+     bawah TIDAK mengubah HTML/JS sama sekali — semua id/class yang
+     dipakai script tetap sama — cuma menata ulang tampilannya di layar
+     lebar: kartu jadi lebih lebar & elegan, dan bagian ringkasan booking
+     "menempel" (sticky) di sisi kanan selagi form di kiri di-scroll,
+     supaya orang di laptop/desktop selalu lihat total harga & pilihan
+     mereka tanpa scroll naik-turun.
+     Di HP (di bawah 860px) tampilannya PERSIS SAMA seperti sebelumnya.
+     ═══════════════════════════════════════════════════════════════ */
+  @media (min-width: 860px) {
+    body {
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+
+    .phone-frame {
+      width: min(1040px, 94vw);
+      max-height: none;
+      min-height: 0;
+      border-radius: 28px;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+      margin: 0 auto;
+    }
+
+    .header {
+      padding: 32px 40px 0;
+      border-radius: 28px 28px 0 0;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      align-items: start;
+      gap: 18px 32px;
+      padding: 28px 40px 40px;
+    }
+
+    /* Semua .card (Lokasi, Tanggal, Waktu, Meja, Durasi, Nama, WA, Catatan)
+       tetap satu kolom kiri, urut dari atas ke bawah seperti di HP. */
+    .content > .card {
+      grid-column: 1;
+    }
+
+    /* Ringkasan booking pindah jadi sidebar kanan yang sticky, membentang
+       setinggi form di kiri (grid-row: 1 / -1), supaya selalu kelihatan. */
+    .content > .summary-card {
+      grid-column: 2;
+      grid-row: 1 / -1;
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      box-shadow: 0 12px 32px rgba(28,58,46,0.12);
+    }
+
+    /* Grid meja & jam dapat ruang lebih lega di kolom kiri yang lebar. */
+    .table-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .time-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* Modal konfirmasi/pembayaran sedikit lebih lega di layar besar. */
+    #confirmModal > div,
+    #paymentModal > div {
+      width: 380px !important;
+    }
+  }
+
+  @media (min-width: 1180px) {
+    .phone-frame { width: 1100px; }
+    .content { grid-template-columns: 1fr 380px; }
+  }
 </style>
 </head>
 <body>
@@ -1083,10 +1160,11 @@
     return row ? row.openHour : 10;
   }
 
-  // Dua set meja: Surabaya (Banana Leaf) dan Denpasar, Bali. Rate per meja
-  // per jam disimpan di masing-masing (semua Rp 50rb/jam, KECUALI Autumn
-  // Table — meja manual Denpasar — yang Rp 30rb/jam). tableData / TOTAL_TABLES
-  // di bawah menunjuk ke set yang sedang aktif dan berubah lewat selectLocation().
+  // Dua set meja: Surabaya (Banana Leaf) dan Denpasar, Bali. Ini FALLBACK
+  // statis (dipakai kalau /api/tables gagal di-fetch) — sumber kebenaran
+  // sebenarnya sekarang ada di database, dikelola Super Admin lewat tab
+  // "Kelola Meja" di admin.html, dan diambil oleh loadVenueTablesForBooking()
+  // di bawah supaya meja baru langsung muncul di sini tanpa deploy ulang.
   const tableDataSurabaya = [
     { id: '1', name: 'Bamboo Table', floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🎋', avail: true, bookedBy: null },
     { id: '2', name: 'Orchid Table',  floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🌸', avail: true, bookedBy: null },
@@ -1094,11 +1172,37 @@
     { id: '4', name: 'Sakura Table', floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🌺', avail: true, bookedBy: null },
     { id: '5', name: 'Dragon Table', floor: 'Lantai 1', cap: '4 orang', rate: 50000, emoji: '🐉', avail: true, bookedBy: null },
   ];
-  const tableDataDenpasar = [
+  let tableDataDenpasar = [
     { id: 'b1', name: 'Spring Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '🌱', note: 'Automatic Table', avail: true, bookedBy: null },
     { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', note: 'Automatic Table', avail: true, bookedBy: null },
     { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', note: 'Manual Mahjong', avail: true, bookedBy: null },
   ];
+  let _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar };
+  // Ambil daftar meja aktif dari server dan timpa fallback statis di atas —
+  // satu tempat ini yang jadi sumber tarif/nama meja buat seluruh halaman
+  // booking (grid meja, ringkasan harga, dsb).
+  async function loadVenueTablesForBooking() {
+    try {
+      const res = await fetch('/api/tables');
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows.length) return;
+      const bySurabaya = [], byDenpasar = [];
+      for (const t of rows) {
+        const entry = {
+          id: t.tableKey, name: t.name, floor: t.floor, cap: t.capacity || '4 orang',
+          rate: t.hourlyRate, emoji: t.emoji || '🀄',
+          note: t.notes ? t.notes : (t.type === 'manual' ? 'Manual Mahjong' : (t.location === 'denpasar' ? 'Automatic Table' : undefined)),
+          avail: true, bookedBy: null,
+        };
+        (t.location === 'denpasar' ? byDenpasar : bySurabaya).push(entry);
+      }
+      if (bySurabaya.length) { tableDataSurabaya.length = 0; tableDataSurabaya.push(...bySurabaya); }
+      if (byDenpasar.length) { tableDataDenpasar.length = 0; tableDataDenpasar.push(...byDenpasar); }
+      _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar };
+      tableData = currentLocation === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+      TOTAL_TABLES = tableData.length;
+    } catch (e) { /* fetch gagal — tetap pakai fallback statis di atas */ }
+  }
 
   let currentLocation = 'surabaya';
 
@@ -1461,6 +1565,19 @@ function closeCommunity() {
 }
 
   // === LOCATION SELECTOR ===
+  function refreshDurationHint(loc) {
+    const hint = document.getElementById('durationHint');
+    if (!hint) return;
+    const activeSet = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+    const rates = [...new Set(activeSet.map(t => t.rate))];
+    if (rates.length <= 1) {
+      hint.textContent = `Rp ${(rates[0] || 50000).toLocaleString('id-ID')} / jam per meja`;
+    } else {
+      hint.textContent = activeSet
+        .map(t => `Rp ${t.rate.toLocaleString('id-ID')}/jam · ${t.name}${t.note ? ` (${t.note})` : ''}`)
+        .join(' · ');
+    }
+  }
   function selectLocation(loc) {
     if (loc === currentLocation) return;
     currentLocation = loc;
@@ -1487,13 +1604,10 @@ function closeCommunity() {
       if (chk) chk.style.display = loc === 'denpasar' ? '' : 'none';
     }
 
-    // Update keterangan tarif di kartu Durasi
-    const hint = document.getElementById('durationHint');
-    if (hint) {
-      hint.textContent = loc === 'denpasar'
-        ? 'Rp 50.000/jam · Spring & Winter (Automatic) · Rp 30.000/jam Autumn (Manual)'
-        : 'Rp 50.000 / jam per meja';
-    }
+    // Update keterangan tarif di kartu Durasi — dibangun dinamis dari
+    // tarif meja yang sedang aktif di lokasi ini (bukan hardcode), supaya
+    // meja baru dengan tarif beda otomatis ikut kesebut di sini juga.
+    refreshDurationHint(loc);
 
     // Reset pilihan meja/waktu — meja lokasi lama tidak berlaku di lokasi baru
     selectedTables = [];
@@ -1800,6 +1914,15 @@ function closeCommunity() {
   renderTimes();
   renderTables();
   updateSummary();
+  // Meja & tarif dari server dimuat async — begitu selesai, render ulang
+  // grid meja & ringkasan harga supaya customer langsung lihat meja/tarif
+  // terbaru (termasuk meja baru yang ditambah Super Admin) tanpa perlu
+  // refresh manual atau deploy ulang halaman ini.
+  loadVenueTablesForBooking().then(() => {
+    renderTables();
+    updateSummary();
+    refreshDurationHint(currentLocation);
+  });
   // Jam operasional dari server dimuat async — begitu selesai, render ulang
   // supaya slot waktu yang ditampilkan langsung sesuai jam terbaru (bukan
   // fallback bawaan), tanpa customer perlu refresh manual.
