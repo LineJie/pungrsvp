@@ -780,14 +780,15 @@
     <button id="tabTimeline" class="btn view-tab-btn active" onclick="switchTab('timeline')">📅 Timeline</button>
     <button id="tabList" class="btn view-tab-btn" onclick="switchTab('list')">📋 Daftar</button>
     <button id="tabCustomers" class="btn view-tab-btn" onclick="switchTab('customers')">👤 Data Customer</button>
-    <button id="tabStaff" class="btn view-tab-btn" onclick="switchTab('staff')" style="display:none">🛡️ Kelola Staff</button>
-    <button id="tabPromo" class="btn view-tab-btn" onclick="switchTab('promo')" style="display:none">🎁 Kelola Promo</button>
-    <button id="tabPayMethods" class="btn view-tab-btn" onclick="switchTab('paymethods')" style="display:none">💳 Metode Bayar</button>
-    <button id="tabHours" class="btn view-tab-btn" onclick="switchTab('hours')" style="display:none">🕐 Jam Operasional</button>
-    <button id="tabTables" class="btn view-tab-btn" onclick="switchTab('tables')" style="display:none">🀄 Kelola Meja</button>
     <button id="tabCommunity" class="btn view-tab-btn" onclick="switchTab('community')">🎉 Acara Bareng</button>
     <button id="tabClosing" class="btn view-tab-btn" onclick="switchTab('closing')">🌙 Tutup Kasir</button>
+    <button id="tabSettings" class="btn view-tab-btn" onclick="switchTab('settings')" style="display:none;margin-left:auto;">⚙️ Pengaturan</button>
   </div>
+
+  <!-- BUTUH TINDAKAN — cuma relevan buat hari ini, jadi cuma tampil kalau
+       filter tanggal lagi di hari ini (bukan tanggal lain), dan cuma di tab
+       Timeline/Daftar (yang lain nggak relevan sama daftar tindakan). -->
+  <div id="actionNeededPanel" style="display:none;max-width:1400px;margin:0 auto;padding:0 16px;"></div>
 
   <!-- TIMELINE VIEW -->
   <div id="viewTimeline">
@@ -822,7 +823,20 @@
 
 </div>
 
-<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar"></div></div></div><div id="viewTables" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🀄 Kelola Meja</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Tambah meja baru, tentukan tipe (matic/manual — nentuin tarif default), dan kasih nama & catatan. Meja langsung muncul di halaman booking customer & semua dropdown admin.</p><div class="form-grid"><div class="form-group"><label>Nama Meja</label><input type="text" id="vt_name" placeholder="misal: Maple Table"></div><div class="form-group"><label>Tipe</label><select id="vt_type" onchange="onVenueTableTypeChange()"><option value="matic">⚙️ Matic (Otomatis) — Rp 50.000/jam</option><option value="manual">🍂 Manual — Rp 30.000/jam</option></select></div><div class="form-group"><label>Tarif per Jam (Rp)</label><input type="number" id="vt_rate" placeholder="50000" min="0"></div><div class="form-group"><label>Cabang</label><select id="vt_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Lantai / Area</label><input type="text" id="vt_floor" placeholder="misal: Lantai 2"></div><div class="form-group"><label>Kapasitas</label><input type="text" id="vt_capacity" placeholder="4 orang" value="4 orang"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="vt_emoji" placeholder="🀄" maxlength="4"></div><div class="form-group" style="grid-column:1/-1"><label>Catatan</label><input type="text" id="vt_notes" placeholder="Catatan opsional — tampil di admin & (kalau diisi) booking customer"></div></div><button class="btn btn-primary" onclick="submitVenueTable()" style="width:100%;padding:12px;font-size:14px;">Simpan Meja Baru</button></div><div class="bookings-table"><table><thead><tr><th></th><th>Nama</th><th>Tipe</th><th>Tarif/jam</th><th>Cabang</th><th>Lantai</th><th>Catatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tablesBody"><tr><td colspan="9" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
+<div id="viewCustomers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div class="bookings-table"><table><thead><tr><th>Nama</th><th>No. WhatsApp</th><th>Jumlah Booking</th><th>Booking Terakhir</th></tr></thead><tbody id="customersBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewSettingsHub" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <h2 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green-dark);margin:0;">⚙️ Pengaturan</h2>
+    <button class="btn" onclick="switchTab('timeline')" style="background:rgba(28,58,46,0.08);color:var(--green-dark);font-weight:700;">← Kembali</button>
+  </div>
+  <div class="view-tabs" style="margin-bottom:20px;">
+    <button id="tabTables" class="btn view-tab-btn active" onclick="switchSettingsTab('tables')">🀄 Kelola Meja</button>
+    <button id="tabStaff" class="btn view-tab-btn" onclick="switchSettingsTab('staff')">🛡️ Kelola Staff</button>
+    <button id="tabPromo" class="btn view-tab-btn" onclick="switchSettingsTab('promo')">🎁 Kelola Promo</button>
+    <button id="tabPayMethods" class="btn view-tab-btn" onclick="switchSettingsTab('paymethods')">💳 Metode Bayar</button>
+    <button id="tabHours" class="btn view-tab-btn" onclick="switchSettingsTab('hours')">🕐 Jam Operasional</button>
+  </div>
+<div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar"></div></div></div><div id="viewTables" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🀄 Kelola Meja</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Tambah meja baru, tentukan tipe (matic/manual — nentuin tarif default), dan kasih nama & catatan. Meja langsung muncul di halaman booking customer & semua dropdown admin.</p><div class="form-grid"><div class="form-group"><label>Nama Meja</label><input type="text" id="vt_name" placeholder="misal: Maple Table"></div><div class="form-group"><label>Tipe</label><select id="vt_type" onchange="onVenueTableTypeChange()"><option value="matic">⚙️ Matic (Otomatis) — Rp 50.000/jam</option><option value="manual">🍂 Manual — Rp 30.000/jam</option></select></div><div class="form-group"><label>Tarif per Jam (Rp)</label><input type="number" id="vt_rate" placeholder="50000" min="0"></div><div class="form-group"><label>Cabang</label><select id="vt_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Lantai / Area</label><input type="text" id="vt_floor" placeholder="misal: Lantai 2"></div><div class="form-group"><label>Kapasitas</label><input type="text" id="vt_capacity" placeholder="4 orang" value="4 orang"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="vt_emoji" placeholder="🀄" maxlength="4"></div><div class="form-group" style="grid-column:1/-1"><label>Catatan</label><input type="text" id="vt_notes" placeholder="Catatan opsional — tampil di admin & (kalau diisi) booking customer"></div></div><button class="btn btn-primary" onclick="submitVenueTable()" style="width:100%;padding:12px;font-size:14px;">Simpan Meja Baru</button></div><div class="bookings-table"><table><thead><tr><th></th><th>Nama</th><th>Tipe</th><th>Tarif/jam</th><th>Cabang</th><th>Lantai</th><th>Catatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tablesBody"><tr><td colspan="9" class="loading">Memuat data…</td></tr></tbody></table></div></div>  </div>
+<div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
   <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
     <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🎉 Buat Acara Main Bareng</h3>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Meja di-share, tiap orang/rombongan daftar & bayar sendiri per jam. Meja tetap jalan walau belum penuh 4 orang.</div>
@@ -1024,6 +1038,7 @@
     if (!forceFresh && _bookingsCache[cacheKey] && (now - _bookingsCacheTime[cacheKey] < CACHE_TTL_MS)) {
       allBookings = _bookingsCache[cacheKey];
       renderTable(allBookings);
+      if (currentView === 'timeline' || currentView === 'list') renderActionNeeded();
       return;
     }
 
@@ -1035,6 +1050,7 @@
       _bookingsCache[cacheKey] = allBookings;
       _bookingsCacheTime[cacheKey] = now;
       renderTable(allBookings);
+      if (currentView === 'timeline' || currentView === 'list') renderActionNeeded();
     } catch (e) {
       document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="empty-state">Gagal memuat data.</td></tr>';
     }
@@ -1046,6 +1062,7 @@
   }
 
   let currentView = 'timeline';
+  let _currentSettingsTab = 'tables';
 
   function switchTab(tab) {
     currentView = tab;
@@ -1056,32 +1073,114 @@
           document.getElementById('viewCustomers').style.display = tab === 'customers' ? 'block' : 'none';
           document.getElementById('tabCustomers').classList.toggle('active', tab === 'customers');
           if (tab === 'customers') loadCustomers();
-      document.getElementById('viewStaff').style.display = tab === 'staff' ? 'block' : 'none';
-      document.getElementById('tabStaff').classList.toggle('active', tab === 'staff');
-      document.getElementById('tabStaff').style.display = isSuperAdmin ? '' : 'none';
-      if (tab === 'staff') loadStaff();
-      document.getElementById('viewPromo').style.display = tab === 'promo' ? 'block' : 'none';
-      document.getElementById('tabPromo').classList.toggle('active', tab === 'promo');
-      document.getElementById('tabPromo').style.display = isSuperAdmin ? '' : 'none';
-      if (tab === 'promo') loadPromoManager();
-      document.getElementById('viewPayMethods').style.display = tab === 'paymethods' ? 'block' : 'none';
-      document.getElementById('tabPayMethods').classList.toggle('active', tab === 'paymethods');
-      document.getElementById('tabPayMethods').style.display = isSuperAdmin ? '' : 'none';
-      if (tab === 'paymethods') loadPaymentMethodsManager();
-      document.getElementById('viewHours').style.display = tab === 'hours' ? 'block' : 'none';
-      document.getElementById('tabHours').classList.toggle('active', tab === 'hours');
-      document.getElementById('tabHours').style.display = isSuperAdmin ? '' : 'none';
-      if (tab === 'hours') loadOperatingHoursManager();
-      document.getElementById('viewTables').style.display = tab === 'tables' ? 'block' : 'none';
-      document.getElementById('tabTables').classList.toggle('active', tab === 'tables');
-      document.getElementById('tabTables').style.display = isSuperAdmin ? '' : 'none';
-      if (tab === 'tables') loadTablesManager();
+      document.getElementById('viewSettingsHub').style.display = tab === 'settings' ? 'block' : 'none';
+      document.getElementById('tabSettings').classList.toggle('active', tab === 'settings');
+      document.getElementById('tabSettings').style.display = isSuperAdmin ? '' : 'none';
+      if (tab === 'settings') switchSettingsTab(_currentSettingsTab);
       document.getElementById('viewCommunity').style.display = tab === 'community' ? 'block' : 'none';
       document.getElementById('tabCommunity').classList.toggle('active', tab === 'community');
       if (tab === 'community') { filterCommunityTableOptions(); loadCommunitySessions(); }
       document.getElementById('viewClosing').style.display = tab === 'closing' ? 'block' : 'none';
       document.getElementById('tabClosing').classList.toggle('active', tab === 'closing');
       if (tab === 'closing') loadClosingReport();
+      // Panel "Butuh Tindakan" cuma masuk akal di Timeline/Daftar (yang lain
+      // bukan tentang jadwal hari ini), dan cuma kalau filter tanggal lagi
+      // di hari ini — lihat renderActionNeeded().
+      document.getElementById('actionNeededPanel').style.display = (tab === 'timeline' || tab === 'list') ? 'block' : 'none';
+      if (tab === 'timeline' || tab === 'list') renderActionNeeded();
+  }
+
+  // Sub-navigasi di dalam halaman Pengaturan (Kelola Meja / Staff / Promo /
+  // Metode Bayar / Jam Operasional) — terpisah dari switchTab() supaya
+  // "Pengaturan" tetap satu tombol di tab bar utama, nggak numpuk 5 tombol
+  // konfigurasi yang jarang disentuh di sana.
+  function switchSettingsTab(subtab) {
+    _currentSettingsTab = subtab;
+      document.getElementById('viewStaff').style.display = subtab === 'staff' ? 'block' : 'none';
+      document.getElementById('tabStaff').classList.toggle('active', subtab === 'staff');
+      if (subtab === 'staff') loadStaff();
+      document.getElementById('viewPromo').style.display = subtab === 'promo' ? 'block' : 'none';
+      document.getElementById('tabPromo').classList.toggle('active', subtab === 'promo');
+      if (subtab === 'promo') loadPromoManager();
+      document.getElementById('viewPayMethods').style.display = subtab === 'paymethods' ? 'block' : 'none';
+      document.getElementById('tabPayMethods').classList.toggle('active', subtab === 'paymethods');
+      if (subtab === 'paymethods') loadPaymentMethodsManager();
+      document.getElementById('viewHours').style.display = subtab === 'hours' ? 'block' : 'none';
+      document.getElementById('tabHours').classList.toggle('active', subtab === 'hours');
+      if (subtab === 'hours') loadOperatingHoursManager();
+      document.getElementById('viewTables').style.display = subtab === 'tables' ? 'block' : 'none';
+      document.getElementById('tabTables').classList.toggle('active', subtab === 'tables');
+      if (subtab === 'tables') loadTablesManager();
+  }
+
+  // ── BUTUH TINDAKAN ───────────────────────────────────────────────
+  // Panel ringkas di atas Timeline/Daftar khusus buat "apa yang harus saya
+  // kerjakan SEKARANG": booking yang jamnya sudah tiba tapi belum check-in,
+  // dan yang lagi checked-in (supaya kelihatan kalau ada yang kelamaan main
+  // / lupa checkout). Timeline & Daftar sendiri TIDAK diubah — tetap dipakai
+  // buat lihat jam kosong & semua booking hari itu seperti biasa.
+  function renderActionNeeded() {
+    const panel = document.getElementById('actionNeededPanel');
+    const dateVal = document.getElementById('filterDate').value;
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD lokal
+    if (dateVal !== todayStr) {
+      // allBookings cuma berisi data buat tanggal yang lagi difilter — kalau
+      // itu bukan hari ini, kita nggak punya data hari-ini buat dihitung, dan
+      // "butuh tindakan sekarang" memang cuma relevan buat hari ini juga.
+      panel.innerHTML = '';
+      return;
+    }
+    const now = new Date();
+    const needCheckin = [];
+    const playing = [];
+    allBookings.forEach(b => {
+      if (!b.time) return;
+      const startHour = parseInt(b.time.substring(0,2));
+      const tz = tzForLoc(b.location);
+      const nowInTz = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+      if (b.status === 'confirmed' && startHour <= nowInTz.getHours()) {
+        const lateMin = (nowInTz.getHours() - startHour) * 60 + nowInTz.getMinutes();
+        needCheckin.push({ b, lateMin });
+      } else if (b.status === 'checked_in' && b.checkinAt) {
+        const checkinTime = new Date(b.checkinAt);
+        const elapsedMin = Math.floor((now - checkinTime) / 60000);
+        playing.push({ b, elapsedMin });
+      }
+    });
+    needCheckin.sort((a, b) => b.lateMin - a.lateMin);
+    playing.sort((a, b) => b.elapsedMin - a.elapsedMin);
+
+    if (!needCheckin.length && !playing.length) {
+      panel.innerHTML = `<div style="background:var(--warm-white);border-radius:16px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.06);display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:13px;">🎉 Semua aman — nggak ada yang butuh tindakan sekarang.</div>`;
+      return;
+    }
+
+    function nameOf(b) { return (b.customerName || '').replace(' (walk-in)','').replace(' (manual)',''); }
+    function durLabel(min) {
+      const h = Math.floor(min / 60), m = min % 60;
+      return h > 0 ? `${h}j ${m}m` : `${m}m`;
+    }
+
+    const checkinCards = needCheckin.map(({b, lateMin}) => `
+      <div style="background:white;border-radius:12px;padding:12px 14px;min-width:200px;flex:1;border-left:4px solid #C0392B;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div style="font-weight:700;font-size:13px;color:var(--green-dark);margin-bottom:2px;">${escHtml(nameOf(b))}</div>
+        <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">${escHtml(b.tableName || '')} · Jam ${escHtml(b.time)}${lateMin > 0 ? ` · <span style="color:#C0392B;font-weight:600;">telat ${durLabel(lateMin)}</span>` : ''}</div>
+        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="checkinBooking(${b.id})">🎮 Check-in Sekarang</button>
+      </div>`).join('');
+
+    const playingCards = playing.map(({b, elapsedMin}) => `
+      <div style="background:white;border-radius:12px;padding:12px 14px;min-width:200px;flex:1;border-left:4px solid #C9A84C;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div style="font-weight:700;font-size:13px;color:var(--green-dark);margin-bottom:2px;">${escHtml(nameOf(b))}</div>
+        <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">${escHtml(b.tableName || '')} · Main ${durLabel(elapsedMin)}${elapsedMin > (b.duration||1)*60 ? ` · <span style="color:#8A6615;font-weight:600;">lewat durasi</span>` : ''}</div>
+        <button class="btn btn-success btn-sm" style="width:100%;" onclick="openPOS(${b.id})">🧾 Checkout</button>
+      </div>`).join('');
+
+    panel.innerHTML = `
+      <div style="background:var(--warm-white);border-radius:16px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+        <h3 style="font-family:'Playfair Display',serif;font-size:15px;color:var(--green-dark);margin-bottom:12px;">🔔 Butuh Tindakan</h3>
+        ${needCheckin.length ? `<div style="font-size:11px;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🔴 Perlu Check-in (${needCheckin.length})</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:${playing.length ? '16px' : '0'};">${checkinCards}</div>` : ''}
+        ${playing.length ? `<div style="font-size:11px;font-weight:700;color:#8A6615;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🟡 Sedang Main (${playing.length})</div><div style="display:flex;gap:10px;flex-wrap:wrap;">${playingCards}</div>` : ''}
+      </div>`;
   }
 
   // === TUTUP KASIR (LAPORAN CLOSING HARIAN) ===
