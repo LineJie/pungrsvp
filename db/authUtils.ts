@@ -76,6 +76,46 @@ export async function ensurePaymentMethodsTable(db: any) {
 // Super Admin bisa ubah kapan saja lewat tab "Jam Operasional" tanpa perlu
 // deploy ulang — ON CONFLICT DO NOTHING supaya seed tidak menimpa perubahan
 // yang sudah dibuat superadmin di run berikutnya.
+// Daftar meja — seed sekali dengan 8 meja yang sudah ada sekarang (5
+// Surabaya @ Rp50rb/jam, 3 Denpasar: Spring & Winter @ Rp50rb/jam otomatis,
+// Autumn @ Rp30rb/jam manual) supaya booking lama & tarif yang sudah
+// berjalan tidak berubah. Setelah ini, Super Admin nambah/ubah meja lewat
+// tab "Kelola Meja" — ON CONFLICT DO NOTHING supaya seed tidak menimpa
+// perubahan yang sudah dibuat.
+export async function ensureVenueTablesTable(db: any) {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS venue_tables (
+            id serial PRIMARY KEY,
+            table_key text NOT NULL UNIQUE,
+            name text NOT NULL,
+            type text NOT NULL DEFAULT 'matic',
+            hourly_rate integer NOT NULL DEFAULT 50000,
+            floor text NOT NULL,
+            location text NOT NULL DEFAULT 'surabaya',
+            capacity text DEFAULT '4 orang',
+            emoji text DEFAULT '🀄',
+            notes text DEFAULT '',
+            active boolean NOT NULL DEFAULT true,
+            sort_order integer NOT NULL DEFAULT 0,
+            created_by text DEFAULT '',
+            created_at timestamp DEFAULT now()
+        )
+    `);
+    await db.execute(sql`
+        INSERT INTO venue_tables (table_key, name, type, hourly_rate, floor, location, capacity, emoji, notes, sort_order)
+        VALUES
+            ('1', 'Bamboo Table', 'matic', 50000, 'Lantai 2', 'surabaya', '4 orang', '🎋', '', 1),
+            ('2', 'Orchid Table', 'matic', 50000, 'Lantai 2', 'surabaya', '4 orang', '🌸', '', 2),
+            ('3', 'Lotus Table', 'matic', 50000, 'Lantai 2', 'surabaya', '4 orang', '🪷', '', 3),
+            ('4', 'Sakura Table', 'matic', 50000, 'Lantai 2', 'surabaya', '4 orang', '🌺', '', 4),
+            ('5', 'Dragon Table', 'matic', 50000, 'Lantai 1', 'surabaya', '4 orang', '🐉', '', 5),
+            ('b1', 'Spring Table', 'matic', 50000, 'Denpasar, Bali', 'denpasar', '4 orang', '🌱', '', 6),
+            ('b2', 'Winter Table', 'matic', 50000, 'Denpasar, Bali', 'denpasar', '4 orang', '❄️', '', 7),
+            ('b3', 'Autumn Table', 'manual', 30000, 'Denpasar, Bali', 'denpasar', '4 orang', '🍂', '', 8)
+        ON CONFLICT (table_key) DO NOTHING
+    `);
+}
+
 export async function ensureOperatingHoursTable(db: any) {
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS operating_hours (

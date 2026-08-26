@@ -66,6 +66,29 @@ export const paymentMethods = pgTable("payment_methods", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ─── Venue Tables module (additive) ────────────────────────────────────────
+// Dulu daftar meja & tarifnya di-hardcode terpisah di banyak file (index.html,
+// admin.html, pos.html, bookings.ts) — gampang beda-beda dan itu penyebab bug
+// Autumn Table kena tarif salah. Sekarang meja adalah DATA di sini: satu
+// sumber kebenaran untuk nama, tipe (matic/manual), tarif, lokasi & catatan.
+// Cuma Super Admin yang boleh tambah/edit/nonaktifkan (lihat tables.ts).
+export const venueTables = pgTable("venue_tables", {
+  id: serial().primaryKey(),
+  tableKey: text("table_key").notNull().unique(), // dipakai sebagai bookings.tableId (e.g. '1', 'b3')
+  name: text().notNull(),
+  type: text().notNull().default("matic"), // matic (meja otomatis) | manual (meja mahjong manual)
+  hourlyRate: integer("hourly_rate").notNull().default(50000),
+  floor: text().notNull(),
+  location: text().notNull().default("surabaya"), // surabaya | denpasar
+  capacity: text().default("4 orang"),
+  emoji: text().default("🀄"),
+  notes: text().default(""), // catatan bebas superadmin, tampil di admin & booking publik
+  active: boolean().notNull().default(true), // nonaktif = disembunyikan dari grid booking, tapi histori booking lama tetap utuh
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdBy: text("created_by").default(""),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const staff = pgTable("staff", {
     id: serial().primaryKey(),
     name: text().notNull(),
