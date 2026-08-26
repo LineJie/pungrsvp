@@ -1143,8 +1143,16 @@
     const fresh = bookingsCache[cacheKey] && bookingsCacheTime[cacheKey] && (Date.now() - bookingsCacheTime[cacheKey] < BOOKINGS_CACHE_TTL_MS);
     if (!forceFresh && fresh) return;
     try {
-      const res = await fetch(`/api/bookings?date=${dateKey}&location=${currentLocation}`);
-      const rows = await res.json();
+      // Ambil booking BIASA dan sesi "Acara Main Bareng" BARENGAN — dulu
+      // yang kedua ini nggak pernah di-fetch sama sekali di halaman booking
+      // customer, jadi meja yang dipakai buat acara mabar keliatan kosong
+      // padahal sebenarnya sudah dikunci staff dari admin.html.
+      const [bookingsRes, communityRes] = await Promise.all([
+        fetch(`/api/bookings?date=${dateKey}&location=${currentLocation}`),
+        fetch(`/api/community-sessions?date=${dateKey}&location=${currentLocation}`)
+      ]);
+      const rows = await bookingsRes.json();
+      const communityRows = await communityRes.json().catch(() => []);
       // Simpan per meja sebagai daftar sesi (bukan hanya per jam mulai),
       // supaya kita bisa bedakan booking yang masih terjadwal normal
       // vs. sesi yang MASIH BERLANGSUNG (checked_in) dan bisa molor lebih
@@ -1160,6 +1168,21 @@
           startHour,
           duration: b.duration || 1,
           status: b.status
+        });
+      });
+      // Sesi Acara Main Bareng yang masih "open" ikut mengunci mejanya —
+      // status dikasih label khusus 'community' (bukan salah satu status
+      // booking biasa) supaya jelas kalau nanti perlu dibedakan tampilannya.
+      (Array.isArray(communityRows) ? communityRows : []).forEach(s => {
+        if (s.status !== 'open') return;
+        const startHour = s.time ? parseInt(s.time.substring(0,2)) : null;
+        if (startHour === null) return;
+        if (!byTable[s.tableId]) byTable[s.tableId] = [];
+        byTable[s.tableId].push({
+          customerName: '🀄 Acara Main Bareng',
+          startHour,
+          duration: s.duration || 1,
+          status: 'community'
         });
       });
       bookingsCache[cacheKey] = byTable;

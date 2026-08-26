@@ -184,16 +184,22 @@
   const bookingId = new URLSearchParams(window.location.search).get('id');
   let booking = null;
 
-  // Tarif per jam per meja — HARUS sama persis dengan TABLE_RATES di
-  // netlify/functions/bookings.ts, supaya angka yang staff lihat & cetak di
-  // POS cocok dengan yang benar-benar dihitung & disimpan di server saat
-  // checkout. Kalau ada meja manual baru dengan tarif beda, tambahkan di
-  // KEDUA tempat.
-  const TABLE_RATES = {
-    b3: 30000, // Autumn Table (manual) — Denpasar, Bali
-  };
+  // Tarif per jam per meja — sekarang diambil dari /api/tables (dikelola
+  // Super Admin), bukan hardcode di sini lagi. _tableRatesCache diisi oleh
+  // loadTableRates() sebelum booking ditampilkan, supaya angka yang staff
+  // lihat & cetak di POS selalu cocok dengan yang dihitung server saat
+  // checkout. Fallback 50.000 kalau somehow meja belum ada di data.
+  let _tableRatesCache = {};
+  async function loadTableRates() {
+    try {
+      const res = await fetch('/api/tables?includeInactive=1');
+      const rows = await res.json();
+      _tableRatesCache = {};
+      for (const t of rows) _tableRatesCache[t.tableKey] = t.hourlyRate;
+    } catch (e) { /* pakai fallback 50000 kalau gagal fetch */ }
+  }
   function getHourlyRate(tableId) {
-    return (tableId && TABLE_RATES[tableId] !== undefined) ? TABLE_RATES[tableId] : 50000;
+    return (tableId && _tableRatesCache[tableId] !== undefined) ? _tableRatesCache[tableId] : 50000;
   }
   let selectedPayment = null;
   let timerInterval = null;
@@ -384,7 +390,7 @@
     return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  loadBooking();
+  loadTableRates().then(loadBooking);
 </script>
 </body>
 </html>

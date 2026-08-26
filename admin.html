@@ -251,6 +251,38 @@
     padding: 3px 8px; border-radius: 6px; margin-left: 6px;
   }
 
+  /* ── Popup status aksi (Memproses… / Gagal → Coba Lagi) ─────────────
+     Dipakai untuk aksi yang butuh feedback jelas selagi nunggu server
+     (check-in, checkout) — beda dari toast biasa karena ini MENGHALANGI
+     interaksi lain selagi proses jalan, dan kalau gagal nunjukin tombol
+     "Coba Lagi" yang jelas, bukan cuma notifikasi kecil yang lewat. */
+  .action-popup-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55); z-index: 2500;
+    align-items: center; justify-content: center;
+  }
+  .action-popup-overlay.open { display: flex; }
+  .action-popup {
+    background: var(--warm-white); border-radius: 20px;
+    padding: 28px 24px; width: 300px; max-width: 90vw;
+    text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  }
+  .action-popup .ap-icon { font-size: 34px; margin-bottom: 12px; }
+  .action-popup .ap-icon.spin { animation: apSpin 0.9s linear infinite; display: inline-block; }
+  @keyframes apSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .action-popup .ap-title {
+    font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+    color: var(--green-dark); margin-bottom: 6px;
+  }
+  .action-popup .ap-msg { font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; }
+  .action-popup .ap-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .action-popup .ap-actions button {
+    flex: 1; padding: 11px; border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .action-popup .ap-btn-retry { background: var(--gold); color: var(--green-dark); }
+  .action-popup .ap-btn-cancel { background: rgba(28,58,46,0.08); color: var(--green-dark); }
+
   .name-cell { font-weight: 600; }
 
   .empty-state {
@@ -870,6 +902,19 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<!-- Popup status aksi: Memproses… / Gagal (Coba Lagi) — lihat showActionProcessing() -->
+<div class="action-popup-overlay" id="actionPopup">
+  <div class="action-popup">
+    <div class="ap-icon" id="apIcon">⏳</div>
+    <div class="ap-title" id="apTitle">Memproses…</div>
+    <div class="ap-msg" id="apMsg">Mohon tunggu sebentar.</div>
+    <div class="ap-actions" id="apActions" style="display:none;">
+      <button class="ap-btn-cancel" onclick="hideActionPopup()">Tutup</button>
+      <button class="ap-btn-retry" id="apRetryBtn">🔁 Coba Lagi</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let allBookings = [];
 
@@ -1354,7 +1399,7 @@
       const actions = isEventBlock
         ? (isAdmin ? `<button class="btn btn-primary btn-sm" onclick="unblockTable(${b.id})" title="Buka blokir meja ini">🔓 Buka Blokir</button>` : '<span style="font-size:11px;color:var(--text-muted)">Meja ditutup admin</span>')
         : b.status === 'confirmed'
-        ? `<button class="btn btn-primary btn-sm" onclick="checkinBooking(${b.id})" title="Check-in tamu">🎮 Check-in</button>
+        ? `<button class="btn btn-primary btn-sm" onclick="checkinBooking(${b.id}, this)" title="Check-in tamu">🎮 Check-in</button>
            ${isAdmin ? `<button class="btn btn-warning btn-sm" onclick="openEditModal(${b.id})">✏️</button>
            <button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">✕</button>` : ''}${superAdminExtra}`
         : b.status === 'checked_in'
@@ -2180,14 +2225,22 @@ async function loadStaff() {
     } catch(e) { showToast('Gagal mengkonfirmasi'); }
   }
 
-  async function checkinBooking(id) {
+  async function checkinBooking(id, btnEl) {
     const b = allBookings.find(x => x.id === id);
     const name = b ? b.customerName.replace(' (walk-in)','').replace(' (manual)','') : '';
     const now = new Date();
     const nowStr = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tzForLoc(b && b.location)});
     if (!confirm(`Check-in tamu "${name}" sekarang?\nJam mulai dicatat: ${nowStr} ${tzLabelForLoc(b && b.location)}`)) return;
+    await doCheckin(id, name, now, nowStr, b);
+  }
+  async function doCheckin(id, name, now, nowStr, b) {
+    // Popup "Memproses…" LANGSUNG begitu mulai — server (Netlify Function +
+    // database Neon) kadang butuh beberapa detik buat "bangun" kalau lagi
+    // idle (cold start), dan tanpa ini kelihatan diam/macet padahal
+    // sebenarnya lagi diproses di belakang layar.
+    showActionProcessing('Memproses Check-in…', `Mencatat jam mulai untuk ${name}.`);
     try {
-      await fetch(`/api/bookings?id=${id}`, {
+      const res = await fetch(`/api/bookings?id=${id}`, {
         method: 'PATCH',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -2195,9 +2248,16 @@ async function loadStaff() {
           checkinAt: now.toISOString()   // ← kirim timestamp aktual
         })
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Server menolak check-in');
+      }
+      hideActionPopup();
       showToast(`🎮 ${name} check-in jam ${nowStr}!`);
-      loadBookings(true);
-    } catch(e) { showToast('Gagal check-in'); }
+      loadBookings(true); // render ulang baris ini, otomatis ganti tombol jadi "Checkout"
+    } catch(e) {
+      showActionError('Check-in Gagal', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => doCheckin(id, name, new Date(), new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:tzForLoc(b && b.location)}), b));
+    }
   }
 
   async function openPOS(id) {
@@ -2749,7 +2809,15 @@ async function loadStaff() {
 
   async function completePOS(shouldPrint) {
     if (!_posBooking || !_posPayment) return;
+    await doCompletePOS(shouldPrint);
+  }
+  async function doCompletePOS(shouldPrint) {
     const b = _posBooking;
+    // Popup "Memproses…" LANGSUNG begitu mulai — sama alasannya kayak
+    // check-in: biar nggak kelihatan macet selagi nunggu server (bisa
+    // beberapa detik kalau database lagi "cold start" habis idle). Popup
+    // ini juga menghalangi tap ganda ke tombol checkout selagi diproses.
+    showActionProcessing('Memproses Checkout…', 'Menyimpan data checkout & menghitung total.');
     try {
       // Pakai _posCheckoutTime — bisa jam sekarang ATAU jam yang sudah diedit manual
       // (untuk kasus kasir/admin lupa checkout di waktu yang benar)
@@ -2769,20 +2837,22 @@ async function loadStaff() {
       });
       const updated = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(updated.error || 'Gagal checkout — promo mungkin sudah tidak aktif, coba lagi.');
-        return;
+        throw new Error(updated.error || 'Server menolak checkout');
       }
       // Pakai totalPaid & notes HASIL SERVER buat struk (bukan preview client),
       // termasuk tag [PROMO:...] yang baru ditempel server kalau promo dipakai.
       b._totalRp = updated.totalPaid ?? b._totalRp;
       b.notes = updated.notes ?? b.notes;
+      hideActionPopup();
       closePOS();
       showToast(shouldPrint ? '🏁 Checkout berhasil!' : '🏁 Checkout selesai (tanpa struk)');
       loadBookings();
       if (shouldPrint) {
         printReceipt(b, _posPayment, b._actualMins, b._totalRp);
       }
-    } catch(e) { showToast('Gagal checkout'); }
+    } catch(e) {
+      showActionError('Checkout Gagal', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => doCompletePOS(shouldPrint));
+    }
   }
 
   function printReceipt(b, payMethod, actualMins, totalRp, receivedOverride) {
@@ -2900,6 +2970,38 @@ async function loadStaff() {
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Popup status aksi: "Memproses…" selagi nunggu server, dan kalau
+  // gagal ganti jadi pesan error + tombol "Coba Lagi" (bukan cuma toast
+  // yang lewat sekilas) — dipakai buat aksi penting kayak check-in &
+  // checkout yang butuh kepastian jelas berhasil/gagal.
+  function showActionProcessing(title, msg) {
+    document.getElementById('apIcon').textContent = '⏳';
+    document.getElementById('apIcon').classList.add('spin');
+    document.getElementById('apTitle').textContent = title || 'Memproses…';
+    document.getElementById('apMsg').textContent = msg || 'Mohon tunggu sebentar.';
+    document.getElementById('apActions').style.display = 'none';
+    document.getElementById('actionPopup').classList.add('open');
+  }
+  function showActionError(title, msg, retryFn) {
+    document.getElementById('apIcon').textContent = '⚠️';
+    document.getElementById('apIcon').classList.remove('spin');
+    document.getElementById('apTitle').textContent = title || 'Gagal';
+    document.getElementById('apMsg').textContent = msg || 'Terjadi kesalahan. Coba lagi ya.';
+    const actions = document.getElementById('apActions');
+    actions.style.display = 'flex';
+    const retryBtn = document.getElementById('apRetryBtn');
+    // Ganti listener tiap kali dipanggil (bukan numpuk) — clone node lama
+    // dibuang, diganti yang baru, biar retryFn selalu yang terkini.
+    const freshRetryBtn = retryBtn.cloneNode(true);
+    retryBtn.parentNode.replaceChild(freshRetryBtn, retryBtn);
+    freshRetryBtn.id = 'apRetryBtn';
+    freshRetryBtn.onclick = () => { hideActionPopup(); if (retryFn) retryFn(); };
+    document.getElementById('actionPopup').classList.add('open');
+  }
+  function hideActionPopup() {
+    document.getElementById('actionPopup').classList.remove('open');
   }
 
   // Set default filter date to today
