@@ -275,6 +275,17 @@
   color: var(--text-muted);
 }
 
+.loc-text .maps-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gold-dark, #8A6615);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(138,102,21,0.35);
+}
+.loc-text .maps-link:active { opacity: 0.7; }
+
   .location-row {
     cursor: pointer;
     border-radius: 14px;
@@ -907,6 +918,7 @@
         <div class="loc-text">
           <strong>Graha Famili, Surabaya</strong>
         <span>Banana Leaf, Jl. Mayjen Yonosewoyo, Plaza Graha Famili C12 · 5 Meja Automatic Table</span>
+        <a href="https://www.google.com/maps/search/?api=1&query=Banana+Leaf+Jl.+Mayjen+Yonosewoyo+Plaza+Graha+Famili+C12+Surabaya" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="maps-link">📍 Buka di Google Maps</a>
         </div>
       <div class="loc-check">✓</div>
       </div>
@@ -916,6 +928,7 @@
     <strong>Denpasar, Bali</strong>
     <span>Lantai 2 The Magendra · Teuku Umar Barat No.888</span>
     <span>3 Meja — Spring &amp; Winter (Automatic), Autumn (Manual Mahjong)</span>
+    <a href="https://www.google.com/maps/search/?api=1&query=The+Magendra+Jl.+Teuku+Umar+Barat+No.888+Denpasar+Bali" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="maps-link">📍 Buka di Google Maps</a>
     </div>
     <div class="loc-check" style="display:none;">✓</div>
     </div>

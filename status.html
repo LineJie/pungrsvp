@@ -103,6 +103,21 @@
   .error-msg { text-align:center; color:var(--red); font-size:13px; padding:20px; display:none; }
   .error-msg.show { display:block; }
     .leaderboard-link-btn { display:block; width:100%; padding:14px; background:transparent; border:1.5px solid rgba(28,58,46,0.2); border-radius:14px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:var(--green-dark); cursor:pointer; margin-bottom:16px; text-align:center; text-decoration:none; }
+
+  /* Tampilan desktop — sama seperti index.html: kartu lebar & elegan,
+     bukan mockup HP sempit ditengah layar gelap. Di HP (<860px) tidak
+     berubah sama sekali. */
+  @media (min-width: 860px) {
+    body { align-items: flex-start; padding: 40px 20px; }
+    .phone-frame {
+      width: min(560px, 92vw);
+      min-height: 0;
+      border-radius: 28px;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+      margin: 5vh auto;
+    }
+    .header { border-radius: 28px 28px 0 0; }
+  }
 </style>
 </head>
 <body>
