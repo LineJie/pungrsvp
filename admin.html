@@ -1035,6 +1035,30 @@
     return key || '—';
   }
 
+  // Sesi Acara Main Bareng yang relevan buat tab Timeline/Daftar/stat revenue —
+  // sebelumnya sesi ini CUMA pernah di-fetch di dalam tab "Acara Bareng"
+  // sendiri, jadi Timeline/Daftar/kartu revenue di dashboard sama sekali
+  // tidak tahu sesi ini ada (meja kelihatan kosong padahal lagi dipakai acara,
+  // dan uang yang sudah masuk dari peserta acara tidak kehitung).
+  let _communityForBookingsView = [];
+
+  async function loadCommunityForBookingsView(dateVal) {
+    const locParam = (_viewLocation && _viewLocation !== 'all') ? `&location=${_viewLocation}` : '';
+    const url = '/api/community-sessions' + (dateVal ? `?date=${dateVal}${locParam}` : (locParam ? `?${locParam.slice(1)}` : ''));
+    try {
+      const res = await fetch(url);
+      const sessions = await res.json();
+      if (!Array.isArray(sessions) || !sessions.length) { _communityForBookingsView = []; return; }
+      await Promise.all(sessions.map(async s => {
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        s.participants = await r.json().catch(() => []);
+      }));
+      _communityForBookingsView = sessions;
+    } catch (e) {
+      _communityForBookingsView = [];
+    }
+  }
+
   async function loadBookings(forceFresh) {
     const dateVal = document.getElementById('filterDate').value;
     const cacheKey = (dateVal || '__all__') + '|' + _viewLocation;
@@ -1056,6 +1080,7 @@
       allBookings = await res.json();
       _bookingsCache[cacheKey] = allBookings;
       _bookingsCacheTime[cacheKey] = now;
+      await loadCommunityForBookingsView(dateVal);
       renderTable(allBookings);
       if (currentView === 'timeline' || currentView === 'list') renderActionNeeded();
     } catch (e) {
@@ -1205,6 +1230,10 @@
       // Cuma sesi yang sudah checkout & lunas yang dihitung sebagai omset closing —
       // booking pending/cancelled/confirmed belum ada uang masuk, jadi tidak relevan buat laporan kas.
       _closingData = (Array.isArray(data) ? data : []).filter(b => b.status === 'completed');
+      // Peserta Acara Main Bareng yang sudah lunas hari ini juga bagian dari
+      // uang masuk — sebelumnya luput sama sekali dari laporan closing
+      // karena datanya bukan di tabel bookings.
+      await loadCommunityForBookingsView(date);
       renderClosingSummary(date);
     } catch (e) {
       document.getElementById('closingSummary').innerHTML = '<div class="empty-state">Gagal memuat data.</div>';
@@ -1226,7 +1255,22 @@
       breakdown[key].total += (b.totalPaid || 0);
       totalOmset += (b.totalPaid || 0);
     });
-    return { breakdown, totalOmset, totalSesi: _closingData.length };
+    // Peserta Acara Main Bareng yang lunas hari ini — bukan metode bayar
+    // tersendiri (participant tidak tercatat pakai metode bayar apa),
+    // jadi masuk sebagai satu baris ringkasan sendiri, bukan dipecah per
+    // metode seperti booking biasa.
+    let communityPaid = 0, communityCount = 0;
+    (_communityForBookingsView || []).forEach(s => {
+      (s.participants || []).filter(p => p.paid).forEach(p => {
+        communityPaid += (p.numPeople || 1) * s.pricePerPerson * s.duration;
+        communityCount++;
+      });
+    });
+    if (communityCount > 0) {
+      breakdown.acara_bareng = { label: '🎉 Acara Bareng (peserta)', count: communityCount, total: communityPaid };
+      totalOmset += communityPaid;
+    }
+    return { breakdown, totalOmset, totalSesi: _closingData.length + communityCount };
   }
 
   function closingLocLabel() {
@@ -1300,6 +1344,18 @@
     setTimeout(() => { w.print(); }, 500);
   }
 
+  // Total uang yang sudah masuk (peserta paid=true) dari sesi Acara Main
+  // Bareng — dipakai bareng-bareng oleh kartu revenue dashboard dan
+  // laporan closing, biar rumusnya konsisten dengan yang dipakai di
+  // renderCommunitySessions() (paidRevenue per sesi).
+  function communityPaidRevenue(sessions) {
+    return (sessions || []).reduce((sessionSum, s) => {
+      const paid = (s.participants || []).filter(p => p.paid)
+        .reduce((sum, p) => sum + (p.numPeople || 1) * s.pricePerPerson * s.duration, 0);
+      return sessionSum + paid;
+    }, 0);
+  }
+
   function renderTable(data) {
     // Stats
     const confirmed = data.filter(b => b.status === 'confirmed').length;
@@ -1323,9 +1379,14 @@
     }
 
     // Hitung revenue dari booking completed (sudah checkout & bayar)
-    const totalRevenue = data
+    // + peserta Acara Main Bareng yang sudah lunas (sebelumnya tidak
+    // pernah ikut kehitung sama sekali di sini karena datanya di tabel
+    // terpisah, community_participants, bukan bookings).
+    const bookingRevenue = data
       .filter(b => b.status === 'completed')
       .reduce((sum, b) => sum + (b.totalPaid || 0), 0);
+    const communityRevenue = communityPaidRevenue(_communityForBookingsView);
+    const totalRevenue = bookingRevenue + communityRevenue;
     document.getElementById('statRevenue').textContent = 'Rp ' + totalRevenue.toLocaleString('id-ID');
 
     document.getElementById('statTotal').textContent = data.length;
@@ -1446,6 +1507,25 @@
                 </div>`;
       });
 
+      // Blok Acara Main Bareng — sebelumnya sesi acara sama sekali tidak
+      // muncul di sini, jadi meja kelihatan kosong padahal lagi dipakai
+      // acara. Diberi style beda (garis putus-putus emas) supaya jelas
+      // beda dari booking biasa, dan klik langsung ke tab Acara Bareng
+      // (bukan modal edit booking) karena pengelolaannya di sana.
+      (_communityForBookingsView || []).filter(s => s.tableId === tbl.id && s.status !== 'cancelled').forEach(s => {
+        const startHour = parseInt(s.time);
+        const dur = s.duration || 1;
+        const left = (startHour - HOURS[0]) * COL_W;
+        const width = dur * COL_W - 3;
+        if (left < 0 || left >= totalWidth) return;
+        const seats = (s.participants || []).reduce((sum, p) => sum + (p.numPeople || 1), 0);
+        html += `<div class="tl-block" style="left:${left}px;width:${Math.min(width, totalWidth-left-3)}px;background:rgba(201,168,76,0.22);border:1.5px dashed var(--gold);"
+                    onclick="switchTab('community')" title="🎉 Acara Main Bareng · ${s.time}–${String(startHour+dur).padStart(2,'0')}:00 · ${seats} peserta">
+                  <div class="bl-name">🎉 Acara Bareng</div>
+                  <div class="bl-time">${s.time}–${String(startHour+dur).padStart(2,'0')}:00</div>
+                </div>`;
+      });
+
       html += '</div></div>';
     });
 
@@ -1460,6 +1540,9 @@
       <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
         <div style="width:12px;height:12px;border-radius:3px;background:rgba(192,57,43,0.2);"></div> Dibatalkan
       </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+        <div style="width:12px;height:12px;border-radius:3px;background:rgba(201,168,76,0.22);border:1.5px dashed var(--gold);"></div> 🎉 Acara Bareng
+      </div>
       ${showNow ? '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><div style="width:2px;height:12px;background:var(--red);"></div> Sekarang</div>' : ''}
     </div>`;
 
@@ -1468,8 +1551,12 @@
 
   // ── LIST ──────────────────────────────────────────────────
   function renderList(data) {
-    if (!data.length) {
+    if (!data.length && !(_communityForBookingsView || []).length) {
       document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="empty-state">Belum ada booking.</td></tr>';
+      return;
+    }
+    if (!data.length) {
+      document.getElementById('bookingsBody').innerHTML = communityRowsHtml();
       return;
     }
     // Sort by time
@@ -1623,6 +1710,53 @@
         </td>
         <td style="white-space:nowrap">
           <div style="display:flex;gap:4px;flex-wrap:wrap">${actions}</div>
+        </td>
+      </tr>`;
+    }).join('') + communityRowsHtml();
+  }
+
+  // Baris Acara Main Bareng di tab Daftar — sebelumnya sesi acara sama
+  // sekali tidak nongol di sini (cuma kelihatan di tab Acara Bareng
+  // sendiri), jadi staff yang cuma ngecek Daftar bisa kelewatan.
+  // Read-only ringkas + tombol "Kelola" ke tab Acara Bareng, supaya
+  // pengelolaan peserta tetap satu tempat (tidak dobel logic di sini).
+  function communityRowsHtml() {
+    const sessions = _communityForBookingsView || [];
+    if (!sessions.length) return '';
+    const sorted = [...sessions].sort((a,b) => a.time.localeCompare(b.time));
+    return sorted.map(s => {
+      const seats = (s.participants || []).reduce((sum, p) => sum + (p.numPeople || 1), 0);
+      const revenue = (s.participants || []).reduce((sum, p) => sum + (p.numPeople || 1) * s.pricePerPerson * s.duration, 0);
+      const paidRevenue = (s.participants || []).filter(p => p.paid).reduce((sum, p) => sum + (p.numPeople || 1) * s.pricePerPerson * s.duration, 0);
+      const endHour = String(parseInt(s.time) + s.duration).padStart(2, '0');
+      const statusBadge = s.status === 'open' ? 'badge-checked_in' : s.status === 'completed' ? 'badge-completed' : 'badge-cancelled';
+      const statusLabel = s.status === 'open' ? '🟢 Berjalan' : s.status === 'completed' ? '🏁 Selesai' : '❌ Batal';
+      return `
+      <tr style="background:rgba(201,168,76,0.06);">
+        <td>
+          <span class="code-badge">🎉 Acara</span><br>
+          <strong>Main Bareng</strong>
+          <span style="font-size:10px;color:var(--text-muted)"> · ${seats} peserta</span>
+        </td>
+        <td>${formatDate(s.date)}</td>
+        <td>
+          <strong style="font-size:14px;">${s.time}–${endHour}:00</strong><br>
+          <span style="font-size:11px;color:var(--text-muted)">${s.duration} jam</span>
+        </td>
+        <td>
+          ${escHtml(s.tableName)}<br>
+          <span style="font-size:11px;color:var(--text-muted)">${escHtml(s.floor)}</span>
+        </td>
+        <td>
+          <span class="badge ${statusBadge}">${statusLabel}</span>
+        </td>
+        <td style="max-width:160px;">
+          <div style="background:#fff8e1;border:1px solid #f0d98c;border-radius:6px;padding:5px 8px;font-size:12px;color:#7a5c00;font-weight:600;word-break:break-word;">
+            Rp ${revenue.toLocaleString('id-ID')} total${paidRevenue !== revenue ? ` (Rp ${paidRevenue.toLocaleString('id-ID')} lunas)` : ' — lunas'}
+          </div>
+        </td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm" onclick="switchTab('community')" style="background:var(--cream);color:var(--green-dark);border:1px solid rgba(28,58,46,0.15)">🎉 Kelola →</button>
         </td>
       </tr>`;
     }).join('');

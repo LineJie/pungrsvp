@@ -251,6 +251,36 @@ async function checkPw() {
     return await res.json();
   }
 
+  // Peserta Acara Main Bareng yang sudah lunas — flattened jadi satu baris
+  // per peserta {date, tableName, amount} biar gampang digabung ke
+  // perhitungan revenue harian/bulanan. Sebelumnya laporan ini sama sekali
+  // tidak menyentuh data community_sessions/community_participants, jadi
+  // uang yang sudah masuk dari acara tidak pernah kehitung di Total Revenue.
+  async function fetchCommunityPaidRows() {
+    const locParam = (_reportLocation && _reportLocation !== 'all') ? `?location=${_reportLocation}` : '';
+    try {
+      const res = await fetch('/api/community-sessions' + locParam);
+      const sessions = await res.json();
+      if (!Array.isArray(sessions) || !sessions.length) return [];
+      const rows = [];
+      await Promise.all(sessions.map(async s => {
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        const participants = await r.json().catch(() => []);
+        (participants || []).filter(p => p.paid).forEach(p => {
+          rows.push({
+            date: s.date,
+            time: s.time,
+            tableName: s.tableName || s.tableId,
+            amount: (p.numPeople || 1) * s.pricePerPerson * s.duration,
+          });
+        });
+      }));
+      return rows;
+    } catch (e) {
+      return [];
+    }
+  }
+
   function calcRevenue(bookings) {
     // Hanya hitung yang completed (sudah checkout & bayar)
     return bookings.filter(b => b.status === 'completed');
@@ -262,11 +292,12 @@ async function checkPw() {
     if (!date) return;
     document.getElementById('harianContent').innerHTML = '<div class="loading-state">Memuat…</div>';
 
-    const all = await fetchAllBookings();
+    const [all, communityRows] = await Promise.all([fetchAllBookings(), fetchCommunityPaidRows()]);
     const dayBookings = all.filter(b => b.date === date);
     const completed = calcRevenue(dayBookings);
+    const dayCommunity = communityRows.filter(r => r.date === date);
 
-    if (!completed.length) {
+    if (!completed.length && !dayCommunity.length) {
       document.getElementById('harianContent').innerHTML = `
         <div class="stats-grid">
           <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp 0</div></div>
@@ -277,8 +308,10 @@ async function checkPw() {
       return;
     }
 
-    const totalRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
-    const totalSesi = completed.length;
+    const bookingRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
+    const communityRevenue = dayCommunity.reduce((sum,r) => sum + r.amount, 0);
+    const totalRevenue = bookingRevenue + communityRevenue;
+    const totalSesi = completed.length + dayCommunity.length;
     const avgPerSesi = Math.round(totalRevenue / totalSesi);
 
     // Per jam (jam mulai booking)
@@ -286,6 +319,10 @@ async function checkPw() {
     completed.forEach(b => {
       const h = b.time ? b.time.substring(0,2) + ':00' : '?';
       perJam[h] = (perJam[h] || 0) + (b.totalPaid || 0);
+    });
+    dayCommunity.forEach(r => {
+      const h = r.time ? r.time.substring(0,2) + ':00' : '?';
+      perJam[h] = (perJam[h] || 0) + r.amount;
     });
     const maxJam = Math.max(...Object.values(perJam), 1);
 
@@ -297,6 +334,12 @@ async function checkPw() {
       perMeja[name].revenue += (b.totalPaid || 0);
       perMeja[name].sesi += 1;
     });
+    dayCommunity.forEach(r => {
+      const name = r.tableName;
+      if (!perMeja[name]) perMeja[name] = { revenue: 0, sesi: 0 };
+      perMeja[name].revenue += r.amount;
+      perMeja[name].sesi += 1;
+    });
 
     // Per payment method
     const perPayment = {};
@@ -304,6 +347,9 @@ async function checkPw() {
       const m = b.paymentMethod || 'lainnya';
       perPayment[m] = (perPayment[m] || 0) + (b.totalPaid || 0);
     });
+    // Peserta Acara Main Bareng tidak tercatat metode bayarnya per-orang,
+    // jadi masuk sebagai satu baris ringkasan tersendiri.
+    if (communityRevenue > 0) perPayment.acara_bareng = (perPayment.acara_bareng || 0) + communityRevenue;
 
     const jamRows = Object.entries(perJam).sort((a,b) => a[0].localeCompare(b[0]))
       .map(([jam, rev]) => `
@@ -322,7 +368,7 @@ async function checkPw() {
         </div>
       `).join('');
 
-    const payLabels = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit BCA', lainnya: '❓ Lainnya' };
+    const payLabels = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit BCA', lainnya: '❓ Lainnya', acara_bareng: '🎉 Acara Bareng (peserta)' };
     const payRows = Object.entries(perPayment).sort((a,b) => b[1]-a[1])
       .map(([m, rev]) => `
         <div class="rank-row">
@@ -358,13 +404,14 @@ async function checkPw() {
     const year = parseInt(document.getElementById('bYear').value);
     document.getElementById('bulananContent').innerHTML = '<div class="loading-state">Memuat…</div>';
 
-    const all = await fetchAllBookings();
+    const [all, communityRows] = await Promise.all([fetchAllBookings(), fetchCommunityPaidRows()]);
     const monthStr = String(month).padStart(2,'0');
     const prefix = `${year}-${monthStr}`;
     const monthBookings = all.filter(b => b.date && b.date.startsWith(prefix));
     const completed = calcRevenue(monthBookings);
+    const monthCommunity = communityRows.filter(r => r.date && r.date.startsWith(prefix));
 
-    if (!completed.length) {
+    if (!completed.length && !monthCommunity.length) {
       document.getElementById('bulananContent').innerHTML = `
         <div class="stats-grid">
           <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp 0</div></div>
@@ -374,8 +421,10 @@ async function checkPw() {
       return;
     }
 
-    const totalRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
-    const totalSesi = completed.length;
+    const bookingRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
+    const communityRevenue = monthCommunity.reduce((sum,r) => sum + r.amount, 0);
+    const totalRevenue = bookingRevenue + communityRevenue;
+    const totalSesi = completed.length + monthCommunity.length;
     const daysInMonth = new Date(year, month, 0).getDate();
     const avgPerDay = Math.round(totalRevenue / daysInMonth);
 
@@ -384,6 +433,10 @@ async function checkPw() {
     completed.forEach(b => {
       const day = b.date.split('-')[2];
       perHari[day] = (perHari[day] || 0) + (b.totalPaid || 0);
+    });
+    monthCommunity.forEach(r => {
+      const day = r.date.split('-')[2];
+      perHari[day] = (perHari[day] || 0) + r.amount;
     });
     const maxHari = Math.max(...Object.values(perHari), 1);
     const sortedDays = Object.entries(perHari).sort((a,b) => parseInt(a[0]) - parseInt(b[0]));
@@ -397,6 +450,12 @@ async function checkPw() {
       const name = b.tableName || TABLE_NAMES[b.tableId] || b.tableId;
       if (!perMeja[name]) perMeja[name] = { revenue: 0, sesi: 0 };
       perMeja[name].revenue += (b.totalPaid || 0);
+      perMeja[name].sesi += 1;
+    });
+    monthCommunity.forEach(r => {
+      const name = r.tableName;
+      if (!perMeja[name]) perMeja[name] = { revenue: 0, sesi: 0 };
+      perMeja[name].revenue += r.amount;
       perMeja[name].sesi += 1;
     });
 
