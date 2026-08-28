@@ -3566,7 +3566,10 @@ async function loadStaff() {
 
     const resetAll = () => {
       Array.from(sel.options).forEach(opt => {
-        if (!opt.value) return;
+        // Jangan sentuh opsi meja cabang lain yang sudah disembunyikan oleh
+        // filterWalkinTableOptions() — kalau di-reset di sini, filter cabang
+        // hilang dan semua meja (Surabaya + Denpasar) muncul lagi di dropdown.
+        if (!opt.value || opt.hidden) return;
         opt.disabled = false;
         opt.textContent = opt.textContent.replace(/ 🔴$/, '');
         opt.style.color = '';
@@ -3630,7 +3633,9 @@ async function loadStaff() {
       .forEach(s => conflictIds.add(s.tableId));
 
     Array.from(sel.options).forEach(opt => {
-      if (!opt.value) return;
+      // Sama seperti resetAll() di atas — jangan sentuh opsi meja cabang lain
+      // yang sedang disembunyikan filter cabang, supaya tidak muncul lagi.
+      if (!opt.value || opt.hidden) return;
       const tableId = opt.value.split('|')[0];
       const base = opt.textContent.replace(/ 🔴$/, '');
       if (conflictIds.has(tableId)) {
