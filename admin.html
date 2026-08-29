@@ -258,7 +258,7 @@
      "Coba Lagi" yang jelas, bukan cuma notifikasi kecil yang lewat. */
   .action-popup-overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.55); z-index: 2500;
+    background: rgba(0,0,0,0.55); z-index: 10000;
     align-items: center; justify-content: center;
   }
   .action-popup-overlay.open { display: flex; }
@@ -703,33 +703,23 @@
       <div class="form-grid">
         <div class="form-group">
           <label>Cabang</label>
-          <select id="bl_location" onchange="renderBlockTableCheckboxes()">
+          <select id="bl_location" onchange="renderBlockTableCheckboxes(); rebuildBlockTimeOptions()">
             <option value="surabaya">Surabaya</option>
             <option value="denpasar">Denpasar, Bali</option>
           </select>
         </div>
         <div class="form-group">
           <label>Tanggal</label>
-          <input type="date" id="bl_date">
+          <input type="date" id="bl_date" onchange="rebuildBlockTimeOptions()">
         </div>
         <div class="form-group">
           <label>Jam Mulai</label>
           <select id="bl_start">
-            <option>10:00</option><option>11:00</option><option>12:00</option>
-            <option>13:00</option><option>14:00</option><option>15:00</option>
-            <option>16:00</option><option>17:00</option><option>18:00</option>
-            <option>19:00</option><option>20:00</option><option>21:00</option>
-            <option>22:00</option><option>23:00</option>
           </select>
         </div>
         <div class="form-group">
           <label>Jam Selesai</label>
           <select id="bl_end">
-            <option>11:00</option><option>12:00</option><option>13:00</option>
-            <option>14:00</option><option>15:00</option><option>16:00</option>
-            <option>17:00</option><option>18:00</option><option>19:00</option>
-            <option>20:00</option><option>21:00</option><option>22:00</option>
-            <option>23:00</option><option selected>24:00</option>
           </select>
         </div>
         <div class="form-group" style="grid-column:1/-1;">
@@ -857,17 +847,12 @@
     <div class="form-grid">
       <div class="form-group">
         <label>Tanggal</label>
-        <input type="date" id="cs_date">
+        <input type="date" id="cs_date" onchange="rebuildCommunityTimeOptions()">
       </div>
       <div class="form-group">
         <label>Jam Mulai</label>
         <select id="cs_time">
           <option value="">Pilih jam</option>
-          <option>10:00</option><option>11:00</option><option>12:00</option>
-          <option>13:00</option><option>14:00</option><option>15:00</option>
-          <option>16:00</option><option>17:00</option><option>18:00</option>
-          <option>19:00</option><option>20:00</option><option>21:00</option>
-          <option>22:00</option><option>23:00</option>
         </select>
       </div>
       <div class="form-group">
@@ -1129,7 +1114,7 @@
       if (tab === 'settings') switchSettingsTab(_currentSettingsTab);
       document.getElementById('viewCommunity').style.display = tab === 'community' ? 'block' : 'none';
       document.getElementById('tabCommunity').classList.toggle('active', tab === 'community');
-      if (tab === 'community') { filterCommunityTableOptions(); loadCommunitySessions(); }
+      if (tab === 'community') { filterCommunityTableOptions(); loadCommunitySessions(); rebuildCommunityTimeOptions(); }
       document.getElementById('viewClosing').style.display = tab === 'closing' ? 'block' : 'none';
       document.getElementById('tabClosing').classList.toggle('active', tab === 'closing');
       if (tab === 'closing') loadClosingReport();
@@ -2548,6 +2533,7 @@ async function loadStaff() {
     if (tab === 'block') {
       if (!document.getElementById('bl_date').value) document.getElementById('bl_date').value = document.getElementById('filterDate').value || new Date().toISOString().slice(0,10);
       renderBlockTableCheckboxes();
+      rebuildBlockTimeOptions();
     } else {
       updateTableAvailability(tab === 'checkin' ? 'ci' : 'mi');
     }
@@ -3646,6 +3632,7 @@ async function loadStaff() {
   document.getElementById('closingDate').value = `${y}-${m}-${d}`;
   document.getElementById('cs_date').value = `${y}-${m}-${d}`;
   document.getElementById('cs_filterDate').value = `${y}-${m}-${d}`;
+  rebuildCommunityTimeOptions();
 
   // === WALK-IN FORM ===
   function toggleWalkin() {
@@ -3678,6 +3665,56 @@ async function loadStaff() {
       html += `<option value="${val}"${val === current ? ' selected' : ''}>${val}</option>`;
     }
     sel.innerHTML = html;
+  }
+
+  // Sama seperti rebuildManualTimeOptions(), tapi buat dropdown "Jam Mulai"
+  // di form Acara Main Bareng — sebelumnya hardcoded statis mulai 10:00
+  // dan gak pernah nyambung ke jam operasional cabang.
+  function rebuildCommunityTimeOptions() {
+    const sel = document.getElementById('cs_time');
+    if (!sel) return;
+    const location = isSuperAdmin ? _viewLocation : _authLocation;
+    const dateStr = document.getElementById('cs_date').value;
+    const dow = dayOfWeekFromDateStr(dateStr);
+    const { openHour, closeHour } = getOperatingHoursRange(location, dow);
+    const current = sel.value;
+    let html = '<option value="">Pilih jam</option>';
+    for (let h = openHour; h < closeHour; h++) {
+      const val = String(h).padStart(2, '0') + ':00';
+      html += `<option value="${val}"${val === current ? ' selected' : ''}>${val}</option>`;
+    }
+    sel.innerHTML = html;
+  }
+
+  // Sama seperti rebuildCommunityTimeOptions(), tapi buat dropdown "Jam
+  // Mulai" & "Jam Selesai" di tab Blokir Meja — sebelumnya hardcoded statis
+  // 10:00–24:00 juga. bl_location pilih cabangnya langsung (bukan lewat
+  // isSuperAdmin/_viewLocation), jadi dipakai apa adanya di sini.
+  function rebuildBlockTimeOptions() {
+    const startSel = document.getElementById('bl_start');
+    const endSel = document.getElementById('bl_end');
+    if (!startSel || !endSel) return;
+    const location = document.getElementById('bl_location').value;
+    const dateStr = document.getElementById('bl_date').value;
+    const dow = dayOfWeekFromDateStr(dateStr);
+    const { openHour, closeHour } = getOperatingHoursRange(location, dow);
+    const curStart = startSel.value;
+    const curEnd = endSel.value;
+
+    let startHtml = '';
+    for (let h = openHour; h < closeHour; h++) {
+      const val = String(h).padStart(2, '0') + ':00';
+      startHtml += `<option${val === curStart ? ' selected' : ''}>${val}</option>`;
+    }
+    startSel.innerHTML = startHtml;
+
+    let endHtml = '';
+    for (let h = openHour + 1; h <= closeHour; h++) {
+      const val = h === 24 ? '24:00' : String(h).padStart(2, '0') + ':00';
+      const isLast = h === closeHour;
+      endHtml += `<option${(val === curEnd || (!curEnd && isLast)) ? ' selected' : ''}>${val}</option>`;
+    }
+    endSel.innerHTML = endHtml;
   }
 
   function updateOccupiedTables() {
@@ -3943,7 +3980,8 @@ async function loadStaff() {
             err.textContent = 'Isi username dan password.';
             return;
       }
-      err.textContent = 'Memeriksa...';
+      err.textContent = '';
+      showActionProcessing('Masuk…', 'Memeriksa username & password.');
       try {
             const res = await fetch('/api/auth', {
                     method: 'POST',
@@ -3952,6 +3990,7 @@ async function loadStaff() {
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
+                    hideActionPopup();
                     err.textContent = data.error || 'Username atau password salah.';
                     document.getElementById('pwInput').value = '';
                     return;
@@ -3973,6 +4012,7 @@ async function loadStaff() {
             // cuma variabel di memori, jadi reload apa pun selalu balik ke layar
             // password.
             try { localStorage.setItem('pungrsvp_admin_auth', JSON.stringify({ user, pw })); } catch (e) {}
+            hideActionPopup();
             document.getElementById('passwordGate').style.display = 'none';
             applyRole();
             switchTab('timeline');
@@ -3985,7 +4025,7 @@ async function loadStaff() {
             // awal login, lalu Jam Mulai & Timeline di-refresh begitu datanya sampai.
             loadOperatingHoursManager().then(() => { rebuildManualTimeOptions(); if (currentView === 'timeline') renderTimeline(allBookings); });
       } catch (e) {
-            err.textContent = 'Gagal menghubungi server. Coba lagi.';
+            showActionError('Gagal Masuk', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), checkPassword);
       }
   }
 
