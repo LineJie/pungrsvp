@@ -932,6 +932,17 @@
 <script>
   let allBookings = [];
 
+  // === ROLE SYSTEM ===
+  // Dipindah ke sini (paling atas) supaya sudah terinisialisasi sebelum
+  // fungsi apapun yang jalan otomatis saat halaman dimuat (misal
+  // rebuildCommunityTimeOptions() di init bawah) sempat memakainya.
+  let userRole = null;
+  let isSuperAdmin = false;
+  let _authUser = '';
+  let _authPass = '';
+  let _authLocation = 'surabaya';
+  let _viewLocation = 'surabaya';
+
   function waLink(contact) { if (!contact) return '#'; let num = String(contact).replace(/[^0-9]/g, ''); if (num.startsWith('0')) num = '62' + num.slice(1); else if (!num.startsWith('62')) num = '62' + num; return 'https://wa.me/' + num; } function formatDate(dateStr) {
     if (!dateStr) return '—';
     const [y, m, d] = dateStr.split('-');
@@ -3888,12 +3899,12 @@ async function loadStaff() {
   }
 
   // === ROLE SYSTEM ===
-  let userRole = null;
-  let isSuperAdmin = false;
-  let _authUser = '';
-  let _authPass = '';
-  let _authLocation = 'surabaya';
-  let _viewLocation = 'surabaya';
+  // (Deklarasi variabelnya sendiri sudah dipindah ke atas script, dekat
+  // `let allBookings = []`, karena beberapa fungsi -- misal
+  // rebuildCommunityTimeOptions() yang dipanggil langsung saat halaman
+  // dimuat -- makai isSuperAdmin/_viewLocation sebelum baris let di sini
+  // sempat dieksekusi, yang bikin "Cannot access before initialization"
+  // dan seluruh script berhenti total termasuk checkPassword().)
 
   function applyRole() {
       const badge = document.getElementById('roleBadge');
