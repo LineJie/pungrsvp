@@ -270,6 +270,25 @@
   .action-popup .ap-icon { font-size: 34px; margin-bottom: 12px; }
   .action-popup .ap-icon.spin { animation: apSpin 0.9s linear infinite; display: inline-block; }
   @keyframes apSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  /* Animasi "Memproses…" — 3 tile mahjong slide masuk dari kiri satu-satu
+     sampai ngebentuk pong (3 tile sama), tahan sebentar, lalu fade buat
+     ngulang loop. Dipakai selagi nunggu server (lihat showActionProcessing()). */
+  .action-popup .ap-icon.mj-processing {
+    display: flex; align-items: center; justify-content: center; gap: 5px; height: 34px;
+  }
+  .action-popup .ap-icon.mj-processing .mj-tile {
+    font-size: 26px; display: inline-block; opacity: 0;
+    animation: mjTileIn 1.6s ease-in-out infinite;
+  }
+  .action-popup .ap-icon.mj-processing .mj-tile:nth-child(1) { animation-delay: 0s; }
+  .action-popup .ap-icon.mj-processing .mj-tile:nth-child(2) { animation-delay: 0.18s; }
+  .action-popup .ap-icon.mj-processing .mj-tile:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes mjTileIn {
+    0%   { transform: translateX(-22px); opacity: 0; }
+    18%  { transform: translateX(0); opacity: 1; }
+    78%  { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(0); opacity: 0; }
+  }
   .action-popup .ap-title {
     font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
     color: var(--green-dark); margin-bottom: 6px;
@@ -1849,6 +1868,7 @@ async function loadStaff() {
       const wantSwitch = confirm(`Staff "${name}" saat ini di cabang ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'}.\n\nKlik OK untuk pindah ke ${currentLocation === 'denpasar' ? 'Surabaya' : 'Denpasar, Bali'}, atau Cancel untuk batal.`);
       if (!wantSwitch) return;
       const newLoc = currentLocation === 'denpasar' ? 'surabaya' : 'denpasar';
+      showActionProcessing('Memindahkan Cabang…', 'Menyimpan perubahan.');
       try {
             const res = await fetch(`/api/staff?id=${id}`, {
                     method: 'PATCH',
@@ -1856,10 +1876,13 @@ async function loadStaff() {
                     body: JSON.stringify({ location: newLoc })
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) { showToast(data.error || 'Gagal update lokasi'); return; }
+            if (!res.ok) throw new Error(data.error || 'Gagal update lokasi');
+            hideActionPopup();
             showToast(`✅ Lokasi ${name} diubah ke ${newLoc === 'denpasar' ? 'Denpasar' : 'Surabaya'}`);
             loadStaff();
-      } catch (e) { showToast('Gagal update lokasi'); }
+      } catch (e) {
+            showActionError('Gagal Update Lokasi', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => editStaffLocation(id, name, currentLocation));
+      }
   }
   
   async function submitStaff() {
@@ -1868,6 +1891,7 @@ async function loadStaff() {
       const password = document.getElementById('st_password').value;
       const role = document.getElementById('st_role').value; const location = document.getElementById('st_location').value;
       if (!name || !username || !password) { showToast('Lengkapi semua field dulu ya!'); return; }
+      showActionProcessing('Menyimpan Staff…', 'Membuat akun staff baru.');
       try {
             const res = await fetch('/api/staff', {
                     method: 'POST',
@@ -1875,22 +1899,30 @@ async function loadStaff() {
                     body: JSON.stringify({ name, username, password, role, location })
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) { showToast(data.error || 'Gagal menyimpan staff'); return; }
+            if (!res.ok) throw new Error(data.error || 'Gagal menyimpan staff');
+            hideActionPopup();
             showToast('✅ Staff berhasil ditambahkan!');
             document.getElementById('st_name').value = '';
             document.getElementById('st_username').value = '';
             document.getElementById('st_password').value = '';
             loadStaff();
-      } catch (e) { showToast('Gagal menyimpan staff'); }
+      } catch (e) {
+            showActionError('Gagal Menyimpan Staff', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), submitStaff);
+      }
   }
   
   async function deleteStaff(id, name) {
       if (!confirm(`Hapus staff "${name}"?`)) return;
+      showActionProcessing('Menghapus Staff…', `Menghapus akun ${name}.`);
       try {
-            await fetch(`/api/staff?id=${id}`, { method: 'DELETE', headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
+            const res = await fetch(`/api/staff?id=${id}`, { method: 'DELETE', headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
+            if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak penghapusan'); }
+            hideActionPopup();
             showToast('Staff dihapus');
             loadStaff();
-      } catch (e) { showToast('Gagal menghapus'); }
+      } catch (e) {
+            showActionError('Gagal Menghapus Staff', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => deleteStaff(id, name));
+      }
   }
 
   // === PROMO MANAGEMENT (Super Admin only) ===
@@ -1946,6 +1978,7 @@ async function loadStaff() {
     const type = document.getElementById('pr_type').value;
     const value = document.getElementById('pr_value').value;
     if (!name || !value) { showToast('Lengkapi semua field dulu ya!'); return; }
+    showActionProcessing('Menyimpan Promo…', 'Membuat promo baru.');
     try {
       const res = await fetch('/api/promos', {
         method: 'POST',
@@ -1953,15 +1986,19 @@ async function loadStaff() {
         body: JSON.stringify({ name, location, type, value })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal menyimpan promo'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan promo');
+      hideActionPopup();
       showToast('✅ Promo berhasil dibuat!');
       document.getElementById('pr_name').value = '';
       document.getElementById('pr_value').value = '';
       loadPromoManager();
-    } catch (e) { showToast('Gagal menyimpan promo'); }
+    } catch (e) {
+      showActionError('Gagal Menyimpan Promo', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), submitPromo);
+    }
   }
 
   async function togglePromoActive(id, currentlyActive) {
+    showActionProcessing('Mengubah Status Promo…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/promos?id=${id}`, {
         method: 'PATCH',
@@ -1969,10 +2006,13 @@ async function loadStaff() {
         body: JSON.stringify({ active: !currentlyActive })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal mengubah status promo'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal mengubah status promo');
+      hideActionPopup();
       showToast(currentlyActive ? '⚪ Promo dinonaktifkan' : '🟢 Promo diaktifkan');
       loadPromoManager();
-    } catch (e) { showToast('Gagal mengubah status promo'); }
+    } catch (e) {
+      showActionError('Gagal Mengubah Status', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => togglePromoActive(id, currentlyActive));
+    }
   }
 
   // === SUPER ADMIN: KELOLA METODE PEMBAYARAN ===
@@ -1997,6 +2037,7 @@ async function loadStaff() {
     const label = document.getElementById('pm_label').value.trim();
     const emoji = document.getElementById('pm_emoji').value.trim();
     if (!label) { showToast('Isi nama metode pembayaran dulu ya!'); return; }
+    showActionProcessing('Menyimpan Metode Pembayaran…', 'Membuat metode baru.');
     try {
       const res = await fetch('/api/payment-methods', {
         method: 'POST',
@@ -2004,15 +2045,19 @@ async function loadStaff() {
         body: JSON.stringify({ label, emoji })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal menyimpan metode pembayaran'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan metode pembayaran');
+      hideActionPopup();
       showToast(`✅ Metode pembayaran "${label}" ditambahkan!`);
       document.getElementById('pm_label').value = '';
       document.getElementById('pm_emoji').value = '';
       loadPaymentMethodsManager();
-    } catch (e) { showToast('Gagal menyimpan metode pembayaran'); }
+    } catch (e) {
+      showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), submitPaymentMethod);
+    }
   }
 
   async function togglePaymentMethodActive(id, currentlyActive) {
+    showActionProcessing('Mengubah Status…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/payment-methods?id=${id}`, {
         method: 'PATCH',
@@ -2020,10 +2065,13 @@ async function loadStaff() {
         body: JSON.stringify({ active: !currentlyActive })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal mengubah status'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal mengubah status');
+      hideActionPopup();
       showToast(currentlyActive ? '⚪ Metode dinonaktifkan' : '🟢 Metode diaktifkan');
       loadPaymentMethodsManager();
-    } catch (e) { showToast('Gagal mengubah status'); }
+    } catch (e) {
+      showActionError('Gagal Mengubah Status', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => togglePaymentMethodActive(id, currentlyActive));
+    }
   }
 
   // === SUPER ADMIN: KELOLA MEJA ===
@@ -2076,6 +2124,7 @@ async function loadStaff() {
     if (!name) { showToast('Isi nama meja dulu ya!'); return; }
     if (!floor) { showToast('Isi lantai/area meja dulu ya!'); return; }
     const hourlyRate = rateRaw !== '' ? parseInt(rateRaw) : TABLE_TYPE_DEFAULT_RATE[type];
+    showActionProcessing('Menyimpan Meja…', 'Membuat meja baru.');
     try {
       const res = await fetch('/api/tables', {
         method: 'POST',
@@ -2083,7 +2132,8 @@ async function loadStaff() {
         body: JSON.stringify({ name, type, hourlyRate, location, floor, capacity, emoji, notes })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal menyimpan meja'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan meja');
+      hideActionPopup();
       showToast(`✅ Meja "${name}" ditambahkan!`);
       document.getElementById('vt_name').value = '';
       document.getElementById('vt_rate').value = '';
@@ -2092,10 +2142,13 @@ async function loadStaff() {
       document.getElementById('vt_emoji').value = '';
       document.getElementById('vt_notes').value = '';
       loadTablesManager();
-    } catch (e) { showToast('Gagal menyimpan meja'); }
+    } catch (e) {
+      showActionError('Gagal Menyimpan Meja', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), submitVenueTable);
+    }
   }
 
   async function toggleTableActive(id, currentlyActive) {
+    showActionProcessing('Mengubah Status Meja…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/tables?id=${id}`, {
         method: 'PATCH',
@@ -2103,10 +2156,13 @@ async function loadStaff() {
         body: JSON.stringify({ active: !currentlyActive })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal mengubah status'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal mengubah status');
+      hideActionPopup();
       showToast(currentlyActive ? '⚪ Meja dinonaktifkan (hilang dari halaman booking)' : '🟢 Meja diaktifkan');
       loadTablesManager();
-    } catch (e) { showToast('Gagal mengubah status'); }
+    } catch (e) {
+      showActionError('Gagal Mengubah Status', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => toggleTableActive(id, currentlyActive));
+    }
   }
 
   function openTableEditModal(id) {
@@ -2137,6 +2193,7 @@ async function loadStaff() {
     const emoji = document.getElementById('vtEditEmoji').value.trim();
     const notes = document.getElementById('vtEditNotes').value.trim();
     if (!name || !floor) { showToast('Nama & lantai/area wajib diisi!'); return; }
+    showActionProcessing('Menyimpan Perubahan…', 'Menyimpan data meja.');
     try {
       const res = await fetch(`/api/tables?id=${id}`, {
         method: 'PATCH',
@@ -2144,11 +2201,14 @@ async function loadStaff() {
         body: JSON.stringify({ name, type, hourlyRate, location, floor, capacity, emoji, notes })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal menyimpan perubahan meja'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan perubahan meja');
+      hideActionPopup();
       showToast('✅ Meja berhasil diedit!');
       closeTableEditModal();
       loadTablesManager();
-    } catch (e) { showToast('Gagal menyimpan perubahan meja'); }
+    } catch (e) {
+      showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), saveTableEdit);
+    }
   }
 
   // === SUPER ADMIN: KELOLA JAM OPERASIONAL ===
@@ -2220,6 +2280,7 @@ async function loadStaff() {
     const openHour = parseInt(document.getElementById(`oh_open_${id}`).value);
     const closeHour = parseInt(document.getElementById(`oh_close_${id}`).value);
     if (openHour >= closeHour) { showToast('Jam buka harus lebih awal dari jam tutup'); return; }
+    showActionProcessing('Menyimpan Jam Operasional…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/operating-hours?id=${id}`, {
         method: 'PATCH',
@@ -2227,10 +2288,13 @@ async function loadStaff() {
         body: JSON.stringify({ openHour, closeHour })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal menyimpan jam operasional'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan jam operasional');
+      hideActionPopup();
       showToast('✅ Jam operasional disimpan');
       loadOperatingHoursManager();
-    } catch (e) { showToast('Gagal menyimpan jam operasional'); }
+    } catch (e) {
+      showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => saveOperatingHour(id));
+    }
   }
 
   // === ACARA MAIN BARENG (community sessions, per-seat pricing) ===
@@ -2245,6 +2309,7 @@ async function loadStaff() {
     const notes = document.getElementById('cs_notes').value.trim();
     if (!date || !time || !tableVal) { showToast('Lengkapi tanggal, jam, dan meja dulu ya!'); return; }
     const [tableId, tableName, floor, location] = tableVal.split('|');
+    showActionProcessing('Membuat Sesi Acara…', 'Menyimpan sesi Acara Bareng.');
     try {
       const res = await fetch('/api/community-sessions', {
         method: 'POST',
@@ -2252,12 +2317,15 @@ async function loadStaff() {
         body: JSON.stringify({ date, time, duration, tableId, tableName, floor, location, pricePerPerson: price, notes })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal membuat sesi'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal membuat sesi');
+      hideActionPopup();
       showToast('🎉 Sesi acara berhasil dibuat!');
       document.getElementById('cs_notes').value = '';
       document.getElementById('cs_filterDate').value = date;
       loadCommunitySessions();
-    } catch (e) { showToast('Gagal membuat sesi'); }
+    } catch (e) {
+      showActionError('Gagal Membuat Sesi', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), createCommunitySession);
+    }
   }
 
   async function loadCommunitySessions() {
@@ -2356,6 +2424,7 @@ async function loadStaff() {
     const numPeople = parseInt(numEl.value) || 1;
     const contact = contactEl.value.trim();
     if (!name) { showToast('Isi nama dulu ya!'); return; }
+    showActionProcessing('Menambah Peserta…', 'Menyimpan data peserta.');
     try {
       const res = await fetch('/api/community-sessions?resource=participants', {
         method: 'POST',
@@ -2363,13 +2432,17 @@ async function loadStaff() {
         body: JSON.stringify({ sessionId, name, numPeople, contact })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal menambah peserta'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal menambah peserta');
+      hideActionPopup();
       showToast('✅ Peserta ditambahkan!');
       loadCommunitySessions();
-    } catch (e) { showToast('Gagal menambah peserta'); }
+    } catch (e) {
+      showActionError('Gagal Menambah Peserta', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => addParticipant(sessionId));
+    }
   }
 
   async function toggleParticipantPaid(id, currentlyPaid, sessionId) {
+    showActionProcessing('Mengubah Status Bayar…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/community-sessions?resource=participants&id=${id}`, {
         method: 'PATCH',
@@ -2377,26 +2450,34 @@ async function loadStaff() {
         body: JSON.stringify({ paid: !currentlyPaid })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal update status bayar'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal update status bayar');
+      hideActionPopup();
       loadCommunitySessions();
-    } catch (e) { showToast('Gagal update status bayar'); }
+    } catch (e) {
+      showActionError('Gagal Update Status', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => toggleParticipantPaid(id, currentlyPaid, sessionId));
+    }
   }
 
   async function deleteParticipant(id, sessionId) {
     if (!confirm('Hapus peserta ini dari sesi?')) return;
+    showActionProcessing('Menghapus Peserta…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/community-sessions?resource=participants&id=${id}`, {
         method: 'DELETE',
         headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass }
       });
-      if (!res.ok) { showToast('Gagal menghapus peserta'); return; }
+      if (!res.ok) throw new Error('Gagal menghapus peserta');
+      hideActionPopup();
       loadCommunitySessions();
-    } catch (e) { showToast('Gagal menghapus peserta'); }
+    } catch (e) {
+      showActionError('Gagal Menghapus', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => deleteParticipant(id, sessionId));
+    }
   }
 
   async function setSessionStatus(id, status) {
     const msg = status === 'completed' ? 'Tutup sesi ini? Meja bakal available lagi buat booking biasa.' : 'Batalkan sesi ini?';
     if (!confirm(msg)) return;
+    showActionProcessing('Menyimpan Status Sesi…', 'Menyimpan perubahan.');
     try {
       const res = await fetch(`/api/community-sessions?id=${id}`, {
         method: 'PATCH',
@@ -2404,10 +2485,13 @@ async function loadStaff() {
         body: JSON.stringify({ status })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showToast(data.error || 'Gagal mengubah status sesi'); return; }
+      if (!res.ok) throw new Error(data.error || 'Gagal mengubah status sesi');
+      hideActionPopup();
       showToast(status === 'completed' ? '🏁 Sesi ditutup' : '❌ Sesi dibatalkan');
       loadCommunitySessions();
-    } catch (e) { showToast('Gagal mengubah status sesi'); }
+    } catch (e) {
+      showActionError('Gagal Mengubah Status', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => setSessionStatus(id, status));
+    }
   }
 
   // Zona waktu & label ikut cabang: Surabaya = WIB (Asia/Jakarta),
@@ -2437,11 +2521,16 @@ async function loadStaff() {
 
   async function cancelBooking(id) {
     if (!confirm('Batalkan booking ini?')) return;
+    showActionProcessing('Membatalkan Booking…', 'Menyimpan perubahan status.');
     try {
-      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'cancelled'}) });
+      const res = await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'cancelled'}) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak pembatalan'); }
+      hideActionPopup();
       showToast('Booking dibatalkan');
       loadBookings(true);
-    } catch(e) { showToast('Gagal membatalkan'); }
+    } catch(e) {
+      showActionError('Gagal Membatalkan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => cancelBooking(id));
+    }
   }
 
   function switchWiTab(tab) {
@@ -2498,6 +2587,7 @@ async function loadStaff() {
     const label = `🚫 Blokir Meja${reason ? ': ' + reason : ' (Acara)'}`;
     let okCount = 0;
     const failed = [];
+    showActionProcessing('Memblokir Meja…', `Memproses ${selectedIds.length} meja.`);
     for (const tableId of selectedIds) {
       const t = TABLES.find(x => x.id === tableId);
       try {
@@ -2518,6 +2608,7 @@ async function loadStaff() {
         okCount++;
       } catch (e) { failed.push(t ? t.name : tableId); }
     }
+    hideActionPopup();
 
     if (okCount > 0) showToast(`🚫 ${okCount} meja diblokir` + (failed.length ? `, ${failed.length} gagal` : ''));
     if (failed.length) alert('Gagal blokir:\n' + failed.join('\n') + '\n(kemungkinan sudah ada booking di jam itu)');
@@ -2534,11 +2625,16 @@ async function loadStaff() {
   // ubah status jadi cancelled supaya slotnya lepas lagi di halaman customer.
   async function unblockTable(id) {
     if (!confirm('Buka blokir meja ini?')) return;
+    showActionProcessing('Membuka Blokir…', 'Menyimpan perubahan status.');
     try {
-      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'cancelled'}) });
+      const res = await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'cancelled'}) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak permintaan'); }
+      hideActionPopup();
       showToast('🔓 Blokir dibuka');
       loadBookings(true);
-    } catch(e) { showToast('Gagal membuka blokir'); }
+    } catch(e) {
+      showActionError('Gagal Membuka Blokir', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => unblockTable(id));
+    }
   }
 
   // === Status bayar (Walk-in / Input Manual) ===
@@ -2584,6 +2680,7 @@ async function loadStaff() {
     const now = new Date();
     const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const timeKey = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    showActionProcessing('Memproses Check-in…', `Mencatat jam mulai untuk ${name}.`);
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -2599,11 +2696,11 @@ async function loadStaff() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        showToast(err.error ? `⚠️ ${err.error}` : 'Gagal check-in. Coba lagi.');
-        return;
+        throw new Error(err.error || 'Gagal check-in. Coba lagi.');
       }
       const created = await res.json().catch(() => null);
       const codeSuffix = created?.bookingCode ? ` — kode ${created.bookingCode}` : '';
+      hideActionPopup();
       showToast(_ciFree ? `🎁 ${name} main gratis di ${tableName}${codeSuffix}!` : `⚡ ${name} check-in di ${tableName}${codeSuffix}!`);
       document.getElementById('ci_name').value = '';
       document.getElementById('ci_table').value = '';
@@ -2614,7 +2711,9 @@ async function loadStaff() {
       document.getElementById('filterDate').value = dateKey;
       switchTab('timeline');
       loadBookings(true); // paksa ambil data baru — booking yang baru dibuat sempat ketutup cache lama
-    } catch(e) { showToast('Gagal check-in. Coba lagi.'); }
+    } catch(e) {
+      showActionError('Check-in Gagal', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), submitCheckin);
+    }
   }
 
   async function confirmPayLater(id) {
@@ -2623,15 +2722,20 @@ async function loadStaff() {
     if (!confirm(`Konfirmasi "${name}" bayar nanti (saat checkout)?\n\nBooking akan dikonfirmasi tanpa pembayaran di depan.`)) return;
     const existingNotes = b?.notes || '';
     const newNotes = existingNotes ? existingNotes + ' [BAYAR NANTI]' : '[BAYAR NANTI]';
+    showActionProcessing('Mengonfirmasi Booking…', 'Menyimpan perubahan.');
     try {
-      await fetch(`/api/bookings?id=${id}`, {
+      const res = await fetch(`/api/bookings?id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'confirmed', notes: newNotes })
       });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak permintaan'); }
+      hideActionPopup();
       showToast(`✅ ${name} dikonfirmasi — bayar saat checkout`);
       loadBookings(true);
-    } catch(e) { showToast('Gagal. Coba lagi.'); }
+    } catch(e) {
+      showActionError('Gagal Mengonfirmasi', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => confirmPayLater(id));
+    }
   }
 
   // Kecualikan booking pending dari auto-cancel (misal: teman/langganan, bayar nanti di hari H)
@@ -2643,37 +2747,52 @@ async function loadStaff() {
     if (isCurrentlyExcluded) {
       if (!confirm(`Aktifkan kembali auto-cancel untuk "${name}"?\n\nBooking akan kembali bisa di-cancel otomatis kalau belum dibayar dalam 2 jam.`)) return;
       const newNotes = existingNotes.replace(' [SKIP_AUTO_CANCEL]', '').replace('[SKIP_AUTO_CANCEL]', '').trim();
+      showActionProcessing('Menyimpan Perubahan…', 'Mengaktifkan kembali auto-cancel.');
       try {
-        await fetch(`/api/bookings?id=${id}`, {
+        const res = await fetch(`/api/bookings?id=${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notes: newNotes })
         });
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak permintaan'); }
+        hideActionPopup();
         showToast(`🔓 Auto-cancel diaktifkan kembali untuk ${name}`);
         loadBookings(true);
-      } catch(e) { showToast('Gagal. Coba lagi.'); }
+      } catch(e) {
+        showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => toggleExcludeAutoCancel(id, isCurrentlyExcluded));
+      }
     } else {
       if (!confirm(`Kecualikan "${name}" dari auto-cancel?\n\nGunakan ini untuk teman/langganan yang janji bayar nanti (misal di hari H booking), supaya tidak ke-cancel otomatis sebelum sempat bayar.`)) return;
       const newNotes = existingNotes ? existingNotes + ' [SKIP_AUTO_CANCEL]' : '[SKIP_AUTO_CANCEL]';
+      showActionProcessing('Menyimpan Perubahan…', 'Mengecualikan dari auto-cancel.');
       try {
-        await fetch(`/api/bookings?id=${id}`, {
+        const res = await fetch(`/api/bookings?id=${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notes: newNotes })
         });
+        if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak permintaan'); }
+        hideActionPopup();
         showToast(`🔒 ${name} dikecualikan dari auto-cancel`);
         loadBookings(true);
-      } catch(e) { showToast('Gagal. Coba lagi.'); }
+      } catch(e) {
+        showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => toggleExcludeAutoCancel(id, isCurrentlyExcluded));
+      }
     }
   }
 
   async function confirmBooking(id) {
     if (!confirm('Konfirmasi booking ini (pembayaran sudah diterima)?')) return;
+    showActionProcessing('Mengonfirmasi Booking…', 'Menyimpan perubahan.');
     try {
-      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'confirmed'}) });
+      const res = await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'confirmed'}) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak permintaan'); }
+      hideActionPopup();
       showToast('✅ Booking dikonfirmasi!');
       loadBookings(true);
-    } catch(e) { showToast('Gagal mengkonfirmasi'); }
+    } catch(e) {
+      showActionError('Gagal Mengonfirmasi', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => confirmBooking(id));
+    }
   }
 
   async function checkinBooking(id) {
@@ -2727,11 +2846,16 @@ async function loadStaff() {
   }
 
   async function restoreBooking(id) {
+    showActionProcessing('Mengaktifkan Booking…', 'Menyimpan perubahan status.');
     try {
-      await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'confirmed'}) });
+      const res = await fetch(`/api/bookings?id=${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'confirmed'}) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Server menolak permintaan'); }
+      hideActionPopup();
       showToast('Booking diaktifkan kembali');
       loadBookings(true);
-    } catch(e) { showToast('Gagal mengaktifkan'); }
+    } catch(e) {
+      showActionError('Gagal Mengaktifkan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => restoreBooking(id));
+    }
   }
 
   function openEditModal(id) {
@@ -2828,6 +2952,7 @@ async function loadStaff() {
       }
       if (totalRaw !== '') payload.totalPaid = parseInt(totalRaw) || 0;
       if (!confirm('Simpan perubahan booking ini? Ini bisa mempengaruhi jadwal dan laporan revenue.')) return;
+      showActionProcessing('Menyimpan Koreksi…', 'Menyimpan perubahan booking.');
       try {
         const res = await fetch(`/api/bookings?id=${id}`, {
           method: 'PATCH',
@@ -2835,17 +2960,21 @@ async function loadStaff() {
           body: JSON.stringify(payload)
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { showToast(data.error || 'Gagal menyimpan perubahan'); return; }
+        if (!res.ok) throw new Error(data.error || 'Gagal menyimpan perubahan');
+        hideActionPopup();
         showToast('✅ Booking berhasil diedit!');
         closeCorrectionModal();
         loadBookings(true);
-      } catch (e) { showToast('Gagal menyimpan perubahan'); }
+      } catch (e) {
+        showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), saveCorrection);
+      }
     }
     async function voidBooking(id) {
       const b = allBookings.find(x => x.id === id);
       if (!b) return;
       const name = b.customerName.replace(' (walk-in)', '');
       if (!confirm(`Void transaksi "${name}" (${b.bookingCode})?\n\nBooking ini akan dibatalkan dan hilang dari total revenue, tapi datanya tetap tersimpan untuk riwayat/audit.`)) return;
+      showActionProcessing('Memproses Void…', `Membatalkan transaksi ${name}.`);
       try {
         const res = await fetch(`/api/bookings?id=${id}`, {
           method: 'PATCH',
@@ -2853,10 +2982,13 @@ async function loadStaff() {
           body: JSON.stringify({ voidCorrection: true })
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { showToast(data.error || 'Gagal void transaksi'); return; }
+        if (!res.ok) throw new Error(data.error || 'Gagal void transaksi');
+        hideActionPopup();
         showToast('🚫 Transaksi berhasil di-void');
         loadBookings(true);
-      } catch (e) { showToast('Gagal void transaksi'); }
+      } catch (e) {
+        showActionError('Gagal Void', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => voidBooking(id));
+      }
     }
 
   // === SUPER ADMIN: correction modal HTML (injected via JS to avoid editor auto-tag corruption) ===
@@ -3442,6 +3574,7 @@ async function loadStaff() {
     const duration = parseInt(document.getElementById('editDuration').value);
     const notes = document.getElementById('editNotes').value;
     const [tableId, tableName, floor] = tableVal.split('|');
+    showActionProcessing('Menyimpan Perubahan…', 'Menyimpan data booking.');
     try {
       const res = await fetch(`/api/bookings?id=${id}`, {
         method: 'PATCH',
@@ -3453,13 +3586,15 @@ async function loadStaff() {
         // Server menolak (mis. bentrok jadwal, 409) — JANGAN tutup modal
         // atau tampilkan "berhasil", supaya admin sadar update-nya gagal
         // dan meja/jam itu masih dipakai booking lain.
-        showToast(data.error ? `⚠️ ${data.error}` : 'Gagal mengupdate — coba lagi.');
-        return;
+        throw new Error(data.error || 'Gagal mengupdate — coba lagi.');
       }
+      hideActionPopup();
       showToast('✅ Booking berhasil diupdate!');
       closeEditModal();
       loadBookings(true);
-    } catch(e) { showToast('Gagal mengupdate — cek koneksi lalu coba lagi.'); }
+    } catch(e) {
+      showActionError('Gagal Mengupdate', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), saveEdit);
+    }
   }
 
   function showToast(msg) {
@@ -3474,16 +3609,19 @@ async function loadStaff() {
   // yang lewat sekilas) — dipakai buat aksi penting kayak check-in &
   // checkout yang butuh kepastian jelas berhasil/gagal.
   function showActionProcessing(title, msg) {
-    document.getElementById('apIcon').textContent = '⏳';
-    document.getElementById('apIcon').classList.add('spin');
+    const apIcon = document.getElementById('apIcon');
+    apIcon.classList.remove('spin');
+    apIcon.classList.add('mj-processing');
+    apIcon.innerHTML = '<span class="mj-tile">🀇</span><span class="mj-tile">🀇</span><span class="mj-tile">🀇</span>';
     document.getElementById('apTitle').textContent = title || 'Memproses…';
     document.getElementById('apMsg').textContent = msg || 'Mohon tunggu sebentar.';
     document.getElementById('apActions').style.display = 'none';
     document.getElementById('actionPopup').classList.add('open');
   }
   function showActionError(title, msg, retryFn) {
-    document.getElementById('apIcon').textContent = '⚠️';
-    document.getElementById('apIcon').classList.remove('spin');
+    const apIcon = document.getElementById('apIcon');
+    apIcon.classList.remove('spin', 'mj-processing');
+    apIcon.textContent = '⚠️';
     document.getElementById('apTitle').textContent = title || 'Gagal';
     document.getElementById('apMsg').textContent = msg || 'Terjadi kesalahan. Coba lagi ya.';
     const actions = document.getElementById('apActions');
@@ -3679,6 +3817,7 @@ async function loadStaff() {
 
     const [tableId, tableName, floor, location] = tableVal.split('|');
 
+    showActionProcessing('Menyimpan Booking Manual…', 'Menyimpan data booking.');
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -3691,9 +3830,9 @@ async function loadStaff() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        showToast(err.error ? `⚠️ ${err.error}` : 'Gagal menyimpan. Coba lagi.');
-        return;
+        throw new Error(err.error || 'Gagal menyimpan. Coba lagi.');
       }
+      hideActionPopup();
       showToast('✅ Booking manual berhasil disimpan!');
       document.getElementById('mi_name').value = '';
       document.getElementById('mi_time').value = '';
@@ -3707,7 +3846,7 @@ async function loadStaff() {
       switchTab('timeline');
       loadBookings(true); // paksa ambil data baru — sama alasannya seperti walk-in di atas
     } catch(e) {
-      showToast('Gagal menyimpan. Coba lagi.');
+      showActionError('Gagal Menyimpan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), submitManual);
     }
   }
 
