@@ -15,7 +15,9 @@ export function verifyPassword(password: string, stored: string): boolean {
     return hashBuf.length === derived.length && timingSafeEqual(hashBuf, derived);
 }
 
+let _ensureStaffTableReady = false;
 export async function ensureStaffTable(db: any) {
+    if (_ensureStaffTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS staff (
               id serial PRIMARY KEY,
@@ -26,9 +28,12 @@ export async function ensureStaffTable(db: any) {
                                             created_at timestamp DEFAULT now()
                                                 )
                                                   `);
+    _ensureStaffTableReady = true;
 }
 
+let _ensurePromosTableReady = false;
 export async function ensurePromosTable(db: any) {
+    if (_ensurePromosTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS promos (
               id serial PRIMARY KEY,
@@ -41,13 +46,16 @@ export async function ensurePromosTable(db: any) {
                                                         created_at timestamp DEFAULT now()
                                                             )
                                                               `);
+    _ensurePromosTableReady = true;
 }
 
 // Metode pembayaran dikelola Super Admin saja (POST/PATCH digate di
 // payment-methods.ts, pola sama seperti promos.ts). Staff hanya baca (GET)
 // buat isi tombol pilihan bayar di POS. `key` dipakai sebagai value yang
 // disimpan di bookings.paymentMethod (jadi tidak berubah walau label diedit).
+let _ensurePaymentMethodsTableReady = false;
 export async function ensurePaymentMethodsTable(db: any) {
+    if (_ensurePaymentMethodsTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS payment_methods (
               id serial PRIMARY KEY,
@@ -67,6 +75,7 @@ export async function ensurePaymentMethodsTable(db: any) {
         VALUES ('tunai', 'Tunai', '💵', 1), ('qris', 'QRIS', '📱', 2), ('debit', 'Debit BCA', '💳', 3)
         ON CONFLICT (key) DO NOTHING
     `);
+    _ensurePaymentMethodsTableReady = true;
 }
 
 // Jam operasional per cabang per hari. Seed di bawah = jam yang berlaku saat
@@ -82,7 +91,9 @@ export async function ensurePaymentMethodsTable(db: any) {
 // berjalan tidak berubah. Setelah ini, Super Admin nambah/ubah meja lewat
 // tab "Kelola Meja" — ON CONFLICT DO NOTHING supaya seed tidak menimpa
 // perubahan yang sudah dibuat.
+let _ensureVenueTablesTableReady = false;
 export async function ensureVenueTablesTable(db: any) {
+    if (_ensureVenueTablesTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS venue_tables (
             id serial PRIMARY KEY,
@@ -114,9 +125,12 @@ export async function ensureVenueTablesTable(db: any) {
             ('b3', 'Autumn Table', 'manual', 30000, 'Denpasar, Bali', 'denpasar', '4 orang', '🍂', '', 8)
         ON CONFLICT (table_key) DO NOTHING
     `);
+    _ensureVenueTablesTableReady = true;
 }
 
+let _ensureOperatingHoursTableReady = false;
 export async function ensureOperatingHoursTable(db: any) {
+    if (_ensureOperatingHoursTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS operating_hours (
               id serial PRIMARY KEY,
@@ -142,17 +156,23 @@ export async function ensureOperatingHoursTable(db: any) {
             ON CONFLICT (location, day_of_week) DO NOTHING
         `);
     }
+    _ensureOperatingHoursTableReady = true;
 }
 
+let _ensureLocationColumnsReady = false;
 export async function ensureLocationColumns(db: any) {
+    if (_ensureLocationColumnsReady) return;
         await db.execute(sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
         await db.execute(sql`ALTER TABLE staff ADD COLUMN IF NOT EXISTS location text NOT NULL DEFAULT 'surabaya'`);
+    _ensureLocationColumnsReady = true;
 }
 
 // Bootstrap untuk fitur "Acara Main Bareng" (community sessions, per-seat
 // pricing). Dua tabel: sesi (meja + jam + harga/orang) dan peserta (nama +
 // jumlah orang + status bayar, banyak peserta per sesi).
+let _ensureCommunityTablesReady = false;
 export async function ensureCommunityTables(db: any) {
+    if (_ensureCommunityTablesReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS community_sessions (
             id serial PRIMARY KEY,
@@ -182,4 +202,5 @@ export async function ensureCommunityTables(db: any) {
             created_at timestamp DEFAULT now()
         )
     `);
+    _ensureCommunityTablesReady = true;
 }

@@ -5,7 +5,9 @@ import { sql } from "drizzle-orm";
 // authUtils.ts. This exists as a safety net so the feature works even before
 // a proper Drizzle migration has been run against the production database.
 // It NEVER touches the existing bookings/members/staff tables.
+let _ensureMahjongTablesReady = false;
 export async function ensureMahjongTables(db: any) {
+  if (_ensureMahjongTablesReady) return;
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS mahjong_games (
       id serial PRIMARY KEY,
@@ -45,6 +47,7 @@ export async function ensureMahjongTables(db: any) {
       created_at timestamp DEFAULT now()
     )
   `);
+  _ensureMahjongTablesReady = true;
 }
 
 // Additive safety net: the pre-existing `members` table referenced by
@@ -52,7 +55,9 @@ export async function ensureMahjongTables(db: any) {
 // was never actually provisioned in some environments. This mirrors the
 // CREATE TABLE IF NOT EXISTS pattern above -- it never touches or drops
 // any existing member data, it only creates the table if missing.
+let _ensureMembersTableReady = false;
 export async function ensureMembersTable(db: any) {
+  if (_ensureMembersTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS members (
               id serial PRIMARY KEY,
@@ -62,6 +67,7 @@ export async function ensureMembersTable(db: any) {
                                       created_at timestamp DEFAULT now()
                                           )
                                             `);
+  _ensureMembersTableReady = true;
 }
 
 // Additive safety net: adds the session_id column used to group consecutive
@@ -69,8 +75,11 @@ export async function ensureMembersTable(db: any) {
 // the "same players?" prompt in mahjong.html) into one running point total.
 // Existing games/events are left untouched -- rows with session_id = NULL
 // are simply treated as their own single-game session by the API.
+let _ensureSessionIdColumnReady = false;
 export async function ensureSessionIdColumn(db: any) {
+  if (_ensureSessionIdColumnReady) return;
     await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS session_id integer`);
+  _ensureSessionIdColumnReady = true;
 }
 
 // Additive safety net: adds the scoring_system column so hosts can choose,
@@ -80,9 +89,12 @@ export async function ensureSessionIdColumn(db: any) {
 // 'hongkong' in the database; that's fine, the application code treats any
 // value that isn't "china" as the Taiwan-style system, so old rows keep
 // working with no data migration needed. New rows default to 'taiwan'.
+let _ensureScoringSystemColumnReady = false;
 export async function ensureScoringSystemColumn(db: any) {
+  if (_ensureScoringSystemColumnReady) return;
     await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS scoring_system text NOT NULL DEFAULT 'taiwan'`);
     await db.execute(sql`ALTER TABLE mahjong_games ALTER COLUMN scoring_system SET DEFAULT 'taiwan'`);
+  _ensureScoringSystemColumnReady = true;
 }
 
 // Additive safety net: groups every event inserted by a single scoring
@@ -92,8 +104,11 @@ export async function ensureScoringSystemColumn(db: any) {
 // instead of just the last single row. NULL for any pre-existing event
 // rows -- those are simply not undo-able, which is fine (they predate the
 // feature and staff can still use manual correction on them).
+let _ensureActionGroupColumnReady = false;
 export async function ensureActionGroupColumn(db: any) {
+  if (_ensureActionGroupColumnReady) return;
     await db.execute(sql`ALTER TABLE mahjong_events ADD COLUMN IF NOT EXISTS action_group text`);
+  _ensureActionGroupColumnReady = true;
 }
 
 // Additive safety net: tiny generic key/value settings table. First (and so
@@ -102,7 +117,9 @@ export async function ensureActionGroupColumn(db: any) {
 // game/event/player row (that would also wipe personal riwayat/statistik,
 // which pull from the same tables) -- it only moves this cutoff forward so
 // the public leaderboard's "Semua Waktu" view starts counting from here.
+let _ensureMahjongSettingsTableReady = false;
 export async function ensureMahjongSettingsTable(db: any) {
+  if (_ensureMahjongSettingsTableReady) return;
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS mahjong_settings (
             key text PRIMARY KEY,
@@ -110,5 +127,6 @@ export async function ensureMahjongSettingsTable(db: any) {
             updated_at timestamp DEFAULT now()
         )
     `);
+  _ensureMahjongSettingsTableReady = true;
 }
 
