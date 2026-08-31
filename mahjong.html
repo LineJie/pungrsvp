@@ -325,7 +325,7 @@ function submitAddPlayer(){
     closeModal("modalAddPlayer");
     toast("Pemain \"" + name + "\" ditambahkan. Sekarang kasih skornya lewat \u270f\ufe0f Koreksi Skor.");
     if (S.game && S.game.id === gameId) loadGameForBooking();
-    if (qs("modalHistory").style.display !== "none") loadBrowseGames();
+    if (qs("modalHistory").classList.contains("open")) loadBrowseGames();
   });
 }
 function openStaffCorrection(target){
@@ -373,7 +373,8 @@ function submitStaffCorrection(){
     closeModal("modalStaffCorrection");
     toast("Koreksi tersimpan (" + (points>0?"+":"") + points + " poin)");
     if (S.game) loadGameForBooking();
-    if (qs("modalLeaderboard").style.display !== "none") loadLeaderboard();
+    if (qs("modalLeaderboard").classList.contains("open")) loadLeaderboard();
+    if (qs("modalHistory").classList.contains("open") && S._lastHistRefresh) S._lastHistRefresh();
   });
 }
 function openStaffRename(pid){
@@ -1064,6 +1065,7 @@ function loadHistory(){
   var wa = qs("histWa").value.trim();
   if (!wa) return;
   localStorage.setItem("mj_wa", wa);
+  S._lastHistRefresh = loadHistory;
   apiGet("/api/mahjong/events?historyWa=" + encodeURIComponent(wa)).then(function(res){
     var list = res.data || [];
     var h = "";
@@ -1075,6 +1077,7 @@ function loadHistory(){
 function loadHistoryByName(){
   var name = qs("histName").value.trim();
   if (!name) return;
+  S._lastHistRefresh = loadHistoryByName;
   qs("histList").innerHTML = "<div class=\"muted\">Mencari...</div>";
   apiGetAuth("/api/mahjong/events?historyName=" + encodeURIComponent(name)).then(function(res){
     if (!res.ok) { qs("histList").innerHTML = "<div class=\"muted\">" + esc(res.data.error || "Gagal mencari.") + "</div>"; return; }
@@ -1086,6 +1089,7 @@ function loadHistoryByName(){
   });
 }
 function loadBrowseGames(){
+  S._lastHistRefresh = loadBrowseGames;
   qs("histList").innerHTML = "<div class=\"muted\">Memuat...</div>";
   apiGetAuth("/api/mahjong/events?browseGames=1").then(function(res){
     if (!res.ok) { qs("histList").innerHTML = "<div class=\"muted\">" + esc(res.data.error || "Gagal memuat.") + "</div>"; return; }
