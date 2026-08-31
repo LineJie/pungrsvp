@@ -289,6 +289,9 @@ export default async (req: Request) => {
         sessionIds: Set<number>;
         wins: number;
         results: { endedAt: number; won: boolean }[];
+        lastGameId?: number;
+        lastPlayerId?: number;
+        lastEndedAtMs?: number;
       };
       const totalsByKey: Record<string, PlayerAgg> = {};
 
@@ -307,6 +310,18 @@ export default async (req: Request) => {
         agg.sessionIds.add(g.sessionId || g.id);
         if (won) agg.wins += 1;
         agg.results.push({ endedAt: new Date((g.endedAt || g.createdAt) as any).getTime(), won });
+        // Track this identity's most recently played game+player row, so a
+        // staff/superadmin correction made straight from the Leaderboard
+        // (outside any specific game) has somewhere valid to attach to --
+        // any event on any of their games counts toward this same summed
+        // score above, so the most recent one is just the most sensible
+        // default target.
+        const endedAtMs = new Date((g.endedAt || g.createdAt) as any).getTime();
+        if (agg.lastGameId == null || endedAtMs >= (agg.lastEndedAtMs ?? -Infinity)) {
+          agg.lastGameId = g.id;
+          agg.lastPlayerId = p.id;
+          agg.lastEndedAtMs = endedAtMs;
+        }
       });
 
       const ranked = Object.values(totalsByKey)
@@ -327,6 +342,8 @@ export default async (req: Request) => {
             sessions: r.sessionIds.size,
             avgPerGame: gamesCount ? Math.round((r.score / gamesCount) * 10) / 10 : 0,
             form,
+            lastGameId: r.lastGameId,
+            lastPlayerId: r.lastPlayerId,
           };
         });
 
@@ -527,7 +544,7 @@ export default async (req: Request) => {
       }
       let deltas;
       try {
-        deltas = calculateKongScore(type, kongerId, allPlayerIds, discardedByPlayerId);
+        deltas = calculateKongScore(type, kongerId, allPlayerIds, discardedByPlayerId, scoringSystem);
       } catch (e: any) {
         return Response.json({ error: e.message || "Invalid Kong data" }, { status: 400 });
       }
