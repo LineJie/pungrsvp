@@ -158,6 +158,8 @@ export default async (req: Request) => {
   if (req.method === "GET") {
     const gameId = url.searchParams.get("gameId");
     const historyWa = url.searchParams.get("historyWa");
+    const historyName = url.searchParams.get("historyName");
+    const browseGames = url.searchParams.get("browseGames");
     const statsWa = url.searchParams.get("statsWa");
     const leaderboard = url.searchParams.get("leaderboard");
     const leaderboardSeasonInfo = url.searchParams.get("leaderboardSeasonInfo");
@@ -210,6 +212,7 @@ export default async (req: Request) => {
         const myTotal = events.filter((e) => e.playerId === myPlayer.id).reduce((s, e) => s + e.points, 0);
         return {
           gameId: g.id,
+          playerId: myPlayer.id,
           tableName: g.tableName,
           location: g.location,
           scoringSystem: g.scoringSystem,
@@ -219,6 +222,70 @@ export default async (req: Request) => {
         };
       }).sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
       return Response.json(history);
+    }
+
+    // Staff/Super Admin only: same shape as historyWa above, but matched by
+    // name (case-insensitive, partial match) instead of an exact WA number --
+    // for looking a player up when staff only knows their name, or when the
+    // player never gave a WA number. Since names aren't unique, each row
+    // also carries the matched player's own name + waNumber so staff can
+    // tell different people with the same name apart.
+    if (historyName) {
+      const staffCheck = await checkStaffReq(req);
+      if (!staffCheck.ok) return Response.json({ error: "Login staff diperlukan" }, { status: 403 });
+      const needle = historyName.trim().toLowerCase();
+      if (!needle) return Response.json([]);
+      const allPlayers = await db.select().from(mahjongPlayers);
+      const myPlayers = allPlayers.filter((p) => (p.name || "").toLowerCase().includes(needle));
+      const gameIds = [...new Set(myPlayers.map((p) => p.gameId))];
+      if (!gameIds.length) return Response.json([]);
+      const games = await db.select().from(mahjongGames).where(inArray(mahjongGames.id, gameIds));
+      const finished = games.filter((g) => g.status === "finished_win" || g.status === "draw");
+      const events = await db.select().from(mahjongEvents).where(inArray(mahjongEvents.gameId, finished.map((g) => g.id)));
+      const history = finished.flatMap((g) => {
+        const matches = myPlayers.filter((p) => p.gameId === g.id);
+        return matches.map((myPlayer) => {
+          const myTotal = events.filter((e) => e.playerId === myPlayer.id).reduce((s, e) => s + e.points, 0);
+          return {
+            gameId: g.id,
+            playerId: myPlayer.id,
+            playerName: myPlayer.name,
+            waNumber: myPlayer.waNumber || "",
+            tableName: g.tableName,
+            location: g.location,
+            scoringSystem: g.scoringSystem,
+            date: g.endedAt || g.createdAt,
+            score: myTotal,
+            result: g.status === "draw" ? "DRAW" : g.winnerPlayerId === myPlayer.id ? "WIN" : "LOSE",
+          };
+        });
+      }).sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
+      return Response.json(history);
+    }
+
+    // Staff/Super Admin only: browse recent game rounds directly (no name or
+    // WA number needed) -- e.g. when staff remembers the table/time but not
+    // who was playing. Returns each round with its seated players so staff
+    // can open straight into a correction from there.
+    if (browseGames) {
+      const staffCheck = await checkStaffReq(req);
+      if (!staffCheck.ok) return Response.json({ error: "Login staff diperlukan" }, { status: 403 });
+      const location = url.searchParams.get("location");
+      let games = await db.select().from(mahjongGames).where(inArray(mahjongGames.status, ["finished_win", "draw"]));
+      if (location && location !== "all") games = games.filter((g) => g.location === location);
+      games = games.sort((a, b) => new Date((b.endedAt || b.createdAt) as any).getTime() - new Date((a.endedAt || a.createdAt) as any).getTime()).slice(0, 30);
+      const gameIds = games.map((g) => g.id);
+      const players = gameIds.length ? await db.select().from(mahjongPlayers).where(inArray(mahjongPlayers.gameId, gameIds)) : [];
+      const rounds = games.map((g) => ({
+        gameId: g.id,
+        tableName: g.tableName,
+        location: g.location,
+        scoringSystem: g.scoringSystem,
+        status: g.status,
+        date: g.endedAt || g.createdAt,
+        players: players.filter((p) => p.gameId === g.id).sort((a, b) => a.seatNumber - b.seatNumber).map((p) => ({ playerId: p.id, name: p.name, waNumber: p.waNumber || "" })),
+      }));
+      return Response.json(rounds);
     }
 
     if (statsWa) {
@@ -555,6 +622,36 @@ export default async (req: Request) => {
       }
   const { scoreboard } = await loadSessionAccumulated(game, players);
         return Response.json({ events: inserted, scoreboard }, { status: 201 });
+    }
+
+    // Staff-only: add a player who was missed when the game was originally
+    // set up (e.g. a whole round that got recorded late, after everyone
+    // already left). Deliberately allowed on ANY game status, finished
+    // games included -- that's the whole point, unlike the normal "join"
+    // flow in mahjong-games.ts which only works before/during active play.
+    // Only touches mahjong_players (adds a row); doesn't score anything by
+    // itself -- staff still needs to give them their points via the
+    // "correction" action right after.
+    if (action === "addPlayer") {
+      const staffCheck = await checkStaffReq(req);
+      if (!staffCheck.ok) {
+        return Response.json({ error: "Login staff diperlukan untuk menambah pemain" }, { status: 403 });
+      }
+      const { name, waNumber } = body;
+      if (!name || !String(name).trim()) {
+        return Response.json({ error: "Nama wajib diisi" }, { status: 400 });
+      }
+      const nextSeat = players.length ? Math.max(...players.map((p) => p.seatNumber)) + 1 : 1;
+      const [row] = await db.insert(mahjongPlayers).values({
+        gameId: game.id,
+        name: String(name).trim(),
+        waNumber: typeof waNumber === "string" ? waNumber.trim() : "",
+        seatNumber: nextSeat,
+      }).returning();
+      const refreshed = await db.select().from(mahjongPlayers).where(eq(mahjongPlayers.gameId, game.id));
+      refreshed.sort((a: any, b: any) => a.seatNumber - b.seatNumber);
+      const { scoreboard } = await loadSessionAccumulated(game, refreshed);
+      return Response.json({ player: row, scoreboard }, { status: 201 });
     }
 
     // Staff-only correction (admin or kasir) — always additive, never edits
