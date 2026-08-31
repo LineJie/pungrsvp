@@ -182,6 +182,14 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
   <div class="muted" id="renameErr" style="color:var(--red);display:none;"></div>
   <button class="btn btn-gold" onclick="submitStaffRename()">Simpan</button>
 </div></div>
+<div class="modal-overlay" id="modalAddPlayer"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalAddPlayer')">&#x2715;</button><div class="modal-title">➕ Tambah Pemain Terlewat</div>
+  <input type="hidden" id="addPlayerGameId">
+  <div class="muted" style="text-align:left;padding:0 0 10px;">Buat pemain yang kelewat dicatat di game/round yang sudah selesai. Setelah tersimpan, kasih skornya lewat ✏️ Koreksi Skor.</div>
+  <div class="label">Nama</div><input class="field" id="addPlayerName" placeholder="Nama pemain">
+  <div class="label">Nomor WhatsApp (opsional)</div><input class="field" id="addPlayerWa" placeholder="08xxxxxxxxxx">
+  <div class="muted" id="addPlayerErr" style="color:var(--red);display:none;"></div>
+  <button class="btn btn-gold" onclick="submitAddPlayer()">Tambah Pemain</button>
+</div></div>
 <script>
 var S = { code:null, booking:null, game:null, players:[], events:[], nav:"score", lastPlayers:[], lastMyIndex:-1, lastSessionId:null, lastScoringSystem:null, sessionGamesCount:1, pickedScoringSystem:"hongkong", staffUser:null, staffPass:null, staffName:null };
 // Catatan: key internal "hongkong" TETAP dipertahankan (dipakai sebagai value
@@ -283,6 +291,7 @@ function staffPanelHtml(){
   h += "<div class=\"staff-panel-title\"><span>🔓 Panel Staff — " + esc(S.staffName) + "</span><span class=\"logout-link\" onclick=\"staffLogout()\">Keluar</span></div>";
   h += "<button class=\"btn btn-outline btn-sm\" onclick=\"doUndo()\">↩️ Undo Aksi Terakhir</button>";
   h += "<button class=\"btn btn-outline btn-sm\" onclick=\"openStaffCorrection()\">✏️ Koreksi Skor</button>";
+  h += "<button class=\"btn btn-outline btn-sm\" onclick=\"openAddPlayer(S.game.id)\">➕ Tambah Pemain Terlewat</button>";
   h += "<div class=\"label\" style=\"margin-top:10px;\">Perbaiki Nama Pemain</div>";
   S.players.slice().sort(function(a,b){ return a.seatNumber-b.seatNumber; }).forEach(function(p){
     h += "<div class=\"staff-rename-row\"><span>" + esc(p.name) + " (Seat " + p.seatNumber + ")</span><span class=\"edit-pencil\" onclick=\"openStaffRename(" + p.id + ")\">✏️ Edit</span></div>";
@@ -297,6 +306,26 @@ function doUndo(){
     var lbl = (res.data.undone && res.data.undone.label) || "aksi terakhir";
     toast("Berhasil di-undo: " + lbl + (res.data.undone && res.data.undone.reopened ? " (game dibuka lagi)" : ""));
     loadGameForBooking();
+  });
+}
+function openAddPlayer(gameId){
+  qs("addPlayerGameId").value = gameId;
+  qs("addPlayerName").value = ""; qs("addPlayerWa").value = "";
+  qs("addPlayerErr").style.display = "none";
+  showModal("modalAddPlayer");
+}
+function submitAddPlayer(){
+  var gameId = parseInt(qs("addPlayerGameId").value);
+  var name = qs("addPlayerName").value.trim();
+  var wa = qs("addPlayerWa").value.trim();
+  var err = qs("addPlayerErr");
+  if (!gameId || !name) { err.textContent = "Nama wajib diisi."; err.style.display = "block"; return; }
+  apiSendAuth("/api/mahjong/events", "POST", {gameId:gameId, action:"addPlayer", name:name, waNumber:wa}).then(function(res){
+    if (!res.ok) { err.textContent = res.data.error || "Gagal menambah pemain."; err.style.display = "block"; return; }
+    closeModal("modalAddPlayer");
+    toast("Pemain \"" + name + "\" ditambahkan. Sekarang kasih skornya lewat \u270f\ufe0f Koreksi Skor.");
+    if (S.game && S.game.id === gameId) loadGameForBooking();
+    if (qs("modalHistory").style.display !== "none") loadBrowseGames();
   });
 }
 function openStaffCorrection(target){
@@ -1007,10 +1036,29 @@ function navClick(which){
 }
 function openHistory(){
   var wa = localStorage.getItem("mj_wa") || "";
-  var h = "<div class=\"label\">Nomor WhatsApp Kamu</div><input class=\"field\" id=\"histWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadHistory()\">Tampilkan Riwayat Saya</button><div id=\"histList\"></div>";
+  var h = "<div class=\"label\">Nomor WhatsApp Kamu</div><input class=\"field\" id=\"histWa\" value=\"" + esc(wa) + "\" placeholder=\"08xxxxxxxxxx\"><button class=\"btn btn-primary\" onclick=\"loadHistory()\">Tampilkan Riwayat Saya</button>";
+  if (S.staffUser) {
+    h += "<div style=\"margin-top:16px;padding-top:14px;border-top:1px solid var(--border);\">";
+    h += "<div class=\"label\">🔓 Cari by Nama (Admin/Staff)</div>";
+    h += "<input class=\"field\" id=\"histName\" placeholder=\"Nama pemain...\"><button class=\"btn btn-outline\" onclick=\"loadHistoryByName()\">Cari</button>";
+    h += "<button class=\"btn btn-outline\" style=\"margin-top:8px;\" onclick=\"loadBrowseGames()\">📋 Lihat Perputaran Game Terakhir</button>";
+    h += "</div>";
+  }
+  h += "<div id=\"histList\"></div>";
   qs("histBody").innerHTML = h;
   showModal("modalHistory");
   if (wa) loadHistory();
+}
+function historyRowHtml(g, displayName){
+  var d = new Date(g.date); var dateStr = isNaN(d) ? "" : d.toLocaleDateString();
+  var resultColor = g.result === "WIN" ? "var(--green-mid)" : g.result === "DRAW" ? "var(--text-muted)" : "var(--red)";
+  var nameLine = displayName ? ("<div class=\"pname\">" + esc(displayName) + (g.waNumber ? " &middot; " + esc(g.waNumber) : "") + "</div>") : "";
+  var h = "<div class=\"player-row\"><div>" + nameLine + "<div class=\"pname\">" + esc(g.tableName) + " - " + dateStr + "</div><div class=\"pseat\">Score: " + g.score + "</div></div><div style=\"display:flex;align-items:center;gap:6px;\"><div style=\"font-weight:700;color:" + resultColor + ";\">" + g.result + "</div>";
+  if (S.staffUser && g.gameId && g.playerId) {
+    h += "<span class=\"lb-edit-icon\" title=\"Koreksi skor\" onclick=\"openLeaderboardCorrection('" + esc(displayName||"").replace(/'/g,"\\'") + "'," + g.gameId + "," + g.playerId + ")\">\u270f\ufe0f</span>";
+  }
+  h += "</div></div>";
+  return h;
 }
 function loadHistory(){
   var wa = qs("histWa").value.trim();
@@ -1020,10 +1068,39 @@ function loadHistory(){
     var list = res.data || [];
     var h = "";
     if (!list.length) { h = "<div class=\"muted\">Belum ada permainan untuk nomor ini.</div>"; }
-    list.forEach(function(g){
-      var d = new Date(g.date); var dateStr = isNaN(d) ? "" : d.toLocaleDateString();
-      var resultColor = g.result === "WIN" ? "var(--green-mid)" : g.result === "DRAW" ? "var(--text-muted)" : "var(--red)";
-      h += "<div class=\"player-row\"><div><div class=\"pname\">" + esc(g.tableName) + " - " + dateStr + "</div><div class=\"pseat\">Score: " + g.score + "</div></div><div style=\"font-weight:700;color:" + resultColor + ";\">" + g.result + "</div></div>";
+    list.forEach(function(g){ h += historyRowHtml(g, null); });
+    qs("histList").innerHTML = h;
+  });
+}
+function loadHistoryByName(){
+  var name = qs("histName").value.trim();
+  if (!name) return;
+  qs("histList").innerHTML = "<div class=\"muted\">Mencari...</div>";
+  apiGetAuth("/api/mahjong/events?historyName=" + encodeURIComponent(name)).then(function(res){
+    if (!res.ok) { qs("histList").innerHTML = "<div class=\"muted\">" + esc(res.data.error || "Gagal mencari.") + "</div>"; return; }
+    var list = res.data || [];
+    var h = "";
+    if (!list.length) { h = "<div class=\"muted\">Nggak ada hasil untuk nama itu.</div>"; }
+    list.forEach(function(g){ h += historyRowHtml(g, g.playerName); });
+    qs("histList").innerHTML = h;
+  });
+}
+function loadBrowseGames(){
+  qs("histList").innerHTML = "<div class=\"muted\">Memuat...</div>";
+  apiGetAuth("/api/mahjong/events?browseGames=1").then(function(res){
+    if (!res.ok) { qs("histList").innerHTML = "<div class=\"muted\">" + esc(res.data.error || "Gagal memuat.") + "</div>"; return; }
+    var rounds = res.data || [];
+    var h = "";
+    if (!rounds.length) { h = "<div class=\"muted\">Belum ada perputaran game selesai.</div>"; }
+    rounds.forEach(function(r){
+      var d = new Date(r.date); var dateStr = isNaN(d) ? "" : (d.toLocaleDateString() + " " + d.toLocaleTimeString().slice(0,5));
+      h += "<div class=\"player-row\" style=\"flex-direction:column;align-items:flex-start;\"><div class=\"pname\">" + esc(r.tableName) + " &middot; " + esc(r.location) + " &middot; " + dateStr + "</div>";
+      r.players.forEach(function(p){
+        h += "<div style=\"display:flex;justify-content:space-between;width:100%;padding:4px 0;\"><span class=\"pseat\">" + esc(p.name) + "</span>";
+        h += "<span class=\"lb-edit-icon\" title=\"Koreksi skor\" onclick=\"openLeaderboardCorrection('" + esc(p.name).replace(/'/g,"\\'") + "'," + r.gameId + "," + p.playerId + ")\">\u270f\ufe0f</span></div>";
+      });
+      h += "<button class=\"btn btn-outline btn-sm\" style=\"margin-top:6px;\" onclick=\"openAddPlayer(" + r.gameId + ")\">➕ Tambah Pemain Terlewat</button>";
+      h += "</div>";
     });
     qs("histList").innerHTML = h;
   });
