@@ -543,7 +543,7 @@ export default async (req: Request) => {
       }
 
       // Taiwan style
-      const { winnerPlayerId, mode, discarderId, pongNaga = 0, kongNaga = 0, pongAngin = 0, kongAngin = 0 } = body as {
+      const { winnerPlayerId, mode, discarderId, pongNaga = 0, kongNaga = 0, pongAngin = 0, kongAngin = 0, isAllStraight = false } = body as {
         winnerPlayerId: number;
         mode: WinMode;
         discarderId?: number;
@@ -551,6 +551,7 @@ export default async (req: Request) => {
         kongNaga?: number;
         pongAngin?: number;
         kongAngin?: number;
+        isAllStraight?: boolean;
       };
       if (!allPlayerIds.includes(winnerPlayerId)) {
         return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
@@ -558,7 +559,7 @@ export default async (req: Request) => {
 
       let hand;
       try {
-        hand = calculateTaiwanHandScore({ mode, pongNaga, kongNaga, pongAngin, kongAngin });
+        hand = calculateTaiwanHandScore({ mode, pongNaga, kongNaga, pongAngin, kongAngin, isAllStraight });
       } catch (e: any) {
         return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
       }
