@@ -57,15 +57,21 @@ export interface KongScoreDelta {
 }
 
 /**
- * Kong from discard: konger +5, the player whose discard was taken -5.
- * Kong from wall: konger +6, the other three seated players -2 each
- * (nets to 0 across the table).
+ * China style: Kong from discard: konger +5, the player whose discard was
+ * taken -5. Kong from wall: konger +6, the other three seated players -2
+ * each (nets to 0 across the table).
+ *
+ * Taiwan style: Kong is purely additive — only the konger gets points,
+ * nobody is deducted. Kong from discard: konger +5. Kong from wall: konger
+ * +6. (Confirmed house rule, Aug 2026 — Taiwan does not dock opponents for
+ * a declared Kong, unlike the old China/Hongkong-style table.)
  */
 export function calculateKongScore(
     type: KongType,
     kongerId: number,
     allPlayerIds: number[],
-    discardedByPlayerId?: number
+    discardedByPlayerId?: number,
+    scoringSystem: ScoringSystem = "china"
   ): KongScoreDelta[] {
     if (!allPlayerIds.includes(kongerId)) {
           throw new Error("Konger must be a seated player in this game");
@@ -81,6 +87,11 @@ export function calculateKongScore(
         if (!allPlayerIds.includes(discardedByPlayerId)) {
                 throw new Error("Discarding player must be seated in this game");
         }
+        if (scoringSystem === "taiwan") {
+          return [
+            { playerId: kongerId, points: 5, eventType: "KONG_FROM_DISCARD", relatedPlayerId: discardedByPlayerId, label: "Kong from Discard" },
+          ];
+        }
         return [
           { playerId: kongerId, points: 5, eventType: "KONG_FROM_DISCARD", relatedPlayerId: discardedByPlayerId, label: "Kong from Discard" },
           { playerId: discardedByPlayerId, points: -5, eventType: "KONG_FROM_DISCARD", relatedPlayerId: kongerId, label: "Discard Taken for Kong" },
@@ -91,6 +102,11 @@ export function calculateKongScore(
         const others = allPlayerIds.filter((id) => id !== kongerId);
         if (others.length !== 3) {
                 throw new Error("Kong from wall requires exactly 4 seated players");
+        }
+        if (scoringSystem === "taiwan") {
+          return [
+            { playerId: kongerId, points: 6, eventType: "KONG_FROM_WALL", label: "Kong from Wall" },
+          ];
         }
         return [
           { playerId: kongerId, points: 6, eventType: "KONG_FROM_WALL", label: "Kong from Wall" },
@@ -299,12 +315,15 @@ export const TAIWAN_NAGA_KONG_POINTS = 4;
 export const TAIWAN_ANGIN_PONG_POINTS = 2;
 export const TAIWAN_ANGIN_KONG_POINTS = 4;
 
+export const TAIWAN_ALL_STRAIGHT_POINTS = 1;
+
 export interface TaiwanHandInput {
     mode: WinMode;
     pongNaga: number;  // count of Dragon triplets in the hand, 0-3 (Red/Green/White)
     kongNaga: number;  // count of Dragon quads in the hand, 0-3
     pongAngin: number; // count of Wind triplets in the hand, 0-4 (E/S/W/N)
     kongAngin: number; // count of Wind quads in the hand, 0-4
+    isAllStraight?: boolean; // hand bonus: all 4 sets are sequences forming a straight run
 }
 
 function assertCount(n: unknown, max: number, label: string): number {
@@ -315,34 +334,41 @@ function assertCount(n: unknown, max: number, label: string): number {
 }
 
 /**
- * Full win calculation (Taiwan style): base Wu (+1), Zimo bonus (+2, only
- * if self-draw), plus every Naga/Angin Pong/Kong the host counted in the
- * winning hand. Each component is recorded as its own 0-point FAN_COMBO
- * event (so the breakdown stays visible in history) — the real point
- * movement happens via calculateFanWinPayments() downstream, same as
- * before.
+ * Full win calculation (Taiwan style). Base win bonus depends on mode --
+ * confirmed house rule, Aug 2026: Zimo (self-draw) is a flat +2, Hu (win
+ * off a discard) is a flat +1 — these do NOT stack (a Zimo win does not
+ * also get the Hu/Wu +1 on top). Plus every Naga/Angin Pong/Kong the host
+ * counted, plus the All Straight hand bonus (+1) if the whole hand is one
+ * straight run of sequences. Each component is recorded as its own
+ * 0-point FAN_COMBO event (so the breakdown stays visible in history) --
+ * the real point movement happens via calculateFanWinPayments() downstream,
+ * same as before.
  */
 export function calculateTaiwanHandScore(input: TaiwanHandInput): { events: FanComboEvent[]; totalPoints: number } {
     const pongNaga = assertCount(input.pongNaga, 3, "Pong Naga");
     const kongNaga = assertCount(input.kongNaga, 3, "Kong Naga");
     const pongAngin = assertCount(input.pongAngin, 4, "Pong Mata Angin");
     const kongAngin = assertCount(input.kongAngin, 4, "Kong Mata Angin");
+    const isAllStraight = !!input.isAllStraight;
     if (pongNaga + kongNaga > 3) throw new Error("Total Pong + Kong Naga maksimal 3 (cuma ada 3 jenis Naga)");
     if (pongAngin + kongAngin > 4) throw new Error("Total Pong + Kong Mata Angin maksimal 4 (cuma ada 4 arah mata angin)");
 
+  const baseLabel = input.mode === "ZIMO" ? "Zimo (Tarik Sendiri)" : "Wu (Menang)";
+  const baseKey: FanComboKey = input.mode === "ZIMO" ? "ZIMO" : "WU";
+  const baseFan = input.mode === "ZIMO" ? TAIWAN_ZIMO_BONUS : TAIWAN_WU_POINTS;
   const events: FanComboEvent[] = [
-        { eventType: "FAN_COMBO", points: 0, label: "Wu (Menang)", metadata: { comboKey: "WU" as FanComboKey, fan: TAIWAN_WU_POINTS } },
+        { eventType: "FAN_COMBO", points: 0, label: baseLabel, metadata: { comboKey: baseKey, fan: baseFan } },
   ];
-    if (input.mode === "ZIMO") {
-          events.push({ eventType: "FAN_COMBO", points: 0, label: "Zimo (Tarik Sendiri)", metadata: { comboKey: "ZIMO" as FanComboKey, fan: TAIWAN_ZIMO_BONUS } });
+    if (isAllStraight) {
+          events.push({ eventType: "FAN_COMBO", points: 0, label: "All Straight", metadata: { comboKey: "ALL_STRAIGHT" as FanComboKey, fan: TAIWAN_ALL_STRAIGHT_POINTS } });
     }
     for (let i = 0; i < pongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Pong Naga", metadata: { comboKey: "PONG_NAGA" as FanComboKey, fan: TAIWAN_NAGA_PONG_POINTS } });
     for (let i = 0; i < kongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Naga", metadata: { comboKey: "KONG_NAGA" as FanComboKey, fan: TAIWAN_NAGA_KONG_POINTS } });
     for (let i = 0; i < pongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Pong Mata Angin", metadata: { comboKey: "PONG_ANGIN" as FanComboKey, fan: TAIWAN_ANGIN_PONG_POINTS } });
     for (let i = 0; i < kongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Mata Angin", metadata: { comboKey: "KONG_ANGIN" as FanComboKey, fan: TAIWAN_ANGIN_KONG_POINTS } });
 
-  const totalPoints = TAIWAN_WU_POINTS
-        + (input.mode === "ZIMO" ? TAIWAN_ZIMO_BONUS : 0)
+  const totalPoints = baseFan
+        + (isAllStraight ? TAIWAN_ALL_STRAIGHT_POINTS : 0)
         + pongNaga * TAIWAN_NAGA_PONG_POINTS
         + kongNaga * TAIWAN_NAGA_KONG_POINTS
         + pongAngin * TAIWAN_ANGIN_PONG_POINTS
@@ -360,7 +386,7 @@ export interface FanComboEvent {
     metadata: { comboKey: FanComboKey; fan: number };
 }
 
-export type FanComboKey = "WU" | "ZIMO" | "PONG_NAGA" | "KONG_NAGA" | "PONG_ANGIN" | "KONG_ANGIN";
+export type FanComboKey = "WU" | "ZIMO" | "PONG_NAGA" | "KONG_NAGA" | "PONG_ANGIN" | "KONG_ANGIN" | "ALL_STRAIGHT";
 
 export interface FanWinPaymentResult {
     playerId: number;
