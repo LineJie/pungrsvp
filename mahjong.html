@@ -868,7 +868,8 @@ var Z = null;
       renderZimoHK();
   }
   function zimoSubmitHK(){
-      apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, mode:Z.mode, comboKeys:Z.comboKeys, discarderId:Z.discarderId, windSelections:Z.windSelections}).then(function(res){
+      var isAllStraight = Z.comboKeys.indexOf("ALL_STRAIGHT") > -1;
+      apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, mode:Z.mode, comboKeys:Z.comboKeys, isAllStraight:isAllStraight, discarderId:Z.discarderId, windSelections:Z.windSelections}).then(function(res){
             if (!res.ok) { alert(res.data.error || "Could not record win"); return; }
             closeModal("modalZimo");
             loadFinishedFull();
