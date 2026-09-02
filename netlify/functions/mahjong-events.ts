@@ -9,6 +9,7 @@ import {
   calculateWinScore,
   calculateAllLoserPayments,
   calculateTaiwanHandScore,
+  calculateTaiwanPaoScore,
   calculateFanWinPayments,
   calculateKongScore,
   type LastCardDraw,
@@ -475,7 +476,7 @@ export default async (req: Request) => {
     // stay available AFTER a game finishes too -- that's usually exactly
     // when a mistake gets noticed (checking the leaderboard, a customer
     // pointing out their name is wrong, etc).
-    if ((action === "recordWin" || action === "recordKong") && game.status !== "active") {
+    if ((action === "recordWin" || action === "recordKong" || action === "pao") && game.status !== "active") {
       return Response.json({ error: "This game is not active — scoring is not allowed" }, { status: 409 });
     }
     const allPlayerIds = players.map((p) => p.id);
@@ -543,15 +544,18 @@ export default async (req: Request) => {
       }
 
       // Taiwan style
-      const { winnerPlayerId, mode, discarderId, pongNaga = 0, kongNaga = 0, pongAngin = 0, kongAngin = 0, isAllStraight = false } = body as {
+      const { winnerPlayerId, mode, discarderId, isAllPong = false, isAllStraight = false, pongNaga = 0, pongAngin = 0, kongNaga = 0, kongAngin = 0, kongOther = 0, flowers = 0 } = body as {
         winnerPlayerId: number;
         mode: WinMode;
         discarderId?: number;
-        pongNaga?: number;
-        kongNaga?: number;
-        pongAngin?: number;
-        kongAngin?: number;
+        isAllPong?: boolean;
         isAllStraight?: boolean;
+        pongNaga?: number;
+        pongAngin?: number;
+        kongNaga?: number;
+        kongAngin?: number;
+        kongOther?: number;
+        flowers?: number;
       };
       if (!allPlayerIds.includes(winnerPlayerId)) {
         return Response.json({ error: "winnerPlayerId must be a seated player" }, { status: 400 });
@@ -559,7 +563,7 @@ export default async (req: Request) => {
 
       let hand;
       try {
-        hand = calculateTaiwanHandScore({ mode, pongNaga, kongNaga, pongAngin, kongAngin, isAllStraight });
+        hand = calculateTaiwanHandScore({ mode, isAllPong, isAllStraight, pongNaga, pongAngin, kongNaga, kongAngin, kongOther, flowers });
       } catch (e: any) {
         return Response.json({ error: e.message || "Invalid win data" }, { status: 400 });
       }
@@ -600,6 +604,32 @@ export default async (req: Request) => {
 
       const { scoreboard } = await loadSessionAccumulated(game, players);
       return Response.json({ events: inserted, totalPoints: hand.totalPoints, total: payment.winnerGain, scoreboard }, { status: 201 });
+    }
+
+    // Pao / salah Hu (false-win declaration) — a standalone action from the
+    // main game screen, separate from the win-recording form above. Ends
+    // the round the same way a real win does, but with no actual winner:
+    // reuses the "draw" status so it's picked up by the same
+    // history/leaderboard filters as a drawn round (status IN
+    // finished_win/draw), with winnerPlayerId left null.
+    if (action === "pao") {
+      const { falsePlayerId } = body as { falsePlayerId: number };
+      let deltas;
+      try {
+        deltas = calculateTaiwanPaoScore(falsePlayerId, allPlayerIds);
+      } catch (e: any) {
+        return Response.json({ error: e.message || "Invalid Pao data" }, { status: 400 });
+      }
+      const actionGroup = randomUUID();
+      const inserted = [];
+      for (const d of deltas) {
+        inserted.push(await insertEvent(game.id, d.playerId, "PAO", d.points, d.relatedPlayerId ?? null, { label: d.label }, actionGroup));
+      }
+      await db.update(mahjongGames)
+        .set({ status: "draw", winnerPlayerId: null, endedAt: new Date() })
+        .where(eq(mahjongGames.id, game.id));
+      const { scoreboard } = await loadSessionAccumulated(game, players);
+      return Response.json({ events: inserted, scoreboard }, { status: 201 });
     }
 
     // Record a Kong (from discard or from wall) during active play. Shared
