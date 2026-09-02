@@ -294,36 +294,52 @@ export function calculateAllLoserPayments(baseAmount: number, defenses: LoserDef
     return { results, winnerGain };
 }
 
-// ─── TAIWAN STYLE (simplified point table) ──────────────────────────────
-// - Every win is worth a base Wu (1 point), plus whichever of these apply:
-//     Zimo (self-draw)         +2
-//     Pong of Naga (Dragon)    +2 each  (up to 3 — Red/Green/White)
-//     Kong of Naga (Dragon)    +4 each
-//     Pong of Angin (Wind)     +2 each  (up to 4 — E/S/W/N)
-//     Kong of Angin (Wind)     +4 each
-//   No other patterns are scored in this house system (deliberately much
-//   simpler than the old Hong Kong fan table it replaced).
-// - Payment mechanic is the same as before: Zimo (self-draw) — all 3
-//   opponents each pay the full point total; Hu (win off a discard) — only
-//   the discarder pays the full point total. See calculateFanWinPayments
-//   below, unchanged.
+// ─── TAIWAN STYLE (house point table, confirmed Aug 2026) ───────────────
+// Full ruleset as given:
+//   Hand Bonus (bentuk tangan, pilih salah satu, tidak stacking):
+//     All Pong                +2
+//     All Straight            +1
+//   Base win (tidak stacking dengan yang lain):
+//     Zimo (tarik sendiri)    +2
+//     Hu (dari buangan)       +1
+//   Pong:
+//     Pong Naga (Dragon)      +2 each (up to 3 — Red/Green/White)
+//     Pong Angin (Wind)       +1 each (up to 4 — E/S/W/N)
+//   Kong (setiap Kong dapat +1 dasar, ditambah bonus per jenis ubin):
+//     Kong Naga               +1 dasar + 2 = +3 each
+//     Kong Angin               +1 dasar + 1 = +2 each
+//     Kong Karakter (lainnya) +1 dasar saja = +1 each
+//   Flower: +1 per flower tile.
+// Payment mechanic unchanged: Zimo — all 3 opponents each pay the full
+// point total; Hu — only the discarder pays the full point total. See
+// calculateFanWinPayments below.
+// Pao (salah Hu / false win, recorded as its OWN action from the main
+// screen, not through this win form): false winner -6, other 3 players
+// +2 each. See calculateTaiwanPaoScore below.
 
-export const TAIWAN_WU_POINTS = 1;
 export const TAIWAN_ZIMO_BONUS = 2;
-export const TAIWAN_NAGA_PONG_POINTS = 2;
-export const TAIWAN_NAGA_KONG_POINTS = 4;
-export const TAIWAN_ANGIN_PONG_POINTS = 2;
-export const TAIWAN_ANGIN_KONG_POINTS = 4;
-
+export const TAIWAN_HU_BONUS = 1;
+export const TAIWAN_ALL_PONG_BONUS = 2;
 export const TAIWAN_ALL_STRAIGHT_POINTS = 1;
+export const TAIWAN_NAGA_PONG_POINTS = 2;
+export const TAIWAN_ANGIN_PONG_POINTS = 1;
+export const TAIWAN_KONG_BASE_POINTS = 1;
+export const TAIWAN_KONG_NAGA_EXTRA = 2;   // on top of the base -> Kong Naga = 3
+export const TAIWAN_KONG_ANGIN_EXTRA = 1;  // on top of the base -> Kong Angin = 2
+export const TAIWAN_FLOWER_POINTS = 1;
+export const TAIWAN_PAO_PENALTY = 6;       // deducted from the false winner
+export const TAIWAN_PAO_COMPENSATION = 2;  // paid to each of the other 3
 
 export interface TaiwanHandInput {
     mode: WinMode;
-    pongNaga: number;  // count of Dragon triplets in the hand, 0-3 (Red/Green/White)
-    kongNaga: number;  // count of Dragon quads in the hand, 0-3
-    pongAngin: number; // count of Wind triplets in the hand, 0-4 (E/S/W/N)
-    kongAngin: number; // count of Wind quads in the hand, 0-4
-    isAllStraight?: boolean; // hand bonus: all 4 sets are sequences forming a straight run
+    isAllPong?: boolean;      // hand bonus: all 4 sets are Pong/Kong
+    isAllStraight?: boolean;  // hand bonus: all 4 sets are sequences forming a straight run
+    pongNaga: number;   // count of Dragon triplets, 0-3 (Red/Green/White)
+    pongAngin: number;  // count of Wind triplets, 0-4 (E/S/W/N)
+    kongNaga: number;   // count of Dragon quads, 0-3
+    kongAngin: number;  // count of Wind quads, 0-4
+    kongOther: number;  // count of plain/number-tile (Karakter) quads, 0-4
+    flowers: number;    // count of flower tiles in the winning hand, 0-8
 }
 
 function assertCount(n: unknown, max: number, label: string): number {
@@ -334,47 +350,78 @@ function assertCount(n: unknown, max: number, label: string): number {
 }
 
 /**
- * Full win calculation (Taiwan style). Base win bonus depends on mode --
- * confirmed house rule, Aug 2026: Zimo (self-draw) is a flat +2, Hu (win
- * off a discard) is a flat +1 — these do NOT stack (a Zimo win does not
- * also get the Hu/Wu +1 on top). Plus every Naga/Angin Pong/Kong the host
- * counted, plus the All Straight hand bonus (+1) if the whole hand is one
- * straight run of sequences. Each component is recorded as its own
- * 0-point FAN_COMBO event (so the breakdown stays visible in history) --
- * the real point movement happens via calculateFanWinPayments() downstream,
- * same as before.
+ * Full win calculation (Taiwan house rules). Base win bonus depends on
+ * mode: Zimo (self-draw) is a flat +2, Hu (win off a discard) is a flat
+ * +1 — these do NOT stack. Hand Bonus (All Pong +2 / All Straight +1) is
+ * mutually exclusive and also does not stack with the base. Each
+ * component is recorded as its own 0-point FAN_COMBO event (so the
+ * breakdown stays visible in history) — the real point movement happens
+ * via calculateFanWinPayments() downstream, same as before.
  */
 export function calculateTaiwanHandScore(input: TaiwanHandInput): { events: FanComboEvent[]; totalPoints: number } {
     const pongNaga = assertCount(input.pongNaga, 3, "Pong Naga");
     const kongNaga = assertCount(input.kongNaga, 3, "Kong Naga");
     const pongAngin = assertCount(input.pongAngin, 4, "Pong Mata Angin");
     const kongAngin = assertCount(input.kongAngin, 4, "Kong Mata Angin");
+    const kongOther = assertCount(input.kongOther, 4, "Kong Karakter");
+    const flowers = assertCount(input.flowers, 8, "Flower");
+    const isAllPong = !!input.isAllPong;
     const isAllStraight = !!input.isAllStraight;
+    if (isAllPong && isAllStraight) throw new Error("Bentuk tangan cuma boleh salah satu: All Pong atau All Straight");
     if (pongNaga + kongNaga > 3) throw new Error("Total Pong + Kong Naga maksimal 3 (cuma ada 3 jenis Naga)");
     if (pongAngin + kongAngin > 4) throw new Error("Total Pong + Kong Mata Angin maksimal 4 (cuma ada 4 arah mata angin)");
+    if (kongNaga + kongAngin + kongOther > 4) throw new Error("Total semua Kong maksimal 4 (cuma ada 4 set dalam 1 tangan)");
 
-  const baseLabel = input.mode === "ZIMO" ? "Zimo (Tarik Sendiri)" : "Wu (Menang)";
+  const baseLabel = input.mode === "ZIMO" ? "Zimo (Tarik Sendiri)" : "Hu (Menang)";
   const baseKey: FanComboKey = input.mode === "ZIMO" ? "ZIMO" : "WU";
-  const baseFan = input.mode === "ZIMO" ? TAIWAN_ZIMO_BONUS : TAIWAN_WU_POINTS;
+  const baseFan = input.mode === "ZIMO" ? TAIWAN_ZIMO_BONUS : TAIWAN_HU_BONUS;
   const events: FanComboEvent[] = [
         { eventType: "FAN_COMBO", points: 0, label: baseLabel, metadata: { comboKey: baseKey, fan: baseFan } },
   ];
+    if (isAllPong) {
+          events.push({ eventType: "FAN_COMBO", points: 0, label: "All Pong", metadata: { comboKey: "ALL_PONG" as FanComboKey, fan: TAIWAN_ALL_PONG_BONUS } });
+    }
     if (isAllStraight) {
           events.push({ eventType: "FAN_COMBO", points: 0, label: "All Straight", metadata: { comboKey: "ALL_STRAIGHT" as FanComboKey, fan: TAIWAN_ALL_STRAIGHT_POINTS } });
     }
     for (let i = 0; i < pongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Pong Naga", metadata: { comboKey: "PONG_NAGA" as FanComboKey, fan: TAIWAN_NAGA_PONG_POINTS } });
-    for (let i = 0; i < kongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Naga", metadata: { comboKey: "KONG_NAGA" as FanComboKey, fan: TAIWAN_NAGA_KONG_POINTS } });
     for (let i = 0; i < pongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Pong Mata Angin", metadata: { comboKey: "PONG_ANGIN" as FanComboKey, fan: TAIWAN_ANGIN_PONG_POINTS } });
-    for (let i = 0; i < kongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Mata Angin", metadata: { comboKey: "KONG_ANGIN" as FanComboKey, fan: TAIWAN_ANGIN_KONG_POINTS } });
+    for (let i = 0; i < kongNaga; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Naga", metadata: { comboKey: "KONG_NAGA" as FanComboKey, fan: TAIWAN_KONG_BASE_POINTS + TAIWAN_KONG_NAGA_EXTRA } });
+    for (let i = 0; i < kongAngin; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Mata Angin", metadata: { comboKey: "KONG_ANGIN" as FanComboKey, fan: TAIWAN_KONG_BASE_POINTS + TAIWAN_KONG_ANGIN_EXTRA } });
+    for (let i = 0; i < kongOther; i++) events.push({ eventType: "FAN_COMBO", points: 0, label: "Kong Karakter", metadata: { comboKey: "KONG_OTHER" as FanComboKey, fan: TAIWAN_KONG_BASE_POINTS } });
+    if (flowers > 0) events.push({ eventType: "FAN_COMBO", points: 0, label: "Flower", metadata: { comboKey: "FLOWER" as FanComboKey, fan: flowers * TAIWAN_FLOWER_POINTS } });
 
   const totalPoints = baseFan
+        + (isAllPong ? TAIWAN_ALL_PONG_BONUS : 0)
         + (isAllStraight ? TAIWAN_ALL_STRAIGHT_POINTS : 0)
         + pongNaga * TAIWAN_NAGA_PONG_POINTS
-        + kongNaga * TAIWAN_NAGA_KONG_POINTS
         + pongAngin * TAIWAN_ANGIN_PONG_POINTS
-        + kongAngin * TAIWAN_ANGIN_KONG_POINTS;
+        + kongNaga * (TAIWAN_KONG_BASE_POINTS + TAIWAN_KONG_NAGA_EXTRA)
+        + kongAngin * (TAIWAN_KONG_BASE_POINTS + TAIWAN_KONG_ANGIN_EXTRA)
+        + kongOther * TAIWAN_KONG_BASE_POINTS
+        + flowers * TAIWAN_FLOWER_POINTS;
 
   return { events, totalPoints };
+}
+
+/**
+ * Pao / salah Hu (false-win declaration), recorded as its own standalone
+ * action from the main game screen — NOT part of the win-recording form
+ * above. The player who wrongly declared Hu loses 6 points; the other
+ * three players each receive 2 (nets to 0 across the table).
+ */
+export function calculateTaiwanPaoScore(falsePlayerId: number, allPlayerIds: number[]): { playerId: number; points: number; label: string; relatedPlayerId?: number }[] {
+    if (!allPlayerIds.includes(falsePlayerId)) {
+          throw new Error("Pemain yang salah Hu harus pemain yang duduk di game ini");
+    }
+    const others = allPlayerIds.filter((id) => id !== falsePlayerId);
+    if (others.length !== 3) {
+          throw new Error("Pao butuh tepat 4 pemain duduk di game ini");
+    }
+    return [
+          { playerId: falsePlayerId, points: -TAIWAN_PAO_PENALTY, label: "Pao (Salah Hu)" },
+          ...others.map((id) => ({ playerId: id, points: TAIWAN_PAO_COMPENSATION, label: "Kompensasi Pao", relatedPlayerId: falsePlayerId })),
+    ];
 }
 
 export type WinMode = "ZIMO" | "HU";
@@ -386,7 +433,7 @@ export interface FanComboEvent {
     metadata: { comboKey: FanComboKey; fan: number };
 }
 
-export type FanComboKey = "WU" | "ZIMO" | "PONG_NAGA" | "KONG_NAGA" | "PONG_ANGIN" | "KONG_ANGIN" | "ALL_STRAIGHT";
+export type FanComboKey = "WU" | "ZIMO" | "PONG_NAGA" | "KONG_NAGA" | "PONG_ANGIN" | "KONG_ANGIN" | "ALL_STRAIGHT" | "ALL_PONG" | "KONG_OTHER" | "FLOWER";
 
 export interface FanWinPaymentResult {
     playerId: number;
