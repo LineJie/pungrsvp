@@ -51,6 +51,14 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 .mini-tile{font-family:"Noto Sans Symbols 2","DM Sans",sans-serif;font-size:13px;width:17px;height:22px;background:linear-gradient(180deg,var(--warm-white),#EFE7D6);border-radius:3px;display:flex;align-items:center;justify-content:center;color:#241f14;box-shadow:0 1px 0 rgba(0,0,0,0.25);}
 .mini-tile-gap{width:4px;}
 .fan-tier-toggle{text-align:center;font-size:11.5px;font-weight:700;color:var(--green-mid);padding:9px 0;cursor:pointer;}
+.section-lbl{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin:16px 0 8px;}
+.combo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;}
+.counter-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.12);background:var(--warm-white);margin-bottom:8px;}
+.counter-label{font-size:13px;font-weight:700;color:var(--green-dark);}
+.counter-sub{font-size:10.5px;color:var(--text-muted);margin-top:2px;}
+.counter-controls{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.counter-btn{width:30px;height:30px;border-radius:9px;border:1.5px solid rgba(28,58,46,0.2);background:var(--cream);color:var(--green-dark);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.counter-val{font-family:"Playfair Display",serif;font-size:16px;font-weight:900;color:var(--green-dark);min-width:18px;text-align:center;}
 .fan-total-strip{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--gold-light),var(--gold));border-radius:12px;padding:10px 14px;margin-bottom:10px;}
 .fan-total-strip .ft-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--green-dark);font-weight:700;}
 .fan-total-strip .ft-value{font-family:"Playfair Display",serif;font-size:16px;font-weight:900;color:var(--green-dark);}
@@ -152,10 +160,14 @@ body{background:#1a1a1a;display:flex;justify-content:center;min-height:100vh;fon
 <div class="nav-item" id="navHistory" onclick="navClick('history')"><span class="ic">&#x1F4DC;</span>Riwayat</div>
 <div class="nav-item" id="navStats" onclick="navClick('stats')"><span class="ic">&#x1F4CA;</span>Statistik</div>
 <div class="nav-item" id="navLeaderboard" onclick="navClick('leaderboard')"><span class="ic">&#x1F3C6;</span>Peringkat</div>
-<div class="nav-item" id="navFanGuide" onclick="window.location.href='/kombinasi.html'"><span class="ic">&#30058;</span>Panduan Fan</div>
+<!-- "Panduan Fan" tab disembunyikan (Aug 2026) -- sistem sudah pindah dari 21-pola Hong Kong-style
+     ke sistem poin sederhana (Hand Bonus/Zimo/Hu/Pong-Kong/Flower/Pao). kombinasi.html masih ada
+     di server, cuma link ke sananya dicopot dari nav biar nggak ada yang kepencet nyasar ke
+     panduan yang udah nggak relevan. -->
 </div>
 <div class="modal-overlay" id="modalBreakdown"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalBreakdown')">&#x2715;</button><div class="modal-title" id="bdTitle">Score Breakdown</div><div id="bdBody"></div></div></div>
 <div class="modal-overlay" id="modalZimo"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalZimo')">&#x2715;</button><div class="modal-title">&#x1F004; Catat Kemenangan</div><div class="modal-step" id="zimoStepLbl"></div><div id="zimoBody"></div></div></div>
+<div class="modal-overlay" id="modalPao"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalPao')">&#x2715;</button><div class="modal-title">&#x26A0;&#xFE0F; Pao / Salah Win</div><div id="paoBody"></div></div></div>
 <div class="modal-overlay" id="modalKong"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalKong')">&#x2715;</button><div class="modal-title">Kong</div><div class="modal-step" id="kongStepLbl"></div><div id="kongBody"></div></div></div>
 <div class="modal-overlay" id="modalHistory"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalHistory')">&#x2715;</button><div class="modal-title">Riwayat Mahjong Saya</div><div id="histBody"></div></div></div>
 <div class="modal-overlay" id="modalStats"><div class="modal-box"><button class="modal-close" onclick="closeModal('modalStats')">&#x2715;</button><div class="modal-title">Statistik Mahjong Saya</div><div id="statsBody"></div></div></div>
@@ -671,6 +683,9 @@ function renderActive(){
   var h = scoreboardHtml();
   h += "<button class=\"btn btn-gold\" onclick=\"openZimo()\">&#x1F004; Ada yang Menang!</button>";
   h += "<button class=\"btn btn-outline\" onclick=\"openKong()\">+ KONG</button>";
+  if (S.game.scoringSystem !== "china") {
+    h += "<button class=\"btn btn-danger btn-sm\" onclick=\"openPao()\">&#x26A0;&#xFE0F; Pao / Salah Win</button>";
+  }
   h += "<button class=\"btn btn-danger btn-sm\" onclick=\"markDraw()\">Tembok Habis — Catat Seri</button>";
   h += staffPanelHtml();
   qs("content").innerHTML = h;
@@ -719,6 +734,23 @@ function openBreakdown(pid){
   showModal("modalBreakdown");
 }
 var Z = null;
+function openPao(){
+  var h = "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Pemain yang salah declare Hu (menang) akan kena <b>-6 poin</b>. Ketiga pemain lain masing-masing dapat <b>+2 poin</b>. Round ini otomatis ditutup sebagai seri.</div>";
+  h += "<div class=\"section-lbl\">Siapa yang salah declare?</div>";
+  S.players.slice().sort(function(a,b){ return a.seatNumber-b.seatNumber; }).forEach(function(p){
+    h += "<button class=\"btn btn-outline\" onclick=\"confirmPao(" + p.id + ",'" + esc(p.name).replace(/'/g,"\\'") + "')\">" + esc(p.name) + " (Seat " + p.seatNumber + ")</button>";
+  });
+  qs("paoBody").innerHTML = h;
+  showModal("modalPao");
+}
+function confirmPao(playerId, name){
+  if (!confirm(esc(name) + " salah declare Hu -- lanjut? " + esc(name) + " akan -6 poin, 3 pemain lain masing-masing +2 poin. Round ditutup sebagai seri.")) return;
+  apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"pao", falsePlayerId:playerId}).then(function(res){
+    if (!res.ok) { alert(res.data.error || "Gagal mencatat Pao"); return; }
+    closeModal("modalPao");
+    loadFinishedFull();
+  });
+}
   // Dispatcher: which "record a win" flow to open depends on this game's
   // scoring_system. China = legacy flat rules (Zimo only). Hongkong = fan
   // table (Zimo or Hu). Both flows share the same modal (#modalZimo).
@@ -731,52 +763,49 @@ var Z = null;
       list.forEach(function(p){ h += "<button class=\"btn btn-outline\" onclick=\"" + onClickFn + "(" + p.id + ")\">" + esc(p.name) + " (Seat " + p.seatNumber + ")</button>"; });
       return h;
   }
-  var WIND_COMBO_KEYS = ["PONG_SEAT_WIND", "PONG_PREVAILING_WIND"];
-  var SEAT_WINDS = [["east","Timur"],["south","Selatan"],["west","Barat"],["north","Utara"]];
   function openZimoHK(){
-      Z = { step:1, winnerPlayerId:null, mode:null, discarderId:null, comboKeys:[], windSelections:{}, showRare:false };
+      Z = { step:1, winnerPlayerId:null, mode:null, discarderId:null, handBonus:"NONE", pongNaga:0, pongAngin:0, kongNaga:0, kongAngin:0, kongOther:0, flowers:0 };
       renderZimoHK();
       showModal("modalZimo");
   }
-  function fanTileRowHtml(tiles){
-      var h = "<div class=\"mini-tile-row\">";
-      (tiles || []).forEach(function(t){
-            if (t === null) { h += "<span class=\"mini-tile-gap\"></span>"; }
-            else { h += "<span class=\"mini-tile\">" + t + "</span>"; }
-      });
-      h += "</div>";
+  // ─── Point calculator (Taiwan house rules, confirmed Aug 2026) ─────────
+  // Base: Zimo +2 / Hu +1 (does not stack). Hand Bonus: All Pong +2, All
+  // Straight +1 (mutually exclusive). Pong Naga +2 / Pong Angin +1 each.
+  // Kong: base +1 every Kong, +2 extra if Naga (total 3), +1 extra if
+  // Angin (total 2), +0 extra otherwise (total 1). Flower +1 each. Mirrors
+  // calculateTaiwanHandScore() server-side exactly, for a live preview
+  // total -- the server recomputes independently, this is display-only.
+  function zimoPointTotalHK(){
+      var base = Z.mode === "ZIMO" ? 2 : 1;
+      var hand = Z.handBonus === "ALL_PONG" ? 2 : (Z.handBonus === "ALL_STRAIGHT" ? 1 : 0);
+      return base + hand
+        + Z.pongNaga*2 + Z.pongAngin*1
+        + Z.kongNaga*3 + Z.kongAngin*2 + Z.kongOther*1
+        + Z.flowers*1;
+  }
+  function zimoTotalStripHtmlHK(){
+      return "<div class=\"fan-total-strip\"><div class=\"ft-label\">Total Poin</div><div class=\"ft-value\">" + zimoPointTotalHK() + " Poin</div></div>";
+  }
+  function zimoSetHandBonusHK(val){ Z.handBonus = (Z.handBonus === val) ? "NONE" : val; renderZimoHK(); }
+  function zimoAdjustCountHK(field, delta, max){
+      var v = (Z[field] || 0) + delta;
+      if (v < 0) v = 0;
+      if (v > max) v = max;
+      Z[field] = v;
+      renderZimoHK();
+  }
+  function zimoCounterRowHtml(label, field, max, sub){
+      var v = Z[field] || 0;
+      var h = "<div class=\"counter-row\"><div class=\"counter-info\"><div class=\"counter-label\">" + esc(label) + "</div>";
+      if (sub) h += "<div class=\"counter-sub\">" + esc(sub) + "</div>";
+      h += "</div><div class=\"counter-controls\">";
+      h += "<button type=\"button\" class=\"counter-btn\" onclick=\"zimoAdjustCountHK('" + field + "',-1," + max + ")\">&#8722;</button>";
+      h += "<span class=\"counter-val\">" + v + "</span>";
+      h += "<button type=\"button\" class=\"counter-btn\" onclick=\"zimoAdjustCountHK('" + field + "',1," + max + ")\">+</button>";
+      h += "</div></div>";
       return h;
   }
-  function fanChecklistItemHtml(f){
-      var sel = Z.comboKeys.indexOf(f.key) > -1;
-      var h = "<button type=\"button\" class=\"fan-check" + (sel?" selected":"") + "\" onclick=\"zimoToggleComboHK('" + f.key + "')\">";
-      h += fanTileRowHtml(f.tiles);
-      h += "<div class=\"fc-info\"><div class=\"fc-top\"><span class=\"fc-name\">" + esc(f.label) + "</span><span class=\"fc-fan\">" + f.fan + " fan</span></div>";
-      h += "<div class=\"fc-desc\">" + esc(f.desc) + "</div></div>";
-      h += "</button>";
-      if (sel && WIND_COMBO_KEYS.indexOf(f.key) > -1) { h += zimoWindPickerHtml(f.key); }
-      return h;
-  }
-  function zimoToggleRareHK(){ Z.showRare = !Z.showRare; renderZimoHK(); }
   function zimoTotalStepsHK(){ return Z.mode === "HU" ? 5 : 4; }
-  function zimoFanTotalHK(){
-      var total = 0;
-      Z.comboKeys.forEach(function(k){ var f = fanTableFind(k); if (f) total += f.fan; });
-      return total;
-  }
-  function zimoFanTotalStripHtmlHK(){
-      var total = zimoFanTotalHK();
-      return "<div class=\"fan-total-strip\"><div class=\"ft-label\">Total</div><div class=\"ft-value\">" + total + " Fan &middot; " + total + " Poin</div></div>";
-  }
-  function zimoWindPickerHtml(key){
-      var current = Z.windSelections[key];
-      var h = "<div class=\"wind-pick-row\">";
-      SEAT_WINDS.forEach(function(w){
-            h += "<button type=\"button\" class=\"wind-chip" + (current===w[0]?" selected":"") + "\" onclick=\"event.stopPropagation();zimoPickWindHK('" + key + "','" + w[0] + "')\">" + w[1] + "</button>";
-      });
-      h += "</div>";
-      return h;
-  }
   function renderZimoHK(){
       var h = "";
       var total = zimoTotalStepsHK();
@@ -794,24 +823,25 @@ var Z = null;
             h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Pilih lawan yang buang ubin kemenangan.</div>";
             h += playerButtonsHtml(opponents, "zimoPickDiscarderHK");
       } else if (Z.step === 4) {
-            qs("zimoStepLbl").textContent = "Step " + (Z.mode === "HU" ? 4 : 3) + " of " + total + " - Pilih Pola (Fan)";
-            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Cocokin gambar ubinnya sama tangan pemenang -- gak perlu hafal nama. Boleh pilih lebih dari satu. Minimal 1 pola untuk menang -- kalau gak ada yang cocok, pilih \"Regular Win\".</div>";
-            h += "<div id=\"fanTotalStrip\">" + zimoFanTotalStripHtmlHK() + "</div>";
-            var commonItems = FAN_TABLE.filter(function(f){ return f.tier === "common"; });
-            var rareItems = FAN_TABLE.filter(function(f){ return f.tier === "rare"; });
-            var rareSelectedCount = rareItems.filter(function(f){ return Z.comboKeys.indexOf(f.key) > -1; }).length;
-            h += "<div class=\"fan-check-list\">";
-            commonItems.forEach(function(f){ h += fanChecklistItemHtml(f); });
+            qs("zimoStepLbl").textContent = "Step " + (Z.mode === "HU" ? 4 : 3) + " of " + total + " - Bonus & Kombinasi";
+            h += "<div class=\"muted\" style=\"text-align:left;padding:0 0 10px;\">Isi sesuai tangan pemenang. Kosongin yang nggak berlaku.</div>";
+            h += "<div id=\"fanTotalStrip\">" + zimoTotalStripHtmlHK() + "</div>";
+            h += "<div class=\"section-lbl\">Bentuk Tangan (pilih salah satu)</div>";
+            h += "<div class=\"combo-grid\">";
+            h += "<button type=\"button\" class=\"chip-btn" + (Z.handBonus==="NONE"?" selected":"") + "\" onclick=\"zimoSetHandBonusHK('NONE')\">Tidak Ada</button>";
+            h += "<button type=\"button\" class=\"chip-btn" + (Z.handBonus==="ALL_PONG"?" selected":"") + "\" onclick=\"zimoSetHandBonusHK('ALL_PONG')\">All Pong (+2)</button>";
+            h += "<button type=\"button\" class=\"chip-btn" + (Z.handBonus==="ALL_STRAIGHT"?" selected":"") + "\" onclick=\"zimoSetHandBonusHK('ALL_STRAIGHT')\">All Straight (+1)</button>";
             h += "</div>";
-            if (Z.showRare || rareSelectedCount > 0) {
-                  h += "<div class=\"fan-tier-toggle\" onclick=\"zimoToggleRareHK()\">Sembunyikan pola langka &#9650;</div>";
-                  h += "<div class=\"fan-check-list\">";
-                  rareItems.forEach(function(f){ h += fanChecklistItemHtml(f); });
-                  h += "</div>";
-            } else {
-                  h += "<div class=\"fan-tier-toggle\" onclick=\"zimoToggleRareHK()\">Lihat " + rareItems.length + " pola langka lainnya &#9660;</div>";
-            }
-            h += "<button class=\"btn btn-gold\" style=\"margin-top:14px;\" onclick=\"zimoComboContinueHK()\">Lanjut</button>";
+            h += "<div class=\"section-lbl\">Pong (kembar 3)</div>";
+            h += zimoCounterRowHtml("Pong Naga", "pongNaga", 3, "+2 / pong");
+            h += zimoCounterRowHtml("Pong Mata Angin", "pongAngin", 4, "+1 / pong");
+            h += "<div class=\"section-lbl\">Kong (kembar 4)</div>";
+            h += zimoCounterRowHtml("Kong Naga", "kongNaga", 3, "+3 / kong (1 dasar + 2 Naga)");
+            h += zimoCounterRowHtml("Kong Mata Angin", "kongAngin", 4, "+2 / kong (1 dasar + 1 Angin)");
+            h += zimoCounterRowHtml("Kong Karakter (angka biasa)", "kongOther", 4, "+1 / kong");
+            h += "<div class=\"section-lbl\">Flower</div>";
+            h += zimoCounterRowHtml("Jumlah Flower", "flowers", 8, "+1 / flower");
+            h += "<button class=\"btn btn-gold\" style=\"margin-top:14px;\" onclick=\"zimoStep4ContinueHK()\">Lanjut</button>";
       } else if (Z.step === 5) {
             qs("zimoStepLbl").textContent = "Step " + total + " of " + total + " - Konfirmasi";
             var w = S.players.find(function(p){ return p.id === Z.winnerPlayerId; });
@@ -822,19 +852,19 @@ var Z = null;
                   var discarder = S.players.find(function(p){ return p.id === Z.discarderId; });
                   modeLabel = "Hu (dari buangan) - " + esc(discarder ? discarder.name : "") + " bayar penuh";
             }
-            var comboLines = Z.comboKeys.map(function(k){
-                  var f = fanTableFind(k);
-                  if (!f) return k;
-                  var windTxt = "";
-                  if (WIND_COMBO_KEYS.indexOf(k) > -1 && Z.windSelections[k]) {
-                        var wm = SEAT_WINDS.find(function(sw){ return sw[0] === Z.windSelections[k]; });
-                        windTxt = wm ? (" - " + wm[1]) : "";
-                  }
-                  return esc(f.label) + windTxt + " (" + f.fan + " fan)";
-            }).join("<br>");
+            var breakdown = [];
+            breakdown.push((Z.mode === "ZIMO" ? "Zimo" : "Hu") + " (+" + (Z.mode === "ZIMO" ? 2 : 1) + ")");
+            if (Z.handBonus === "ALL_PONG") breakdown.push("All Pong (+2)");
+            if (Z.handBonus === "ALL_STRAIGHT") breakdown.push("All Straight (+1)");
+            if (Z.pongNaga) breakdown.push(Z.pongNaga + "x Pong Naga (+" + (Z.pongNaga*2) + ")");
+            if (Z.pongAngin) breakdown.push(Z.pongAngin + "x Pong Angin (+" + Z.pongAngin + ")");
+            if (Z.kongNaga) breakdown.push(Z.kongNaga + "x Kong Naga (+" + (Z.kongNaga*3) + ")");
+            if (Z.kongAngin) breakdown.push(Z.kongAngin + "x Kong Angin (+" + (Z.kongAngin*2) + ")");
+            if (Z.kongOther) breakdown.push(Z.kongOther + "x Kong Karakter (+" + Z.kongOther + ")");
+            if (Z.flowers) breakdown.push(Z.flowers + "x Flower (+" + Z.flowers + ")");
             h += "<div class=\"muted\" style=\"text-align:left;\"><b>Pemenang:</b> " + esc(w?w.name:"") + "<br><b>Mode:</b> " + modeLabel + "</div>";
-            h += "<div class=\"muted\" style=\"text-align:left;margin-top:8px;\"><b>Pola yang kena:</b><br>" + comboLines + "</div>";
-            h += zimoFanTotalStripHtmlHK();
+            h += "<div class=\"muted\" style=\"text-align:left;margin-top:8px;\"><b>Rincian:</b><br>" + breakdown.join("<br>") + "</div>";
+            h += zimoTotalStripHtmlHK();
             h += "<button class=\"btn btn-gold\" onclick=\"zimoSubmitHK()\">Konfirmasi & Catat Menang</button>";
       }
       qs("zimoBody").innerHTML = h;
@@ -847,29 +877,17 @@ var Z = null;
       renderZimoHK();
   }
   function zimoPickDiscarderHK(pid){ Z.discarderId = pid; Z.step = 4; renderZimoHK(); }
-  function zimoToggleComboHK(key){
-      var i = Z.comboKeys.indexOf(key);
-      if (i>-1) { Z.comboKeys.splice(i,1); delete Z.windSelections[key]; }
-      else { Z.comboKeys.push(key); }
-      renderZimoHK();
-  }
-  function zimoPickWindHK(key, wind){ Z.windSelections[key] = wind; renderZimoHK(); }
-  function zimoComboContinueHK(){
-      if (!Z.comboKeys.length) { alert("Pilih minimal 1 pola (minimal 1 fan) untuk menang"); return; }
-      for (var i=0;i<WIND_COMBO_KEYS.length;i++){
-            var k = WIND_COMBO_KEYS[i];
-            if (Z.comboKeys.indexOf(k) > -1 && !Z.windSelections[k]) {
-                  var f = fanTableFind(k);
-                  alert("Pilih arah angin untuk " + (f?f.label:k) + " dulu");
-                  return;
-            }
+  function zimoStep4ContinueHK(){
+      if (Z.handBonus === "ALL_PONG" && (Z.pongNaga===0 && Z.pongAngin===0 && Z.kongNaga===0 && Z.kongAngin===0 && Z.kongOther===0)) {
+            if (!confirm("All Pong dipilih tapi nggak ada Pong/Kong yang dihitung -- yakin lanjut?")) return;
       }
       Z.step = 5;
       renderZimoHK();
   }
   function zimoSubmitHK(){
-      var isAllStraight = Z.comboKeys.indexOf("ALL_STRAIGHT") > -1;
-      apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, mode:Z.mode, comboKeys:Z.comboKeys, isAllStraight:isAllStraight, discarderId:Z.discarderId, windSelections:Z.windSelections}).then(function(res){
+      var isAllPong = Z.handBonus === "ALL_PONG";
+      var isAllStraight = Z.handBonus === "ALL_STRAIGHT";
+      apiSend("/api/mahjong/events", "POST", {gameId:S.game.id, action:"recordWin", winnerPlayerId:Z.winnerPlayerId, mode:Z.mode, isAllPong:isAllPong, isAllStraight:isAllStraight, pongNaga:Z.pongNaga, pongAngin:Z.pongAngin, kongNaga:Z.kongNaga, kongAngin:Z.kongAngin, kongOther:Z.kongOther, flowers:Z.flowers, discarderId:Z.discarderId}).then(function(res){
             if (!res.ok) { alert(res.data.error || "Could not record win"); return; }
             closeModal("modalZimo");
             loadFinishedFull();
