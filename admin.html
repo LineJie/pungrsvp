@@ -1642,7 +1642,7 @@
         : (isPayLater && b.status === 'checked_in') ? (isLongPlay ? `⚠️ Main, Bayar Nanti${longPlayWarning}` : '🎮 Main (Bayar Nanti)')
         : b.status === 'confirmed' ? '✅ Lunas'
         : b.status === 'pending' ? pendingLabel
-        : b.status === 'checked_in' ? (isLongPlay ? `⚠️ Sedang Main${longPlayWarning}` : '🎮 Sedang Main')
+        : b.status === 'checked_in' ? (isLongPlay ? `⚠️ Sedang Main · Lunas${longPlayWarning}` : '🎮 Sedang Main · Lunas')
         : b.status === 'completed' ? (promoTagMatch ? `🏁 Selesai · 🎁 ${escHtml(promoTagMatch[1])}` : '🏁 Selesai')
         : '❌ Batal';
       const badgeClassFinal = isEventBlock ? 'badge-cancelled' : isOwnerFree ? 'badge-ownerfree' : isPayLater ? 'badge-paylater' : isExcluded ? 'badge-paylater' : (isLongPlay ? 'badge-longplay' : badgeClass);
