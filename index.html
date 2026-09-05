@@ -513,6 +513,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .duration-row > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .duration-label {
@@ -525,6 +532,7 @@
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 2px;
+    word-break: break-word;
   }
 
   .stepper {
@@ -534,6 +542,7 @@
     background: var(--cream);
     border-radius: 12px;
     overflow: hidden;
+    flex-shrink: 0;
   }
 
   .step-btn {
@@ -1498,6 +1507,7 @@
     renderTables();
     renderTimes();
     updateSummary();
+    refreshDurationHint(currentLocation);
   }
 
   // === DURATION ===
@@ -1583,13 +1593,31 @@ function closeCommunity() {
     const hint = document.getElementById('durationHint');
     if (!hint) return;
     const activeSet = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+
+    // Kalau user sudah pilih meja, tampilkan harga meja yang DIPILIH saja —
+    // bukan daftar semua meja di cabang itu.
+    if (selectedTables.length > 0) {
+      const chosen = selectedTables.map(i => tableData[i]);
+      const rates = [...new Set(chosen.map(t => t.rate))];
+      if (rates.length <= 1) {
+        hint.textContent = `Rp ${(rates[0] || 50000).toLocaleString('id-ID')} / jam per meja`;
+      } else {
+        hint.textContent = chosen
+          .map(t => `${t.name}: Rp ${t.rate.toLocaleString('id-ID')}/jam`)
+          .join(' · ');
+      }
+      return;
+    }
+
+    // Belum ada meja dipilih — kalau semua meja di cabang harganya sama,
+    // tampilkan itu; kalau beda-beda, tampilkan rentang harga singkat
+    // (bukan nge-list nama semua meja).
     const rates = [...new Set(activeSet.map(t => t.rate))];
     if (rates.length <= 1) {
       hint.textContent = `Rp ${(rates[0] || 50000).toLocaleString('id-ID')} / jam per meja`;
     } else {
-      hint.textContent = activeSet
-        .map(t => `Rp ${t.rate.toLocaleString('id-ID')}/jam · ${t.name}${t.note ? ` (${t.note})` : ''}`)
-        .join(' · ');
+      const min = Math.min(...rates), max = Math.max(...rates);
+      hint.textContent = `Rp ${min.toLocaleString('id-ID')}–${max.toLocaleString('id-ID')} / jam, tergantung meja`;
     }
   }
   function selectLocation(loc) {
