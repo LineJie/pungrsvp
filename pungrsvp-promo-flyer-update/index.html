@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Pung Pung Mahjong – Booking Meja</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=Zilla+Slab:wght@600;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --cream: #F5F0E8;
+    --green-dark: #1C3A2E;
+    --green-mid: #2D5A45;
+    --green-light: #4A8C68;
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --warm-white: #FDFAF4;
+    --text-muted: #7A7060;
+    --red: #C0392B;
+    --tile-shadow: 0 2px 8px rgba(28,58,46,0.15);
+  }
+
+  /* Leaderboard styling — disamakan dengan halaman mahjong.html (cek status booking) */
+  .chip-btn{padding:9px 4px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:var(--cream);color:var(--green-dark);font-size:12px;font-weight:600;cursor:pointer;text-align:center;flex:1;}
+  .chip-btn.selected{background:var(--green-dark);color:var(--gold-light);border-color:var(--green-dark);}
+  .lb-muted{color:var(--text-muted);font-size:12px;text-align:center;padding:12px;}
+  .lb-switch-row{display:flex;gap:6px;margin-bottom:8px;}
+  .lb-filter-row{display:flex;gap:8px;margin-bottom:14px;}
+  .lb-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+  .lb-stat-card{background:var(--warm-white);border:1px solid rgba(28,58,46,0.08);border-radius:14px;padding:12px;}
+  .lb-stat-label{font-family:"Space Mono",monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
+  .lb-stat-value{font-family:"Zilla Slab",serif;font-size:22px;font-weight:700;color:var(--green-dark);line-height:1.15;}
+  .lb-stat-sub{font-size:10px;color:var(--text-muted);margin-top:2px;}
+  .lb-podium{margin-bottom:8px;}
+  .lb-leader-card{background:linear-gradient(135deg,var(--green-dark),var(--green-mid));border-radius:16px;padding:16px;margin-bottom:8px;}
+  .lb-leader-crown{font-size:20px;margin-bottom:6px;}
+  .lb-leader-avatar{width:44px;height:44px;border-radius:50%;background:var(--gold);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-family:"Zilla Slab",serif;font-weight:700;font-size:18px;float:left;margin-right:12px;}
+  .lb-leader-name{font-family:"Zilla Slab",serif;font-size:19px;font-weight:700;color:#fff;padding-top:4px;}
+  .lb-leader-meta{font-family:"Space Mono",monospace;font-size:9px;color:rgba(255,255,255,0.65);letter-spacing:0.5px;margin-top:3px;}
+  .lb-leader-score{font-family:"Zilla Slab",serif;font-size:26px;font-weight:900;color:var(--gold-light);margin-top:10px;clear:both;text-align:right;}
+  .lb-runner-row{display:flex;align-items:center;background:var(--warm-white);border-radius:12px;padding:10px 12px;margin-bottom:6px;}
+  .lb-runner-rank{font-family:"Zilla Slab",serif;font-size:16px;font-weight:700;color:var(--text-muted);width:20px;flex-shrink:0;}
+  .lb-runner-avatar{width:32px;height:32px;border-radius:50%;background:var(--cream);border:1.5px solid var(--gold);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-family:"Zilla Slab",serif;font-weight:700;font-size:13px;margin-right:10px;flex-shrink:0;}
+  .lb-runner-info{flex:1;min-width:0;}
+  .lb-runner-name{font-weight:700;color:var(--green-dark);font-size:13px;}
+  .lb-runner-meta{font-family:"Space Mono",monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.3px;}
+  .lb-runner-score{font-family:"Zilla Slab",serif;font-weight:700;font-size:16px;color:var(--green-mid);flex-shrink:0;margin-left:6px;}
+  .lb-table-title{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin:16px 0 8px;padding-left:2px;}
+  .lb-row{background:var(--warm-white);border-radius:12px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;}
+  .lb-row-rank{font-family:"Zilla Slab",serif;font-weight:700;font-size:14px;color:var(--text-muted);width:22px;flex-shrink:0;}
+  .lb-row-main{flex:1;min-width:0;}
+  .lb-row-name{font-weight:700;color:var(--green-dark);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lb-row-meta{font-family:"Space Mono",monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.3px;margin-top:2px;}
+  .lb-form{display:flex;gap:2px;margin-top:4px;}
+  .lb-form span{width:9px;height:9px;border-radius:2px;background:rgba(28,58,46,0.15);display:inline-block;}
+  .lb-form span.w{background:var(--green-mid);}
+  .lb-form span.l{background:var(--red);}
+  .lb-row-score{font-family:"Zilla Slab",serif;font-weight:700;font-size:17px;color:var(--green-mid);text-align:right;flex-shrink:0;margin-left:8px;}
+  .lb-row-score.neg{color:var(--red);}
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: #1a1a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .phone-frame {
+    width: 390px;
+    min-height: 100vh;
+    background: var(--cream);
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--green-dark);
+    padding: 20px 20px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    /* Lingkaran ini murni dekoratif, tapi karena posisinya absolute dengan
+       z-index:auto, browser mengecatnya DI ATAS tombol "..." (.more-btn)
+       yang non-positioned — jadi tanpa ini, klik ke tombol titik-tiga di
+       pojok kanan atas suka "ketelan" oleh lingkaran ini dan menu tidak
+       kebuka. pointer-events:none memastikan lingkaran ini tidak pernah
+       menangkap klik/tap sama sekali. */
+    pointer-events: none;
+  }
+
+  .header-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .back-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border: none;
+    color: white;
+    font-size: 18px;
+  }
+
+  .more-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    gap: 3px;
+    border: none;
+  }
+
+  .dot { width: 4px; height: 4px; background: white; border-radius: 50%; }
+  .more-menu { position:absolute; top:56px; right:20px; background:var(--warm-white); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.25); padding:6px; min-width:190px; z-index:30; display:none; }
+  .more-menu.open { display: block; }
+  .more-menu-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:600; color:var(--green-dark); cursor:pointer; }
+  .more-menu-item:hover { background: var(--cream); }
+  .more-menu-item .mi-ic { font-size: 16px; }
+
+  .brand-section {
+    text-align: center;
+    padding-bottom: 28px;
+  }
+
+  .logo-circle {
+    width: 110px; height: 110px;
+    margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .logo-circle img {
+    width: 110px; height: 110px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+  }
+
+  .page-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 7px 12px;
+    border: 1px solid rgba(232,201,122,0.35);
+    border-radius: 999px;
+    color: var(--gold-light);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .opening-badge {
+    display: inline-block;
+    margin-bottom: 5px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(201,168,76,0.16);
+    color: #8A6615;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+
+  .stats-strip {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 12px 0 0;
+  }
+
+  .header-location {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+  }
+
+  .stat-icon { font-size: 14px; }
+
+  /* CURVED TRANSITION */
+  .curve {
+    height: 24px;
+    background: var(--green-dark);
+    position: relative;
+  }
+  .curve::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 24px;
+    background: var(--cream);
+    border-radius: 24px 24px 0 0;
+  }
+
+  /* CONTENT */
+  .content {
+    padding: 4px 16px 32px;
+    background: var(--cream);
+  }
+
+  /* SECTION CARD */
+  .card {
+    background: var(--warm-white);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 12px rgba(28,58,46,0.07);
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* LOCATION */
+  .location-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .loc-icon {
+    width: 36px; height: 36px;
+    background: rgba(44,90,69,0.1);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .loc-text strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 2px;
+  }
+
+.loc-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.loc-text .maps-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gold-dark, #8A6615);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(138,102,21,0.35);
+}
+.loc-text .maps-link:active { opacity: 0.7; }
+
+  .location-row {
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 8px;
+    border: 1.5px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .location-row.selected {
+    border-color: var(--green-mid);
+    background: rgba(74,140,104,0.06);
+  }
+
+  .location-row.disabled {
+    opacity: 0.55;
+  }
+
+  .loc-check {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--green-mid);
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .loc-badge {
+    margin-left: auto;
+    flex-shrink: 0;
+    background: rgba(201,168,76,0.18);
+    color: #9A7520;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    align-self: center;
+  }
+
+  /* DATE PICKER */
+  .date-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 8px;
+  }
+
+  .date-scroll::-webkit-scrollbar { display: none; }
+
+  .date-chip {
+    flex-shrink: 0;
+    width: 56px;
+    padding: 10px 0;
+    border-radius: 14px;
+    text-align: center;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    background: var(--cream);
+    transition: all 0.2s;
+  }
+
+  .date-chip .day-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .date-chip .day-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--green-dark);
+    line-height: 1.2;
+    margin: 2px 0;
+  }
+
+  .date-chip .status {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .date-chip.full .day-name,
+  .date-chip.full .day-num { color: #BFBAB2; }
+
+  .date-chip.full .status { color: var(--red); }
+
+  .date-chip.active {
+    background: var(--green-dark);
+    border-color: var(--green-dark);
+    box-shadow: var(--tile-shadow);
+  }
+
+  .date-chip.active .day-name { color: rgba(255,255,255,0.6); }
+  .date-chip.active .day-num { color: var(--gold-light); }
+  .date-chip.active .status { color: var(--gold-light); }
+
+  .date-chip.available .status { color: var(--green-light); }
+
+  /* TIME PICKER */
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .time-slot {
+    padding: 10px 6px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1.5px solid rgba(28,58,46,0.12);
+    background: var(--cream);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .time-slot .time-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-dark);
+    display: block;
+  }
+
+  .time-slot .time-avail {
+    font-size: 10px;
+    color: var(--green-light);
+    margin-top: 2px;
+    display: block;
+  }
+
+  .time-slot.selected {
+    background: var(--green-dark);
+    border-color: var(--green-dark);
+  }
+
+  .time-slot.selected .time-val { color: var(--gold-light); }
+  .time-slot.selected .time-avail { color: rgba(255,255,255,0.5); }
+
+  .time-slot.full {
+    border-color: rgba(28,58,46,0.06);
+    cursor: default;
+  }
+
+  .time-slot.full .time-val { color: #C5C0B8; }
+  .time-slot.full .time-avail { color: var(--red); }
+
+  /* TABLE SELECTOR */
+  .table-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .table-card {
+    border-radius: 14px;
+    padding: 14px 12px;
+    border: 1.5px solid rgba(28,58,46,0.1);
+    background: var(--cream);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .table-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--green-light);
+    transform: scaleX(0);
+    transition: transform 0.2s;
+  }
+
+  .table-card.selected::before { transform: scaleX(1); }
+
+  .table-card.selected {
+    border-color: var(--green-mid);
+    background: white;
+    box-shadow: 0 4px 14px rgba(28,58,46,0.1);
+  }
+
+  .table-card.unavailable { opacity: 0.45; cursor: default; }
+
+  .table-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 3px;
+  }
+
+  .table-cap {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .table-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .tag-available { background: rgba(74,140,104,0.12); color: var(--green-mid); }
+  .tag-full { background: rgba(192,57,43,0.1); color: var(--red); }
+  .tag-vip { background: rgba(201,168,76,0.15); color: #9A7520; }
+
+  .table-emoji {
+    font-size: 22px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  /* DURASI */
+  .duration-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .duration-row > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .duration-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green-dark);
+  }
+
+  .duration-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    word-break: break-word;
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--cream);
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .step-btn {
+    width: 36px; height: 36px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--green-dark);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 300;
+  }
+
+  .step-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green-dark);
+    min-width: 28px;
+    text-align: center;
+  }
+
+  /* SUMMARY */
+  .summary-card {
+    background: var(--green-dark);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+
+  .summary-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .summary-key {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .summary-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+  }
+
+  .summary-val.gold { color: var(--gold-light); }
+
+  .summary-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin: 12px 0;
+  }
+
+  .price-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .price-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .price-amount {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+
+  /* NAME INPUT */
+  .name-input {
+    width: 100%;
+    background: var(--cream);
+    border: 1.5px solid rgba(28,58,46,0.1);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--green-dark);
+    outline: none;
+    margin-top: 4px;
+  }
+
+  .name-input::placeholder { color: #B5B0A8; }
+  .name-input:focus { border-color: var(--green-mid); }
+
+  .field-required {
+    color: var(--red);
+    font-size: 10px;
+    margin-left: 3px;
+  }
+
+  /* NOTES */
+  .notes-input {
+    width: 100%;
+    background: var(--cream);
+    border: 1.5px solid rgba(28,58,46,0.1);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--green-dark);
+    resize: none;
+    height: 70px;
+    outline: none;
+    margin-top: 4px;
+  }
+
+  .notes-input::placeholder { color: #B5B0A8; }
+  .notes-input:focus { border-color: var(--green-mid); }
+
+  /* CTA BUTTON */
+  .cta-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--gold);
+    border: none;
+    border-radius: 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--green-dark);
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(201,168,76,0.35);
+  }
+
+  .cta-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.2s;
+  }
+
+  .cta-btn:active::after { background: rgba(255,255,255,0.15); }
+
+  .cta-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* WHATSAPP LINK */
+  .wa-link {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .wa-link a {
+    color: var(--green-mid);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  /* MEMBER BADGE */
+  .member-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #1C3A2E, #2D5A45);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+  }
+
+  .member-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .member-text {
+    flex: 1;
+  }
+
+  .member-text strong {
+    font-size: 12px;
+    color: var(--gold-light);
+    display: block;
+    font-weight: 600;
+  }
+
+  .member-text span {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .member-arrow {
+    color: var(--gold-light);
+    font-size: 16px;
+  }
+
+  /* BOTTOM SAFE AREA */
+  .safe-bottom { height: 20px; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     TAMPILAN DESKTOP/WEB — halaman ini awalnya cuma didesain sebagai
+     mockup "kartu HP" (.phone-frame lebar tetap 390px) yang di layar
+     lebar cuma numpuk kecil di tengah background gelap. Media query di
+     bawah TIDAK mengubah HTML/JS sama sekali — semua id/class yang
+     dipakai script tetap sama — cuma menata ulang tampilannya di layar
+     lebar: kartu jadi lebih lebar & elegan, dan bagian ringkasan booking
+     "menempel" (sticky) di sisi kanan selagi form di kiri di-scroll,
+     supaya orang di laptop/desktop selalu lihat total harga & pilihan
+     mereka tanpa scroll naik-turun.
+     Di HP (di bawah 860px) tampilannya PERSIS SAMA seperti sebelumnya.
+     ═══════════════════════════════════════════════════════════════ */
+  @media (min-width: 860px) {
+    body {
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+
+    .phone-frame {
+      width: min(1040px, 94vw);
+      max-height: none;
+      min-height: 0;
+      border-radius: 28px;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+      margin: 0 auto;
+    }
+
+    .header {
+      padding: 32px 40px 0;
+      border-radius: 28px 28px 0 0;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      align-items: start;
+      gap: 18px 32px;
+      padding: 28px 40px 40px;
+    }
+
+    /* Semua .card (Lokasi, Tanggal, Waktu, Meja, Durasi, Nama, WA, Catatan)
+       tetap satu kolom kiri, urut dari atas ke bawah seperti di HP. */
+    .content > .card {
+      grid-column: 1;
+    }
+
+    /* Ringkasan booking pindah jadi sidebar kanan yang sticky, membentang
+       setinggi form di kiri (grid-row: 1 / -1), supaya selalu kelihatan. */
+    .content > .summary-card {
+      grid-column: 2;
+      grid-row: 1 / -1;
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      box-shadow: 0 12px 32px rgba(28,58,46,0.12);
+    }
+
+    /* Grid meja & jam dapat ruang lebih lega di kolom kiri yang lebar. */
+    .table-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .time-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* Modal konfirmasi/pembayaran sedikit lebih lega di layar besar. */
+    #confirmModal > div,
+    #paymentModal > div {
+      width: 380px !important;
+    }
+  }
+
+  @media (min-width: 1180px) {
+    .phone-frame { width: 1100px; }
+    .content { grid-template-columns: 1fr 380px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-frame" id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-nav">
+      <button class="back-btn">←</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <a href="/mahjong.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:20px;padding:8px 12px;color:white;font-size:12px;font-weight:600;">
+          🀄 Catat Skor
+        </a>
+        <a href="/status.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:20px;padding:8px 12px;color:white;font-size:12px;font-weight:600;">
+          🎫 Cek Booking
+        </a>
+      </div>
+      <div class="more-btn" onclick="toggleMoreMenu()">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="brand-section">
+      <div class="logo-circle"><img src="https://raw.githubusercontent.com/LineJie/pungrsvp/main/images/Pung%20Logo.png" alt="Pung Pung Mahjong"></div>
+      <div class="page-label">📅 Pilih Meja &amp; Jadwal</div>
+
+      <div class="stats-strip">
+        <button class="stat header-location" type="button" onclick="document.getElementById('locBanana').closest('.card').scrollIntoView({behavior:'smooth', block:'center'})" aria-label="Pilih lokasi booking">
+          <span class="stat-icon">📍</span> <span id="headerLocation">Surabaya</span> · Ubah lokasi
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="more-menu" id="moreMenu">
+    <div class="more-menu-item" onclick="openLeaderboardHome()"><span class="mi-ic">&#x1F3C6;</span> Leaderboard Mahjong</div>
+<!-- Link "Kamus Kombinasi" ke kombinasi.html disembunyikan (2026-08) —
+         sistem fan lama sudah diganti sistem poin Taiwan baru, kombinasi.html
+         belum diupdate jadi disembunyikan dulu dari customer. Baris asli:
+         <div class="more-menu-item" onclick="window.location.href='/kombinasi.html'"><span class="mi-ic">🀄</span> Kamus Kombinasi</div> -->
+  </div>
+
+  <!-- CURVE TRANSITION -->
+  <div class="curve"></div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- COMMUNITY STRIP — sementara dihapus dari tampilan, belum pede buat komunitas.
+         Modal & fungsi JS di bawah masih ada, tinggal aktifin lagi strip ini kalau sudah siap:
+    <div class="member-strip" onclick="openCommunity()">
+      <div class="member-icon">🎴</div>
+      <div class="member-text">
+        <strong>Join Our Community!</strong>
+        <span>Scan QR atau tap untuk bergabung</span>
+      </div>
+      <div class="member-arrow">›</div>
+    </div>
+    -->
+
+    <!-- PROMO FLYER POPUP — muncul otomatis begitu halaman dibuka kalau ada
+         flyer aktif untuk cabang yang sedang dipilih (lihat loadPromoFlyerPopup()
+         di INIT). Dikelola superadmin lewat admin.html > Pengaturan > Flyer
+         Promo, tidak butuh deploy ulang buat ganti gambar. -->
+    <div id="flyerModal" onclick="closeFlyerPopup()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+      <div onclick="event.stopPropagation()" style="max-width:360px;width:100%;position:relative;">
+        <button onclick="closeFlyerPopup()" aria-label="Tutup"
+          style="position:absolute;top:-14px;right:-8px;width:32px;height:32px;border-radius:50%;background:var(--warm-white);border:none;color:var(--green-dark);font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:2;">✕</button>
+        <a id="flyerModalLink" href="#" target="_blank" rel="noopener" style="display:block;">
+          <img id="flyerModalImg" src="" alt="Promo" style="width:100%;border-radius:16px;display:block;box-shadow:0 12px 32px rgba(0,0,0,0.4);">
+        </a>
+      </div>
+    </div>
+
+    <!-- QR MODAL -->
+    <div id="qrModal" onclick="closeCommunity()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;flex-direction:column;">
+      <div onclick="event.stopPropagation()" style="background:white;border-radius:24px;padding:28px 24px;width:300px;text-align:center;position:relative;">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1C3A2E;margin-bottom:4px;">Join Our Community</div>
+        <div style="font-size:12px;color:#7A7060;margin-bottom:16px;">Scan QR code di bawah ini</div>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Freclub.co%2Fclubs%2F%40pungpung-mahjong" style="width:220px;height:220px;object-fit:contain;border-radius:12px;" alt="QR Code">
+        <div style="margin-top:14px;">
+          <a href="https://reclub.co/clubs/@pungpung-mahjong" target="_blank"
+             style="display:inline-block;background:#1C3A2E;color:#E8C97A;text-decoration:none;font-size:13px;font-weight:600;padding:10px 24px;border-radius:12px;">
+            Buka Link Community →
+          </a>
+        </div>
+        <button onclick="closeCommunity()" style="margin-top:12px;background:none;border:none;font-size:12px;color:#7A7060;cursor:pointer;">Tutup</button>
+      </div>
+    </div>
+    <!-- LEADERBOARD MODAL -->
+    <div id="lbModal" onclick="closeLeaderboardHome()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:999;align-items:center;justify-content:center;">
+      <div onclick="event.stopPropagation()" style="background:#FDFAF4;border-radius:24px;padding:24px 20px;width:320px;margin:16px;max-height:80vh;overflow-y:auto;">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1C3A2E;text-align:center;margin-bottom:4px;">&#x1F3C6; Leaderboard Mahjong</div>
+        <div style="font-size:12px;color:#7A7060;text-align:center;margin-bottom:16px;">Top pemain Pung Pung Mahjong</div>
+        <div id="lbHomeBody"></div>
+        <button onclick="closeLeaderboardHome()" style="width:100%;margin-top:14px;padding:11px;background:#F5F0E8;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#7A7060;cursor:pointer;">Tutup</button>
+      </div>
+    </div>
+
+<!-- LOKASI -->
+    <div class="card">
+      <div class="section-label">Pilih Lokasi</div>
+      <div class="location-row selected" id="locBanana" onclick="selectLocation('surabaya')">
+        <div class="loc-icon">📍</div>
+        <div class="loc-text">
+          <strong>Graha Famili, Surabaya</strong>
+        <span>Banana Leaf, Jl. Mayjen Yonosewoyo, Plaza Graha Famili C12 · 5 Meja Automatic Table</span>
+        <a href="https://www.google.com/maps/search/?api=1&query=Banana+Leaf+Jl.+Mayjen+Yonosewoyo+Plaza+Graha+Famili+C12+Surabaya" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="maps-link">📍 Buka di Google Maps</a>
+        </div>
+      <div class="loc-check">✓</div>
+      </div>
+    <div class="location-row" id="locDenpasar" onclick="selectLocation('denpasar')" style="margin-top:10px;">
+    <div class="loc-icon">📍</div>
+    <div class="loc-text">
+    <strong>Denpasar, Bali</strong>
+    <span>Lantai 2 The Magendra · Teuku Umar Barat No.888</span>
+    <span>3 Meja — Spring &amp; Winter (Automatic), Autumn (Manual Mahjong)</span>
+    <a href="https://www.google.com/maps/search/?api=1&query=The+Magendra+Jl.+Teuku+Umar+Barat+No.888+Denpasar+Bali" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="maps-link">📍 Buka di Google Maps</a>
+    </div>
+    <div class="loc-check" style="display:none;">✓</div>
+    </div>
+    </div>
+
+    <!-- PILIH TANGGAL -->
+    <div class="card">
+      <div class="section-label">Pilih Tanggal</div>
+      <div class="date-scroll" id="dateScroll"></div>
+    </div>
+
+    <!-- PILIH WAKTU -->
+    <div class="card">
+      <div class="section-label">Pilih Waktu Mulai</div>
+      <div class="time-grid" id="timeGrid"></div>
+    </div>
+
+    <!-- PILIH MEJA -->
+    <div class="card">
+      <div class="section-label">Pilih Meja</div>
+      <div class="table-grid" id="tableGrid"></div>
+    </div>
+
+    <!-- DURASI -->
+    <div class="card">
+      <div class="section-label">Durasi Bermain</div>
+      <div class="duration-row">
+        <div>
+          <div class="duration-label" id="durationLabel">2 Jam</div>
+          <div class="duration-hint" id="durationHint">Rp 50.000 / jam per meja</div>
+        </div>
+        <div class="stepper">
+          <button class="step-btn" onclick="changeDuration(-1)">−</button>
+          <span class="step-val" id="durationVal">2</span>
+          <button class="step-btn" onclick="changeDuration(1)">+</button>
+        </div>
+      </div>
+      <div id="durationClosingWarning" style="display:none;margin-top:10px;background:rgba(192,57,43,0.1);border:1.5px solid rgba(192,57,43,0.3);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#a83232;font-weight:600;"></div>
+    </div>
+
+    <!-- NAMA -->
+    <div class="card">
+      <div class="section-label">Nama Pemesan <span class="field-required">*</span></div>
+      <input id="customerName" class="name-input" type="text" placeholder="Masukkan nama lengkap Anda…" autocomplete="name">
+    </div>
+
+    <!-- KONTAK -->
+    <div class="card">
+      <div class="section-label">Nomor WhatsApp Kamu</div>
+      <input type="tel" id="customerPhone" placeholder="Contoh: 08123456789"
+        style="width:100%;background:var(--cream);border:1.5px solid rgba(28,58,46,0.1);border-radius:12px;
+               padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--green-dark);outline:none;">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Untuk kami hubungi jika ada perubahan</div>
+    </div>
+
+    <!-- CATATAN -->
+    <div class="card">
+      <div class="section-label">Catatan (Opsional)</div>
+      <textarea class="notes-input" placeholder="Misal: minta kursi tambahan, ada yang ultah, atau request khusus…"></textarea>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-card">
+      <div class="summary-title">Ringkasan Booking</div>
+      <div class="summary-row">
+        <span class="summary-key">Tanggal</span>
+        <span class="summary-val gold" id="sumDate">Pilih tanggal</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Waktu</span>
+        <span class="summary-val" id="sumTime">Pilih waktu</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Meja</span>
+        <span class="summary-val" id="sumTable">Pilih meja</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Durasi</span>
+        <span class="summary-val" id="sumDur">2 jam</span>
+      </div>
+      <hr class="summary-divider">
+      <div class="price-total">
+        <span class="price-label">Estimasi Total</span>
+        <span class="price-amount" id="sumPrice">Rp 100.000</span>
+      </div>
+    </div>
+
+    <!-- CONFIRM MODAL -->
+    <div id="confirmModal" onclick="closeConfirmModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1001;align-items:center;justify-content:center;">
+      <div onclick="event.stopPropagation()" style="background:#FDFAF4;border-radius:24px;padding:28px 24px;width:320px;margin:16px;">
+        <div style="font-size:24px;text-align:center;margin-bottom:10px;">🀄</div>
+        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#1C3A2E;text-align:center;margin-bottom:4px;">Konfirmasi Booking</div>
+        <div style="font-size:12px;color:#7A7060;text-align:center;margin-bottom:18px;">Pastikan detail berikut sudah benar</div>
+        <div id="confirmSummary" style="background:#F5F0E8;border-radius:14px;padding:14px 16px;font-size:13px;color:#1C3A2E;line-height:2;margin-bottom:18px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="closeConfirmModal()" style="flex:1;padding:12px;background:#F5F0E8;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#7A7060;cursor:pointer;">← Ubah</button>
+          <button onclick="proceedBooking()" style="flex:2;padding:12px;background:#C9A84C;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:#1C3A2E;cursor:pointer;">Ya, Booking Sekarang</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
+    <div id="paymentModal" onclick="closePaymentModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;">
+      <div onclick="event.stopPropagation()" style="background:#FDFAF4;border-radius:24px;padding:28px 24px;width:320px;text-align:center;margin:16px;">
+
+        <!-- Success icon -->
+        <div style="width:56px;height:56px;background:rgba(74,140,104,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;">✅</div>
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1C3A2E;margin-bottom:4px;">Booking Diterima!</div>
+        <div id="pmBookingCode" style="display:inline-block;background:#1C3A2E;color:#E8C97A;font-size:13px;font-weight:700;letter-spacing:2px;padding:4px 14px;border-radius:8px;margin-bottom:10px;"></div>
+        <div style="font-size:12px;color:#7A7060;margin-bottom:16px;">Simpan kode ini untuk cek status booking kamu</div>
+
+        <!-- Booking summary mini -->
+        <div style="background:#F5F0E8;border-radius:14px;padding:14px 16px;text-align:left;margin-bottom:18px;font-size:12px;color:#1C3A2E;line-height:1.9;">
+          <div id="pmSummary"></div>
+        </div>
+
+        <!-- Bank payment info (dinamis: BCA Teresa untuk Surabaya, Mandiri Rika untuk Denpasar) -->
+        <div style="background:linear-gradient(135deg,#1C3A2E,#2D5A45);border-radius:16px;padding:18px 20px;margin-bottom:16px;">
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;">Transfer ke</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <div id="pmBankBadge" style="background:#0066B2;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700;color:white;letter-spacing:1px;">BCA</div>
+            <div style="text-align:left;">
+              <div id="pmRekNumber" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#E8C97A;letter-spacing:2px;">8630038775</div>
+              <div id="pmRekName" style="font-size:11px;color:rgba(255,255,255,0.6);">a.n. Teresa Carolina</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;color:rgba(255,255,255,0.6);">Total transfer</span>
+            <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#E8C97A;" id="pmTotal">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Copy button -->
+        <button onclick="copyRekening()" style="width:100%;padding:11px;background:#F5F0E8;border:1.5px solid rgba(28,58,46,0.15);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#1C3A2E;cursor:pointer;margin-bottom:10px;">
+          📋 Salin Nomor Rekening
+        </button>
+
+        <!-- WA confirm button -->
+        <button id="pmWaBtn" style="width:100%;padding:13px;background:#C9A84C;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#1C3A2E;cursor:pointer;margin-bottom:12px;">
+          💬 Konfirmasi via WhatsApp
+        </button>
+
+        <div style="font-size:11px;color:#7A7060;">Kirim bukti transfer ke WA kami setelah pembayaran</div>
+        <a id="pmStatusLink" href="/status.html" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#2D5A45;font-weight:600;text-decoration:none;">🎫 Cek status booking kamu →</a>
+        <button onclick="closePaymentModal()" style="margin-top:8px;background:none;border:none;font-size:12px;color:#7A7060;cursor:pointer;">Tutup</button>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <button class="cta-btn" onclick="submitBooking()">
+      <div class="cta-inner">
+        <span>🀄</span>
+        <span>Lanjut ke Konfirmasi</span>
+      </div>
+    </button>
+
+    <div class="wa-link">
+      Butuh bantuan? <a id="waHelpLink" href="https://wa.me/628999880707">Chat langsung di WhatsApp</a>
+    </div>
+
+    <div class="safe-bottom"></div>
+
+  </div>
+</div>
+
+<script>
+  // === DATA ===
+  const today = new Date();
+  const days = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  // Generate 7 days from today
+  const dateData = Array.from({length: 7}, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return {
+      date: d,
+      dateKey: `${y}-${m}-${dd}`,
+      dayName: days[d.getDay()],
+      dayNum: d.getDate(),
+      month: months[d.getMonth()],
+      dayOfWeek: d.getDay(),
+      isSaturday: d.getDay() === 6,
+      full: false
+    };
+  });
+
+  // Tutup Surabaya: 22:00 hari biasa (slot terakhir 21:00), 24:00 Sabtu
+  // (slot terakhir 23:00). Tutup Denpasar: 21:00 Senin-Kamis (slot
+  // terakhir 20:00), 22:00 Jumat-Minggu (slot terakhir 21:00).
+  const allTimeSlots = [
+    { time: '00:00' }, { time: '01:00' }, { time: '02:00' }, { time: '03:00' },
+    { time: '04:00' }, { time: '05:00' }, { time: '06:00' }, { time: '07:00' },
+    { time: '08:00' }, { time: '09:00' }, { time: '10:00' }, { time: '11:00' },
+    { time: '12:00' }, { time: '13:00' }, { time: '14:00' }, { time: '15:00' },
+    { time: '16:00' }, { time: '17:00' }, { time: '18:00' }, { time: '19:00' },
+    { time: '20:00' }, { time: '21:00' }, { time: '22:00' }, { time: '23:00' },
+  ];
+
+  // Jam operasional per cabang — diambil dari /api/operating-hours (bisa
+  // diubah Super Admin di admin panel). Nilai di bawah cuma FALLBACK kalau
+  // fetch gagal, supaya halaman booking tetap bisa jalan.
+  //   Surabaya: Minggu-Kamis 10:00-22:00, Jumat-Sabtu 10:00-24:00
+  //   Denpasar: Senin-Kamis 10:00-21:00, Jumat-Minggu 10:00-22:00
+  let _operatingHours = {}; // key: "location|dayOfWeek" -> { openHour, closeHour }
+
+  function fallbackClosingHour(location, dayOfWeek) {
+    if (location === 'denpasar') {
+      return (dayOfWeek >= 1 && dayOfWeek <= 4) ? 21 : 22;
+    }
+    return (dayOfWeek === 5 || dayOfWeek === 6) ? 24 : 22;
+  }
+
+  async function loadOperatingHours() {
+    try {
+      const res = await fetch('/api/operating-hours');
+      const rows = await res.json();
+      if (Array.isArray(rows)) {
+        rows.forEach(r => { _operatingHours[`${r.location}|${r.dayOfWeek}`] = { openHour: r.openHour, closeHour: r.closeHour }; });
+      }
+    } catch (e) { /* pakai fallback */ }
+  }
+
+  // Jam tutup per cabang, tergantung hari dalam seminggu (0=Minggu..6=Sabtu).
+  function getClosingHour(location, dayOfWeek) {
+    const row = _operatingHours[`${location}|${dayOfWeek}`];
+    return row ? row.closeHour : fallbackClosingHour(location, dayOfWeek);
+  }
+  function getOpeningHour(location, dayOfWeek) {
+    const row = _operatingHours[`${location}|${dayOfWeek}`];
+    return row ? row.openHour : 10;
+  }
+
+  // Dua set meja: Surabaya (Banana Leaf) dan Denpasar, Bali. Ini FALLBACK
+  // statis (dipakai kalau /api/tables gagal di-fetch) — sumber kebenaran
+  // sebenarnya sekarang ada di database, dikelola Super Admin lewat tab
+  // "Kelola Meja" di admin.html, dan diambil oleh loadVenueTablesForBooking()
+  // di bawah supaya meja baru langsung muncul di sini tanpa deploy ulang.
+  const tableDataSurabaya = [
+    { id: '1', name: 'Bamboo Table', floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🎋', avail: true, bookedBy: null },
+    { id: '2', name: 'Orchid Table',  floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🌸', avail: true, bookedBy: null },
+    { id: '3', name: 'Lotus Table',  floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🪷', avail: true, bookedBy: null },
+    { id: '4', name: 'Sakura Table', floor: 'Lantai 2', cap: '4 orang', rate: 50000, emoji: '🌺', avail: true, bookedBy: null },
+    { id: '5', name: 'Dragon Table', floor: 'Lantai 1', cap: '4 orang', rate: 50000, emoji: '🐉', avail: true, bookedBy: null },
+  ];
+  let tableDataDenpasar = [
+    { id: 'b1', name: 'Spring Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '🌱', note: 'Automatic Table', avail: true, bookedBy: null },
+    { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', note: 'Automatic Table', avail: true, bookedBy: null },
+    { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', note: 'Manual Mahjong', avail: true, bookedBy: null },
+  ];
+  let _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar };
+  // Ambil daftar meja aktif dari server dan timpa fallback statis di atas —
+  // satu tempat ini yang jadi sumber tarif/nama meja buat seluruh halaman
+  // booking (grid meja, ringkasan harga, dsb).
+  async function loadVenueTablesForBooking() {
+    try {
+      const res = await fetch('/api/tables');
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows.length) return;
+      const bySurabaya = [], byDenpasar = [];
+      for (const t of rows) {
+        const entry = {
+          id: t.tableKey, name: t.name, floor: t.floor, cap: t.capacity || '4 orang',
+          rate: t.hourlyRate, emoji: t.emoji || '🀄',
+          note: t.notes ? t.notes : (t.type === 'manual' ? 'Manual Mahjong' : (t.location === 'denpasar' ? 'Automatic Table' : undefined)),
+          avail: true, bookedBy: null,
+        };
+        (t.location === 'denpasar' ? byDenpasar : bySurabaya).push(entry);
+      }
+      if (bySurabaya.length) { tableDataSurabaya.length = 0; tableDataSurabaya.push(...bySurabaya); }
+      if (byDenpasar.length) { tableDataDenpasar.length = 0; tableDataDenpasar.push(...byDenpasar); }
+      _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar };
+      tableData = currentLocation === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+      TOTAL_TABLES = tableData.length;
+    } catch (e) { /* fetch gagal — tetap pakai fallback statis di atas */ }
+  }
+
+  let currentLocation = 'surabaya';
+
+  // Rekening transfer per cabang. Surabaya tetap BCA a.n. Teresa Carolina,
+  // Denpasar/Bali pakai Mandiri a.n. Rika A. JANGAN ditukar antar cabang.
+  const REKENING = {
+    surabaya: { bank: 'BCA', badgeColor: '#0066B2', number: '8630038775', name: 'Teresa Carolina', wa: '628999880707' },
+    denpasar: { bank: 'Mandiri', badgeColor: '#003D79', number: '1450014635755', name: 'Rika A', wa: '6288231360817' }
+  };
+  let _pmRekening = REKENING.surabaya;
+  let tableData = tableDataSurabaya;
+  let TOTAL_TABLES = tableData.length;
+
+  function getTimeData(dayOfWeek, location) {
+    const openingHour = getOpeningHour(location, dayOfWeek);
+    const closingHour = getClosingHour(location, dayOfWeek);
+    // Sebelumnya cuma difilter batas atas (jam tutup) — batas bawah (jam
+    // buka) gak pernah dicek sama sekali, dan daftar slotnya sendiri
+    // hardcoded mulai jam 10:00, jadi kalaupun jam buka diubah lebih pagi
+    // (misal Denpasar jam 9) di admin, jam segitu tetap gak akan pernah
+    // muncul di halaman booking customer.
+    return allTimeSlots
+      .filter(t => parseInt(t.time) >= openingHour && parseInt(t.time) < closingHour)
+      .map(t => ({ time: t.time, avail: TOTAL_TABLES, full: false }));
+  }
+
+  let timeData = getTimeData(new Date().getDay(), 'surabaya');
+
+  // Bookings per lokasi+tanggal: { [location|dateKey]: { [time]: { [tableId]: customerName } } }
+  let bookingsCache = {};
+
+  // === STATE ===
+  let selectedDate = null;
+  let selectedTime = null;
+  let selectedTables = [];
+  let duration = 2;
+
+  // === LOAD BOOKINGS FOR DATE ===
+  // Cache TTL — data booking dianggap "segar" cuma 20 detik. Sebelumnya
+  // cache ini tidak pernah kadaluarsa selama halaman terbuka, jadi kalau
+  // customer lain booking meja yang sama sementara halaman kita sudah lama
+  // terbuka, meja itu masih kelihatan "Tersedia" padahal sudah kepakai.
+  const BOOKINGS_CACHE_TTL_MS = 20000;
+  let bookingsCacheTime = {};
+
+  async function loadBookingsForDate(dateKey, forceFresh) {
+    const cacheKey = currentLocation + '|' + dateKey;
+    const fresh = bookingsCache[cacheKey] && bookingsCacheTime[cacheKey] && (Date.now() - bookingsCacheTime[cacheKey] < BOOKINGS_CACHE_TTL_MS);
+    if (!forceFresh && fresh) return;
+    try {
+      // Ambil booking BIASA dan sesi "Acara Main Bareng" BARENGAN — dulu
+      // yang kedua ini nggak pernah di-fetch sama sekali di halaman booking
+      // customer, jadi meja yang dipakai buat acara mabar keliatan kosong
+      // padahal sebenarnya sudah dikunci staff dari admin.html.
+      const [bookingsRes, communityRes] = await Promise.all([
+        fetch(`/api/bookings?date=${dateKey}&location=${currentLocation}`),
+        fetch(`/api/community-sessions?date=${dateKey}&location=${currentLocation}`)
+      ]);
+      const rows = await bookingsRes.json();
+      const communityRows = await communityRes.json().catch(() => []);
+      // Simpan per meja sebagai daftar sesi (bukan hanya per jam mulai),
+      // supaya kita bisa bedakan booking yang masih terjadwal normal
+      // vs. sesi yang MASIH BERLANGSUNG (checked_in) dan bisa molor lebih
+      // lama dari durasi yang dipesan di awal.
+      const byTable = {};
+      rows.forEach(b => {
+        if (b.status === 'cancelled') return;
+        const startHour = b.time ? parseInt(b.time.substring(0,2)) : null;
+        if (startHour === null) return;
+        if (!byTable[b.tableId]) byTable[b.tableId] = [];
+        byTable[b.tableId].push({
+          customerName: b.customerName,
+          startHour,
+          duration: b.duration || 1,
+          status: b.status
+        });
+      });
+      // Sesi Acara Main Bareng yang masih "open" ikut mengunci mejanya —
+      // status dikasih label khusus 'community' (bukan salah satu status
+      // booking biasa) supaya jelas kalau nanti perlu dibedakan tampilannya.
+      (Array.isArray(communityRows) ? communityRows : []).forEach(s => {
+        if (s.status !== 'open') return;
+        const startHour = s.time ? parseInt(s.time.substring(0,2)) : null;
+        if (startHour === null) return;
+        if (!byTable[s.tableId]) byTable[s.tableId] = [];
+        byTable[s.tableId].push({
+          customerName: '🀄 Acara Main Bareng',
+          startHour,
+          duration: s.duration || 1,
+          status: 'community'
+        });
+      });
+      bookingsCache[cacheKey] = byTable;
+      bookingsCacheTime[cacheKey] = Date.now();
+    } catch (e) {
+      bookingsCache[cacheKey] = {};
+      bookingsCacheTime[cacheKey] = Date.now();
+    }
+  }
+
+  // Apply booking data to timeData and tableData for selected date+time.
+  // Normal booking (pending/confirmed/completed): blocks slot [startHour, startHour+duration-1] seperti biasa.
+  //
+  // Booking yang MASIH checked_in dan BELUM lewat jam booking awalnya:
+  // diblok seperti biasa juga (startHour s/d startHour+duration-1) — belum
+  // ada tanda-tanda extend, jadi tidak perlu blok ekstra.
+  //
+  // Booking checked_in yang SUDAH LEWAT jam booking awalnya (berarti sedang
+  // extend main): diblok dari jam mulai s/d (SEKARANG + buffer kecil),
+  // BUKAN sampai jam tutup. Ini mencegah booking 2 jam siang bisa
+  // mengunci meja itu seharian penuh. Selama masih checked_in, tiap kali
+  // halaman ini dibuka ulang buffer-nya otomatis maju mengikuti waktu
+  // sekarang — begitu kasir checkout, kembali normal.
+  const CLOSING_HOUR = 23;       // jam tutup terakhir (Sabtu), batas atas aman
+  const OVERRUN_BUFFER_HOURS = 1; // grace period di atas "sekarang" saat sedang extend
+
+  // Zona waktu ikut cabang yang sedang dipilih: Surabaya = WIB
+  // (Asia/Jakarta), Denpasar = WITA (Asia/Makassar). Ini bukan cuma soal
+  // label tampilan — "jam berapa sekarang" dipakai juga untuk menentukan
+  // slot mana yang sudah lewat, jadi harus ikut waktu lokal cabang tsb.
+  function tzForLoc(location) {
+    return location === 'denpasar' ? 'Asia/Makassar' : 'Asia/Jakarta';
+  }
+  function tzLabelForLoc(location) {
+    return location === 'denpasar' ? 'WITA' : 'WIB';
+  }
+  function getNowWIB(location) {
+    const now = new Date();
+    return new Date(now.toLocaleString('en-US', { timeZone: tzForLoc(location) }));
+  }
+  function getTodayKeyWIB(location) {
+    const wib = getNowWIB(location);
+    return `${wib.getFullYear()}-${String(wib.getMonth()+1).padStart(2,'0')}-${String(wib.getDate()).padStart(2,'0')}`;
+  }
+
+  function applyBookings() {
+    if (selectedDate === null) return;
+    const dateKey = dateData[selectedDate].dateKey;
+    const byTable = bookingsCache[currentLocation + '|' + dateKey] || {};
+    const isToday = dateKey === getTodayKeyWIB(currentLocation);
+    const nowHour = getNowWIB(currentLocation).getHours();
+
+    // Build: for each 'HH:00' slot -> { tableId: customerName } yang ke-block
+    const slotTableBlocked = {};
+
+    Object.entries(byTable).forEach(([tableId, sessions]) => {
+      sessions.forEach(s => {
+        let endHour = s.startHour + s.duration - 1;
+        if (s.status === 'checked_in' && isToday && nowHour > endHour) {
+          // Sedang overrun/extend — kunci secukupnya dari waktu sekarang,
+          // bukan langsung sampai tutup.
+          endHour = Math.min(CLOSING_HOUR, nowHour + OVERRUN_BUFFER_HOURS);
+        }
+        for (let h = s.startHour; h <= endHour; h++) {
+          const blockedKey = h.toString().padStart(2, '0') + ':00';
+          if (!slotTableBlocked[blockedKey]) slotTableBlocked[blockedKey] = {};
+          slotTableBlocked[blockedKey][tableId] = s.customerName;
+        }
+      });
+    });
+
+    // Update time slot availability based on blocked slots
+    timeData.forEach(slot => {
+      const blocked = slotTableBlocked[slot.time] || {};
+      const bookedCount = Object.keys(blocked).length;
+      slot.avail = TOTAL_TABLES - bookedCount;
+      slot.full = slot.avail <= 0;
+    });
+
+    // Update table availability for selected time
+    const selectedTimeStr = selectedTime !== null ? timeData[selectedTime].time : null;
+    tableData.forEach(t => {
+      if (selectedTimeStr && slotTableBlocked[selectedTimeStr]) {
+        const booker = slotTableBlocked[selectedTimeStr][t.id];
+        t.avail = !booker;
+        t.bookedBy = booker || null;
+      } else {
+        t.avail = true;
+        t.bookedBy = null;
+      }
+    });
+  }
+
+  // === RENDER DATES ===
+  function renderDates() {
+    const el = document.getElementById('dateScroll');
+    el.innerHTML = dateData.map((d, i) => `
+      <div class="date-chip ${d.full ? 'full' : 'available'} ${selectedDate === i ? 'active' : ''}" onclick="selectDate(${i})">
+        <div class="day-name">${d.dayName}</div>
+        <div class="day-num">${d.dayNum}</div>
+        <div class="status">${d.full ? 'PENUH' : d.isSaturday ? '🌙' : d.month}</div>
+      </div>
+    `).join('');
+  }
+
+  async function selectDate(i) {
+    if (dateData[i].full) return;
+    selectedDate = i;
+    selectedTime = null;
+    timeData = getTimeData(dateData[i].dayOfWeek, currentLocation);
+    tableData.forEach(t => { t.avail = true; t.bookedBy = null; });
+    renderDates();
+    renderTimes();
+    renderTables();
+    updateSummary();
+    await loadBookingsForDate(dateData[i].dateKey);
+    applyBookings();
+    renderTimes();
+    renderTables();
+  }
+
+  // === RENDER TIMES ===
+  function renderTimes() {
+    const el = document.getElementById('timeGrid');
+    const isSat = selectedDate !== null && dateData[selectedDate].isSaturday;
+    const isMeja5 = selectedTables.some(idx => tableData[idx].id === '5');
+    el.innerHTML = timeData.map((t, i) => {
+      const blockedForMeja5 = isSat && isMeja5 && parseInt(t.time) >= 22;
+      const isFullSlot = t.full || blockedForMeja5;
+      const availLabel = blockedForMeja5 ? 'Lt.1 tutup' : t.full ? 'Penuh' : t.avail + ' meja';
+      return `
+      <div class="time-slot ${isFullSlot ? 'full' : ''} ${selectedTime === i ? 'selected' : ''}"
+           onclick="${isFullSlot ? '' : `selectTime(${i})`}">
+        <span class="time-val">${t.time}</span>
+        <span class="time-avail">${availLabel}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function selectTime(i) {
+    selectedTime = i;
+    applyBookings();
+    renderTimes();
+    renderTables();
+    updateSummary();
+    validateDurationAgainstClosing();
+  }
+
+  // === RENDER TABLES ===
+  function renderTables() {
+    const el = document.getElementById('tableGrid');
+    const activeFloor = selectedTables.length > 0 ? tableData[selectedTables[0]].floor : null;
+    const isSat = selectedDate !== null && dateData[selectedDate].isSaturday;
+    el.innerHTML = tableData.map((t, i) => {
+      const isSelected = selectedTables.includes(i);
+      const crossFloor = activeFloor && t.floor !== activeFloor;
+      const maxReached = selectedTables.length >= 4 && !isSelected;
+      const isDisabled = !t.avail || crossFloor || maxReached;
+      const emoji = t.emoji || '🀄';
+      const tagLabel = !t.avail
+        ? `Terisi · ${typeof t.bookedBy === 'object' ? t.bookedBy?.customerName : t.bookedBy || '—'}`
+        : crossFloor ? 'Beda lantai'
+        : maxReached ? 'Maks 4 meja'
+        : isSelected ? '✓ Dipilih'
+        : 'Tersedia';
+      const tagClass = !t.avail || crossFloor || maxReached ? 'tag-full'
+        : isSelected ? 'tag-vip'
+        : 'tag-available';
+      return `
+      <div class="table-card ${isDisabled ? 'unavailable' : ''} ${isSelected && !isDisabled ? 'selected' : ''}"
+           onclick="${!isDisabled ? `selectTable(${i})` : ''}">
+        <span class="table-emoji">${emoji}</span>
+        <div class="table-name">${t.name}</div>
+        <div class="table-cap">📍 ${t.floor} · 👥 ${t.cap}${t.note ? `<br><span style='color:#8A6615;font-size:10px;font-weight:700;'>🀄 ${t.note}</span>` : ''}${isSat && t.id === '5' ? '<br><span style=\'color:#C0392B;font-size:10px;font-weight:600;\'>⚠ Sabtu tutup 22:00</span>' : ''}</div>
+        <span class="table-tag ${tagClass}">${tagLabel}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function selectTable(i) {
+    if (!tableData[i].avail) return; // block unavailable
+    const already = selectedTables.indexOf(i);
+    if (already !== -1) {
+      selectedTables.splice(already, 1);
+    } else {
+      if (selectedTables.length > 0 && tableData[i].floor !== tableData[selectedTables[0]].floor) return;
+      if (selectedTables.length >= 4) return;
+      selectedTables.push(i);
+    }
+    const isSat = selectedDate !== null && dateData[selectedDate].isSaturday;
+    const hasDragon = selectedTables.some(idx => tableData[idx].id === '5');
+    if (isSat && hasDragon && selectedTime !== null && parseInt(timeData[selectedTime].time) >= 22) {
+      selectedTime = null;
+    }
+    renderTables();
+    renderTimes();
+    updateSummary();
+    refreshDurationHint(currentLocation);
+  }
+
+  // === DURATION ===
+  function changeDuration(delta) {
+    duration = Math.max(1, Math.min(6, duration + delta));
+    document.getElementById('durationVal').textContent = duration;
+    document.getElementById('durationLabel').textContent = duration + ' Jam';
+    updateSummary();
+    validateDurationAgainstClosing();
+  }
+
+  // Cek apakah jam mulai + durasi yang dipilih melewati jam tutup cabang di
+  // hari itu. Kalau iya, tampilkan peringatan dan kunci tombol submit —
+  // supaya customer tidak bisa booking misal jam 20:00 durasi 3 jam padahal
+  // tutup jam 21:00.
+  function validateDurationAgainstClosing() {
+    const warnEl = document.getElementById('durationClosingWarning');
+    const ctaBtn = document.querySelector('.cta-btn');
+    if (selectedDate === null || selectedTime === null || !warnEl) {
+      if (warnEl) warnEl.style.display = 'none';
+      if (ctaBtn) { ctaBtn.disabled = false; ctaBtn.style.opacity = '1'; ctaBtn.style.cursor = 'pointer'; }
+      return true;
+    }
+    const d = dateData[selectedDate];
+    const t = timeData[selectedTime];
+    const closingHour = getClosingHour(currentLocation, d.dayOfWeek);
+    const startHour = parseInt(t.time);
+    const endHour = startHour + duration;
+    const tzLabel = tzLabelForLoc(currentLocation);
+    const closingLabel = closingHour === 24 ? '24:00 (tengah malam)' : `${String(closingHour).padStart(2,'0')}:00`;
+
+    if (endHour > closingHour) {
+      const maxDuration = closingHour - startHour;
+      warnEl.style.display = 'block';
+      warnEl.textContent = maxDuration > 0
+        ? `⚠️ ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'} tutup jam ${closingLabel} ${tzLabel}. Mulai jam ${t.time}, durasi maksimal ${maxDuration} jam.`
+        : `⚠️ ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'} tutup jam ${closingLabel} ${tzLabel}. Jam ${t.time} sudah tidak bisa booking, coba pilih jam lebih awal.`;
+      if (ctaBtn) { ctaBtn.disabled = true; ctaBtn.style.opacity = '0.5'; ctaBtn.style.cursor = 'not-allowed'; }
+      return false;
+    }
+    warnEl.style.display = 'none';
+    if (ctaBtn) { ctaBtn.disabled = false; ctaBtn.style.opacity = '1'; ctaBtn.style.cursor = 'pointer'; }
+    return true;
+  }
+
+  // === SUMMARY ===
+  function updateSummary() {
+    const d = selectedDate !== null ? dateData[selectedDate] : null;
+    const t = selectedTime !== null ? timeData[selectedTime] : null;
+
+    document.getElementById('sumDate').textContent = d ? `${d.dayName}, ${d.dayNum} ${d.month}` : 'Pilih tanggal';
+    document.getElementById('sumTime').textContent = t ? `${t.time} ${tzLabelForLoc(currentLocation)}` : 'Pilih waktu';
+
+    if (selectedTables.length === 0) {
+      document.getElementById('sumTable').textContent = 'Pilih meja';
+    } else {
+      const names = selectedTables.map(i => tableData[i].name).join(', ');
+      document.getElementById('sumTable').textContent =
+        selectedTables.length > 1 ? `${names} (${selectedTables.length} meja)` : names;
+    }
+
+    document.getElementById('sumDur').textContent = duration + ' jam';
+    // Total dihitung dari tarif ASLI tiap meja (bukan flat 50rb) supaya
+    // Autumn Table (meja manual Denpasar, 30rb/jam) terhitung benar.
+    const perHourTotal = selectedTables.length > 0
+      ? selectedTables.reduce((sum, i) => sum + (tableData[i].rate || 50000), 0)
+      : (tableData[0] ? tableData[0].rate : 50000);
+    const total = perHourTotal * duration;
+    document.getElementById('sumPrice').textContent = 'Rp ' + total.toLocaleString('id-ID');
+  }
+
+  // === COMMUNITY MODAL ===
+  function openCommunity() {
+    document.getElementById('qrModal').style.display = 'flex';
+  }
+
+function closeCommunity() {
+  document.getElementById('qrModal').style.display = 'none';
+}
+
+  // === LOCATION SELECTOR ===
+  function refreshDurationHint(loc) {
+    const hint = document.getElementById('durationHint');
+    if (!hint) return;
+    const activeSet = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+
+    // Kalau user sudah pilih meja, tampilkan harga meja yang DIPILIH saja —
+    // bukan daftar semua meja di cabang itu.
+    if (selectedTables.length > 0) {
+      const chosen = selectedTables.map(i => tableData[i]);
+      const rates = [...new Set(chosen.map(t => t.rate))];
+      if (rates.length <= 1) {
+        hint.textContent = `Rp ${(rates[0] || 50000).toLocaleString('id-ID')} / jam per meja`;
+      } else {
+        hint.textContent = chosen
+          .map(t => `${t.name}: Rp ${t.rate.toLocaleString('id-ID')}/jam`)
+          .join(' · ');
+      }
+      return;
+    }
+
+    // Belum ada meja dipilih — kalau semua meja di cabang harganya sama,
+    // tampilkan itu; kalau beda-beda, tampilkan rentang harga singkat
+    // (bukan nge-list nama semua meja).
+    const rates = [...new Set(activeSet.map(t => t.rate))];
+    if (rates.length <= 1) {
+      hint.textContent = `Rp ${(rates[0] || 50000).toLocaleString('id-ID')} / jam per meja`;
+    } else {
+      const min = Math.min(...rates), max = Math.max(...rates);
+      hint.textContent = `Rp ${min.toLocaleString('id-ID')}–${max.toLocaleString('id-ID')} / jam, tergantung meja`;
+    }
+  }
+  // Ambil flyer promo aktif untuk cabang yang lagi dipilih, tampilkan sebagai
+  // popup begitu halaman dibuka. Pakai sessionStorage KEYED PER FLYER ID —
+  // jadi kalau superadmin ganti/upload flyer baru, popup tetap muncul lagi
+  // meski customer sudah pernah nutup flyer LAMA di sesi yang sama.
+  function loadPromoFlyerPopup() {
+    fetch('/api/promo-flyers?location=' + currentLocation + '&active=true')
+      .then((r) => r.json())
+      .then((list) => {
+        if (!Array.isArray(list) || !list.length) return;
+        // Kalau ada beberapa flyer aktif bersamaan untuk cabang yang sama,
+        // ambil yang paling baru dibuat.
+        const flyer = list.slice().sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+        const dismissKey = 'flyerDismissed:' + flyer.id;
+        if (sessionStorage.getItem(dismissKey)) return;
+
+        document.getElementById('flyerModalImg').src = flyer.imageUrl;
+        const link = document.getElementById('flyerModalLink');
+        if (flyer.linkUrl) {
+          link.href = flyer.linkUrl;
+          link.style.pointerEvents = 'auto';
+        } else {
+          link.removeAttribute('href');
+          link.style.pointerEvents = 'none';
+        }
+        document.getElementById('flyerModal').dataset.flyerId = flyer.id;
+        document.getElementById('flyerModal').style.display = 'flex';
+      })
+      .catch(() => { /* diam-diam gagal — popup promo bukan fitur kritikal, jangan ganggu booking */ });
+  }
+  function closeFlyerPopup() {
+    const modal = document.getElementById('flyerModal');
+    const id = modal.dataset.flyerId;
+    if (id) sessionStorage.setItem('flyerDismissed:' + id, '1');
+    modal.style.display = 'none';
+  }
+  function selectLocation(loc) {
+    if (loc === currentLocation) return;
+    currentLocation = loc;
+    tableData = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+    TOTAL_TABLES = tableData.length;
+    document.getElementById('waHelpLink').href = 'https://wa.me/' + REKENING[loc].wa;
+
+    // Header hanya menunjukkan cabang aktif. Nama brand tetap konsisten,
+    // sedangkan alamat lengkap tersedia pada kartu pilihan lokasi di bawah.
+    const headerLocation = document.getElementById('headerLocation');
+    if (headerLocation) headerLocation.textContent = loc === 'denpasar' ? 'Denpasar, Bali' : 'Surabaya';
+
+    // Update kartu lokasi (checkmark & border aktif)
+    const bananaRow = document.getElementById('locBanana');
+    const denpasarRow = document.getElementById('locDenpasar');
+    if (bananaRow) {
+      bananaRow.classList.toggle('selected', loc === 'surabaya');
+      const chk = bananaRow.querySelector('.loc-check');
+      if (chk) chk.style.display = loc === 'surabaya' ? '' : 'none';
+    }
+    if (denpasarRow) {
+      denpasarRow.classList.toggle('selected', loc === 'denpasar');
+      const chk = denpasarRow.querySelector('.loc-check');
+      if (chk) chk.style.display = loc === 'denpasar' ? '' : 'none';
+    }
+
+    // Update keterangan tarif di kartu Durasi — dibangun dinamis dari
+    // tarif meja yang sedang aktif di lokasi ini (bukan hardcode), supaya
+    // meja baru dengan tarif beda otomatis ikut kesebut di sini juga.
+    refreshDurationHint(loc);
+
+    // Reset pilihan meja/waktu — meja lokasi lama tidak berlaku di lokasi baru
+    selectedTables = [];
+    selectedTime = null;
+    timeData = selectedDate !== null ? getTimeData(dateData[selectedDate].dayOfWeek, currentLocation) : getTimeData(new Date().getDay(), currentLocation);
+
+    renderTables();
+    renderTimes();
+    updateSummary();
+    validateDurationAgainstClosing();
+
+    if (selectedDate !== null) {
+      loadBookingsForDate(dateData[selectedDate].dateKey).then(() => {
+        applyBookings();
+        renderTimes();
+        renderTables();
+      });
+    }
+  }
+
+  // === SUBMIT ===
+  // Booking data stored here between confirm modal and actual submit
+  let _pendingBookingData = null;
+
+  function submitBooking() {
+    const customerName = document.getElementById('customerName').value.trim();
+    if (!customerName) {
+      alert('Masukkan nama pemesan dulu ya! 😊');
+      document.getElementById('customerName').focus();
+      return;
+    }
+    if (selectedDate === null || selectedTime === null || selectedTables.length === 0) {
+      alert('Lengkapi pilihan tanggal, waktu, dan meja dulu ya! 😊');
+      return;
+    }
+    if (!validateDurationAgainstClosing()) {
+      alert('Durasi yang dipilih melewati jam tutup. Kurangi durasi atau pilih jam mulai lebih awal ya! 😊');
+      return;
+    }
+    const customerPhone = document.getElementById('customerPhone').value.trim();
+    const d = dateData[selectedDate];
+    const t = timeData[selectedTime];
+    const tbs = selectedTables.map(i => tableData[i]);
+    const notes = document.querySelector('.notes-input').value;
+    const totalNum = tbs.reduce((sum, tb) => sum + (tb.rate || 50000), 0) * duration;
+    const totalHarga = totalNum.toLocaleString('id-ID');
+
+    // Store pending data (termasuk lokasi saat ini, supaya konsisten walau
+    // ada perubahan state lain sebelum proceedBooking() benar-benar jalan)
+    _pendingBookingData = { customerName, customerPhone, d, t, tbs, notes, totalHarga, totalNum, duration, location: currentLocation };
+
+    // Show confirm modal
+    const mejaNota = tbs.length > 1 ? ` (${tbs.length} meja)` : '';
+    document.getElementById('confirmSummary').innerHTML =
+      `<b>👤</b> ${escHtml(customerName)}<br>` +
+      `<b>📅</b> ${d.dayName}, ${d.dayNum} ${d.month}<br>` +
+      `<b>⏰</b> ${t.time} ${tzLabelForLoc(currentLocation)} &nbsp;·&nbsp; <b>⏱</b> ${duration} jam${mejaNota}<br>` +
+      tbs.map(tb => `<b>🀄</b> ${tb.name} (${tb.floor})`).join('<br>') +
+      `<br><b>💰</b> Rp ${totalHarga}`;
+    document.getElementById('confirmModal').style.display = 'flex';
+  }
+
+  function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+  }
+
+  async function proceedBooking() {
+    closeConfirmModal();
+    if (!_pendingBookingData) return;
+    const { customerName, customerPhone, d, t, tbs, notes, totalHarga, duration: bookingDuration, location: bookingLocation } = _pendingBookingData;
+
+    // Refresh data booking hari ini sebelum benar-benar submit — cache bisa
+    // sudah agak basi (sampai 20 detik) kalau customer sempat mikir lama di
+    // modal konfirmasi. Server tetap jadi penjaga akhir (409 di bawah), tapi
+    // ini mengurangi kemungkinan submit ke meja yang baru saja kepakai orang lain.
+    await loadBookingsForDate(d.dateKey, true);
+
+    // Save to database. Booking beberapa meja sekaligus dikirim satu per
+    // satu (bukan Promise.all paralel) supaya kalau salah satu meja bentrok,
+    // meja yang SUDAH berhasil dibuat sebelumnya bisa langsung di-rollback
+    // (dihapus) alih-alih diam-diam tersimpan padahal customer melihat pesan gagal.
+    let bookingCode = '';
+    const createdIds = [];
+    try {
+      for (const tb of tbs) {
+        const r = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerName, customerContact: customerPhone,
+            date: d.dateKey, time: t.time, tableId: tb.id, tableName: tb.name,
+            floor: tb.floor, duration: bookingDuration, notes, location: bookingLocation })
+        });
+        if (r.status === 409) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(`Meja ${tb.name} sudah dipesan jam ${err.conflictTime || t.time}. Pilih meja atau jam lain.`);
+        }
+        if (!r.ok) throw new Error('Gagal menyimpan booking, coba lagi.');
+        const row = await r.json();
+        createdIds.push(row.id);
+        if (!bookingCode) bookingCode = row.bookingCode || '';
+      }
+      delete bookingsCache[bookingLocation + '|' + d.dateKey];
+    } catch (e) {
+      // Rollback meja yang sempat berhasil dibuat sebelum kegagalan ini,
+      // supaya tidak ada meja "nyangkut" ter-booking tanpa customer sadar.
+      await Promise.all(createdIds.map(id => fetch(`/api/bookings?id=${id}`, { method: 'DELETE' }).catch(() => {})));
+      if (e.message && e.message.includes('sudah dipesan')) {
+        alert('⚠️ ' + e.message);
+        if (selectedDate !== null) {
+          delete bookingsCache[currentLocation + '|' + dateData[selectedDate].dateKey];
+          await loadBookingsForDate(dateData[selectedDate].dateKey, true);
+          applyBookings(); renderTimes(); renderTables();
+        }
+        return;
+      }
+      alert('⚠️ ' + (e.message || 'Gagal menyimpan booking, coba lagi.'));
+      return;
+    }
+
+    // Siapkan pesan WA pakai data dari _pendingBookingData (SEBELUM reset)
+    const tableList = tbs.map(tb => `🀄 ${tb.name} (${tb.floor})`).join('\n');
+    const mejaNota = tbs.length > 1 ? ` (${tbs.length} meja)` : '';
+    const notesTxt = notes ? `\n📝 Catatan: ${notes}` : '';
+    const codeTxt = bookingCode ? `\n🎫 Kode Booking: ${bookingCode}` : '';
+    // Rekening tujuan mengikuti cabang booking (bookingLocation), bukan currentLocation,
+    // supaya tetap akurat walau customer sempat ganti-ganti cabang di form.
+    _pmRekening = REKENING[bookingLocation] || REKENING.surabaya;
+    const waMsg = `Halo Pung Pung Mahjong! Saya mau booking meja:\n\n👤 Nama: ${customerName}\n📅 ${d.dayName}, ${d.dayNum} ${d.month}\n⏰ ${t.time} ${tzLabelForLoc(bookingLocation)}\n${tableList}\n⏱ ${bookingDuration} jam${mejaNota}\n💰 Total: Rp ${totalHarga}${codeTxt}${notesTxt}\n\nSaya akan segera transfer ke ${_pmRekening.bank} ${_pmRekening.number} a.n. ${_pmRekening.name} dan kirim bukti pembayaran di sini. Mohon ditunggu ya! 🙏`;
+    const waUrl = `https://wa.me/${_pmRekening.wa}?text=${encodeURIComponent(waMsg)}`;
+
+    // Tampilkan payment modal DULU sebelum reset form
+    document.getElementById('pmBookingCode').textContent = bookingCode ? `Kode: ${bookingCode}` : '';
+    if (bookingCode) document.getElementById('pmStatusLink').href = `/status.html?code=${bookingCode}`;
+    document.getElementById('pmSummary').innerHTML =
+      `<b>👤</b> ${escHtml(customerName)}<br>` +
+      `<b>📅</b> ${d.dayName}, ${d.dayNum} ${d.month}<br>` +
+      `<b>⏰</b> ${t.time} ${tzLabelForLoc(bookingLocation)} &nbsp;·&nbsp; <b>⏱</b> ${bookingDuration} jam<br>` +
+      tbs.map(tb => `<b>🀄</b> ${tb.name} (${tb.floor})`).join('<br>');
+    document.getElementById('pmTotal').textContent = 'Rp ' + totalHarga;
+    document.getElementById('pmBankBadge').textContent = _pmRekening.bank;
+    document.getElementById('pmBankBadge').style.background = _pmRekening.badgeColor;
+    document.getElementById('pmRekNumber').textContent = _pmRekening.number;
+    document.getElementById('pmRekName').textContent = 'a.n. ' + _pmRekening.name;
+    document.getElementById('pmWaBtn').onclick = () => { window.open(waUrl, '_blank'); };
+    document.getElementById('paymentModal').style.display = 'flex';
+    _pendingBookingData = null;
+
+    // Reset form SETELAH modal sudah tampil
+    selectedTables = [];
+    selectedTime = null;
+    selectedDate = null;
+    duration = 2;
+    document.getElementById('customerPhone').value = '';
+    document.querySelector('.notes-input').value = '';
+    renderDates();
+    renderTimes();
+    renderTables();
+    updateSummary();
+  }
+
+  function closePaymentModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+  }
+
+  function copyRekening() {
+    const nomor = _pmRekening.number;
+    navigator.clipboard.writeText(nomor).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = '✅ Tersalin!';
+      setTimeout(() => btn.textContent = orig, 2000);
+    }).catch(() => {
+      prompt('Salin nomor rekening ini:', nomor);
+    });
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function toggleMoreMenu() {
+    document.getElementById('moreMenu').classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('moreMenu');
+    const btn = document.querySelector('.more-btn');
+    if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+      menu.classList.remove('open');
+    }
+  });
+
+  let _lbPeriod = 'week';
+  let _lbLocation = 'all';
+  function openLeaderboardHome() {
+    document.getElementById('moreMenu').classList.remove('open');
+    _lbPeriod = 'week';
+    _lbLocation = 'all';
+    let h = '<div class="lb-switch-row" id="lbLocRow">';
+    h += '<button class="chip-btn" id="lbLocAll" onclick="setLbLocationHome(\'all\')">Semua</button>';
+    h += '<button class="chip-btn" id="lbLocSurabaya" onclick="setLbLocationHome(\'surabaya\')">Surabaya</button>';
+    h += '<button class="chip-btn" id="lbLocDenpasar" onclick="setLbLocationHome(\'denpasar\')">Bali</button>';
+    h += '</div>';
+    h += '<div class="lb-filter-row"><button class="chip-btn" id="lbWeek" onclick="setLbPeriodHome(\'week\')">Minggu Ini</button><button class="chip-btn" id="lbMonth" onclick="setLbPeriodHome(\'month\')">Bulan Ini</button><button class="chip-btn" id="lbAll" onclick="setLbPeriodHome(\'all\')">Semua Waktu</button></div><div id="lbHomeList"></div>';
+    document.getElementById('lbHomeBody').innerHTML = h;
+    document.getElementById('lbModal').style.display = 'flex';
+    loadLeaderboardHome();
+  }
+  function closeLeaderboardHome() {
+    document.getElementById('lbModal').style.display = 'none';
+  }
+  function setLbPeriodHome(p) { _lbPeriod = p; loadLeaderboardHome(); }
+  function setLbLocationHome(l) { _lbLocation = l; loadLeaderboardHome(); }
+  function lbInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    let s = parts[0].charAt(0);
+    if (parts.length > 1) s += parts[parts.length - 1].charAt(0);
+    return s.toUpperCase();
+  }
+  function lbFormHtml(form) {
+    const arr = (form && form.length) ? form : [];
+    let h = '<div class="lb-form">';
+    for (let i = 0; i < 5; i++) {
+      const idx = arr.length - 5 + i;
+      const cls = (idx >= 0) ? (arr[idx] === 'W' ? ' w' : ' l') : '';
+      h += '<span class="' + cls + '"></span>';
+    }
+    h += '</div>';
+    return h;
+  }
+  function renderLeaderboardHomeBody(list, stats) {
+    let h = '';
+    if (stats) {
+      h += '<div class="lb-stats-grid">';
+      h += '<div class="lb-stat-card"><div class="lb-stat-label">Sesi</div><div class="lb-stat-value">' + stats.sessions + '</div></div>';
+      h += '<div class="lb-stat-card"><div class="lb-stat-label">Games</div><div class="lb-stat-value">' + stats.games + '</div></div>';
+      h += '<div class="lb-stat-card"><div class="lb-stat-label">Jam Main</div><div class="lb-stat-value">' + stats.hours + '<span style="font-size:12px;">h</span></div></div>';
+      if (stats.hotStreak) {
+        h += '<div class="lb-stat-card"><div class="lb-stat-label">Hot Streak</div><div class="lb-stat-value" style="font-size:17px;">' + stats.hotStreak.count + '&#215; ' + escHtml(stats.hotStreak.name) + '</div></div>';
+      } else if (stats.biggestWin) {
+        h += '<div class="lb-stat-card"><div class="lb-stat-label">Biggest Win</div><div class="lb-stat-value">+' + stats.biggestWin.amount + '</div><div class="lb-stat-sub">' + escHtml(stats.biggestWin.name) + '</div></div>';
+      } else {
+        h += '<div class="lb-stat-card"><div class="lb-stat-label">Status</div><div class="lb-stat-value" style="font-size:14px;">Belum ada</div></div>';
+      }
+      h += '</div>';
+    }
+    if (!list.length) { return h + '<div class="lb-muted">Belum ada game yang selesai di periode/cabang ini.</div>'; }
+
+    const leader = list[0];
+    const runners = list.slice(1, 3);
+    const rest = list.slice(3);
+
+    h += '<div class="lb-podium">';
+    h += '<div class="lb-leader-card"><div class="lb-leader-crown">&#x1F3C6;</div>';
+    h += '<div class="lb-leader-avatar">' + escHtml(lbInitials(leader.name)) + '</div>';
+    h += '<div class="lb-leader-name">' + escHtml(leader.name) + '</div>';
+    h += '<div class="lb-leader-meta">' + leader.games + ' GAMES &middot; ' + leader.winPct + '% WIN &middot; ' + leader.sessions + ' SESI</div>';
+    h += '<div class="lb-leader-score">' + (leader.score > 0 ? '+' : '') + leader.score + '</div>';
+    h += '</div>';
+    runners.forEach((p, i) => {
+      h += '<div class="lb-runner-row"><div class="lb-runner-rank">' + (i + 2) + '</div>';
+      h += '<div class="lb-runner-avatar">' + escHtml(lbInitials(p.name)) + '</div>';
+      h += '<div class="lb-runner-info"><div class="lb-runner-name">' + escHtml(p.name) + '</div><div class="lb-runner-meta">' + p.games + ' GAMES &middot; ' + p.winPct + '% WIN</div></div>';
+      h += '<div class="lb-runner-score">' + (p.score > 0 ? '+' : '') + p.score + '</div></div>';
+    });
+    h += '</div>';
+
+    if (rest.length) {
+      h += '<div class="lb-table-title">Full Standings</div>';
+      rest.forEach((p, i) => {
+        const rank = i + 4;
+        h += '<div class="lb-row"><div class="lb-row-rank">' + rank + '</div>';
+        h += '<div class="lb-row-main"><div class="lb-row-name">' + escHtml(p.name) + '</div>';
+        h += '<div class="lb-row-meta">' + p.winPct + '% &middot; ' + p.wins + 'W/' + p.games + 'G &middot; ' + p.sessions + ' sesi &middot; avg ' + (p.avgPerGame > 0 ? '+' : '') + p.avgPerGame + '</div>';
+        h += lbFormHtml(p.form) + '</div>';
+        h += '<div class="lb-row-score' + (p.score < 0 ? ' neg' : '') + '">' + (p.score > 0 ? '+' : '') + p.score + '</div></div>';
+      });
+    }
+    return h;
+  }
+  function loadLeaderboardHome() {
+    ['Week', 'Month', 'All'].forEach((k) => { const el = document.getElementById('lb' + k); if (el) el.classList.remove('selected'); });
+    const idMap = { week: 'lbWeek', month: 'lbMonth', all: 'lbAll' };
+    if (document.getElementById(idMap[_lbPeriod])) document.getElementById(idMap[_lbPeriod]).classList.add('selected');
+    ['All', 'Surabaya', 'Denpasar'].forEach((k) => { const el = document.getElementById('lbLoc' + k); if (el) el.classList.remove('selected'); });
+    const locIdMap = { all: 'lbLocAll', surabaya: 'lbLocSurabaya', denpasar: 'lbLocDenpasar' };
+    if (document.getElementById(locIdMap[_lbLocation])) document.getElementById(locIdMap[_lbLocation]).classList.add('selected');
+    document.getElementById('lbHomeList').innerHTML = '<div class="lb-muted">Memuat...</div>';
+    const locParam = (_lbLocation && _lbLocation !== 'all') ? ('&location=' + _lbLocation) : '';
+    fetch('/api/mahjong/events?leaderboard=1&includeStats=1&period=' + _lbPeriod + locParam)
+      .then((r) => r.json())
+      .then((res) => {
+        const data = res.data || res || {};
+        const list = data.players || [];
+        const stats = data.stats || null;
+        document.getElementById('lbHomeList').innerHTML = renderLeaderboardHomeBody(list, stats);
+      })
+      .catch(() => {
+        document.getElementById('lbHomeList').innerHTML = '<div class="lb-muted">Gagal memuat leaderboard.</div>';
+      });
+  }
+
+  // === INIT ===
+  // Baca ?loc= dari URL — dipakai buat share link per-cabang (misal broadcast
+  // WA/IG Denpasar pakai link ...?loc=denpasar) supaya customer langsung
+  // lihat meja, tarif, DAN flyer promo cabang yang benar sejak awal, tanpa
+  // harus klik "Ubah Lokasi" dulu. Tanpa param, default tetap Surabaya
+  // seperti sebelumnya. Harus dijalankan SEBELUM render lain & sebelum flyer
+  // popup dimuat.
+  (function applyLocationFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const loc = params.get('loc');
+    if (loc === 'denpasar' || loc === 'surabaya') selectLocation(loc);
+  })();
+  loadPromoFlyerPopup();
+  renderDates();
+  renderTimes();
+  renderTables();
+  updateSummary();
+  // Meja & tarif dari server dimuat async — begitu selesai, render ulang
+  // grid meja & ringkasan harga supaya customer langsung lihat meja/tarif
+  // terbaru (termasuk meja baru yang ditambah Super Admin) tanpa perlu
+  // refresh manual atau deploy ulang halaman ini.
+  loadVenueTablesForBooking().then(() => {
+    renderTables();
+    updateSummary();
+    refreshDurationHint(currentLocation);
+  });
+  // Jam operasional dari server dimuat async — begitu selesai, render ulang
+  // supaya slot waktu yang ditampilkan langsung sesuai jam terbaru (bukan
+  // fallback bawaan), tanpa customer perlu refresh manual.
+  loadOperatingHours().then(() => {
+    timeData = selectedDate !== null ? getTimeData(dateData[selectedDate].dayOfWeek, currentLocation) : getTimeData(new Date().getDay(), currentLocation);
+    renderTimes();
+    validateDurationAgainstClosing();
+  });
+</script>
+</body>
+</html>
