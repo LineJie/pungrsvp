@@ -1,0 +1,26 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
+[[redirects]]
+  from = "/status"
+  to = "/status.html"
+  status = 200
+
+[[redirects]]
+  from = "/pos"
+  to = "/pos.html"
+  status = 200
+
+[[redirects]]
+  from = "/laporan"
+  to = "/laporan.html"
+  status = 200
