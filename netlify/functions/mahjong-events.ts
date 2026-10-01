@@ -1,7 +1,7 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
 import { mahjongGames, mahjongPlayers, mahjongEvents, mahjongSettings, staff } from "../../db/schema.js";
-import { eq, inArray } from "drizzle-orm";
+import { eq, ne, and, gt, asc, desc, sql, inArray } from "drizzle-orm";
 import { verifyPassword } from "../../db/authUtils.js";
 import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn, ensureMahjongSettingsTable } from "../../db/mahjongUtils.js";
 import { randomUUID } from "node:crypto";
@@ -272,8 +272,10 @@ export default async (req: Request) => {
       const staffCheck = await checkStaffReq(req);
       if (!staffCheck.ok) return Response.json({ error: "Login staff diperlukan" }, { status: 403 });
       const location = url.searchParams.get("location");
-      let games = await db.select().from(mahjongGames).where(inArray(mahjongGames.status, ["finished_win", "draw"]));
-      if (location && location !== "all") games = games.filter((g) => g.location === location);
+      const browseConds = [inArray(mahjongGames.status, ["finished_win", "draw"])];
+      if (location && location !== "all") browseConds.push(eq(mahjongGames.location, location));
+      let games = await db.select().from(mahjongGames).where(and(...browseConds))
+        .orderBy(desc(sql`coalesce(${mahjongGames.endedAt}, ${mahjongGames.createdAt})`)).limit(30);
       games = games.sort((a, b) => new Date((b.endedAt || b.createdAt) as any).getTime() - new Date((a.endedAt || a.createdAt) as any).getTime()).slice(0, 30);
       const gameIds = games.map((g) => g.id);
       const players = gameIds.length ? await db.select().from(mahjongPlayers).where(inArray(mahjongPlayers.gameId, gameIds)) : [];
@@ -322,10 +324,18 @@ export default async (req: Request) => {
     if (leaderboard) {
       const period = url.searchParams.get("period") || "all"; // week | month | all
       const location = url.searchParams.get("location"); // surabaya | denpasar | absent/all = every branch
+      const system = url.searchParams.get("system"); // taiwan | china | absent = both (perilaku lama)
       const includeStats = url.searchParams.get("includeStats");
 
-      let games = await db.select().from(mahjongGames).where(inArray(mahjongGames.status, ["finished_win", "draw"]));
-      if (location && location !== "all") games = games.filter((g) => g.location === location);
+      // Filter cabang & sistem skor dikerjakan di database (bukan menarik semua
+      // game lalu difilter di JS). Sistem "taiwan" = semua game yang BUKAN
+      // "china" -- sama persis dengan aturan di client (data lama bisa saja
+      // tersimpan sebagai "hongkong"/"taiwan", semuanya dianggap Taiwan).
+      const lbConds = [inArray(mahjongGames.status, ["finished_win", "draw"])];
+      if (location && location !== "all") lbConds.push(eq(mahjongGames.location, location));
+      if (system === "china") lbConds.push(eq(mahjongGames.scoringSystem, "china"));
+      else if (system === "taiwan") lbConds.push(ne(mahjongGames.scoringSystem, "china"));
+      let games = await db.select().from(mahjongGames).where(and(...lbConds));
 
       const now = Date.now();
       const periodCutoff = period === "week" ? now - 7 * 24 * 60 * 60 * 1000
@@ -345,7 +355,14 @@ export default async (req: Request) => {
 
       const gameById = new Map<number, (typeof games)[number]>(games.map((g) => [g.id, g]));
       const players = await db.select().from(mahjongPlayers).where(inArray(mahjongPlayers.gameId, gameIds));
-      const events = await db.select().from(mahjongEvents).where(inArray(mahjongEvents.gameId, gameIds));
+      // Total skor per pemain dijumlahkan di database (SUM ... GROUP BY) --
+      // sebelumnya SEMUA baris event ditarik ke fungsi lalu dijumlah di JS.
+      const eventTotals = await db
+        .select({ playerId: mahjongEvents.playerId, total: sql<string>`coalesce(sum(${mahjongEvents.points}), 0)` })
+        .from(mahjongEvents)
+        .where(inArray(mahjongEvents.gameId, gameIds))
+        .groupBy(mahjongEvents.playerId);
+      const totalByPlayerId = new Map<number, number>(eventTotals.map((r) => [r.playerId, Number(r.total)]));
 
       // One aggregate row per player identity (matched by WA number, or by
       // name when no phone was given -- same matching rule used elsewhere).
@@ -371,7 +388,7 @@ export default async (req: Request) => {
           totalsByKey[key] = { name: p.name, waNumber: p.waNumber || "", score: 0, gameIdsPlayed: new Set(), sessionIds: new Set(), wins: 0, results: [] };
         }
         const agg = totalsByKey[key];
-        const playerTotal = events.filter((e) => e.playerId === p.id).reduce((s, e) => s + e.points, 0);
+        const playerTotal = totalByPlayerId.get(p.id) || 0;
         const won = g.status === "finished_win" && g.winnerPlayerId === p.id;
         agg.score += playerTotal;
         agg.gameIdsPlayed.add(g.id);
@@ -437,14 +454,19 @@ export default async (req: Request) => {
         if (streak > 0 && (!hotStreak || streak > hotStreak.count)) hotStreak = { name: r.name, count: streak };
       });
 
+      // Biggest win: satu baris saja yang diambil dari database (terbesar,
+      // kalau seri yang paling awal) -- hasil sama dengan loop lama.
       let biggestWin: { name: string; amount: number } | null = null;
-      events
-        .filter((e) => e.eventType === "LOSER_PAYMENT" && e.points > 0)
-        .forEach((e) => {
-          if (biggestWin && e.points <= biggestWin.amount) return;
-          const p = players.find((pl) => pl.id === e.playerId);
-          if (p) biggestWin = { name: p.name, amount: e.points };
-        });
+      const [bigRow] = await db
+        .select({ playerId: mahjongEvents.playerId, points: mahjongEvents.points })
+        .from(mahjongEvents)
+        .where(and(inArray(mahjongEvents.gameId, gameIds), eq(mahjongEvents.eventType, "LOSER_PAYMENT"), gt(mahjongEvents.points, 0)))
+        .orderBy(desc(mahjongEvents.points), asc(mahjongEvents.id))
+        .limit(1);
+      if (bigRow) {
+        const bp = players.find((pl) => pl.id === bigRow.playerId);
+        if (bp) biggestWin = { name: bp.name, amount: bigRow.points };
+      }
 
       return Response.json({
         players: ranked,

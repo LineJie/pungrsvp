@@ -31,6 +31,14 @@ async function getGameWithPlayers(gameId: number) {
   return { game, players };
 }
 
+// Dipakai kalau row game-nya sudah di-load di request yang sama, supaya tidak
+// select game yang sama dua kali (endpoint ini di-poll lobi tiap beberapa detik).
+async function withPlayers(game: typeof mahjongGames.$inferSelect) {
+  const players = await db.select().from(mahjongPlayers).where(eq(mahjongPlayers.gameId, game.id));
+  players.sort((a, b) => a.seatNumber - b.seatNumber);
+  return { game, players };
+}
+
 export default async (req: Request) => {
   await ensureMahjongTables(db);
   await ensureMembersTable(db);
@@ -56,7 +64,7 @@ export default async (req: Request) => {
             const rows = await db.select().from(mahjongGames)
               .where(and(eq(mahjongGames.bookingId, parseInt(bookingId)), inArray(mahjongGames.status, OPEN_STATUSES)));
             if (!rows.length) return Response.json({ error: "No active game for this booking" }, { status: 404 });
-            const data = await getGameWithPlayers(rows[0].id);
+            const data = await withPlayers(rows[0]);
             // Defensive cleanup: a "ghost" game (host row insert failed after the
             // game row was created) should never block a fresh Create Game attempt.
             if (data && data.players.length === 0 && data.game.status === "waiting_for_players") {
@@ -73,7 +81,7 @@ export default async (req: Request) => {
       if (location) conditions.push(eq(mahjongGames.location, location));
       const rows = await db.select().from(mahjongGames).where(and(...conditions));
       if (!rows.length) return Response.json({ error: "No open game at this table" }, { status: 404 });
-      const data = await getGameWithPlayers(rows[0].id);
+      const data = await withPlayers(rows[0]);
       return Response.json(data);
     }
 
@@ -85,7 +93,11 @@ export default async (req: Request) => {
     const games = conditions.length
       ? await db.select().from(mahjongGames).where(and(...conditions))
       : await db.select().from(mahjongGames);
-    const allPlayers = await db.select().from(mahjongPlayers);
+    // Hanya ambil pemain dari game yang memang ditampilkan (bukan seluruh tabel).
+    const listedGameIds = games.map((g) => g.id);
+    const allPlayers = listedGameIds.length
+      ? await db.select().from(mahjongPlayers).where(inArray(mahjongPlayers.gameId, listedGameIds))
+      : [];
     const result = games.map((g) => ({
       ...g,
       players: allPlayers.filter((p) => p.gameId === g.id).sort((a, b) => a.seatNumber - b.seatNumber),

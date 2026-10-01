@@ -496,6 +496,9 @@ function stopLobbyPolling(){
 }
 function pollLobbyState(){
   if (!S.booking || !S.game) { return; }
+  // Tab/HP sedang tidak dilihat (layar mati, pindah app) -> lewati polling.
+  // Begitu dibuka lagi, tick berikutnya (maks 3 dtk) langsung menyegarkan.
+  if (document.hidden) { return; }
   apiGet("/api/mahjong/games?bookingId=" + S.booking.id).then(function(res){
     if (!res.ok || !res.data.game) return;
     var newGame = res.data.game, newPlayers = res.data.players || [];
@@ -1150,7 +1153,14 @@ function loadStats(){
 function openLeaderboard(){
   S.lbPeriod = "week";
   S.lbLocation = (S.booking && S.booking.location) ? S.booking.location : "all";
-  var h = "<div class=\"lb-switch-row\" id=\"lbLocRow\">";
+  // Leaderboard dipisah per sistem skor (Taiwan / China) -- default ikut sistem
+  // game yang sedang dimainkan kalau ada, selain itu Taiwan.
+  S.lbSystem = (S.game && S.game.scoringSystem === "china") ? "china" : "taiwan";
+  var h = "<div class=\"lb-switch-row\" id=\"lbSysRow\">";
+  h += "<button class=\"chip-btn\" id=\"lbSysTaiwan\" onclick=\"setLbSystem('taiwan')\">Taiwan</button>";
+  h += "<button class=\"chip-btn\" id=\"lbSysChina\" onclick=\"setLbSystem('china')\">China</button>";
+  h += "</div>";
+  h += "<div class=\"lb-switch-row\" id=\"lbLocRow\">";
   h += "<button class=\"chip-btn\" id=\"lbLocAll\" onclick=\"setLbLocation('all')\">Semua</button>";
   h += "<button class=\"chip-btn\" id=\"lbLocSurabaya\" onclick=\"setLbLocation('surabaya')\">Surabaya</button>";
   h += "<button class=\"chip-btn\" id=\"lbLocDenpasar\" onclick=\"setLbLocation('denpasar')\">Bali</button>";
@@ -1162,6 +1172,7 @@ function openLeaderboard(){
 }
 function setLbPeriod(p){ S.lbPeriod = p; loadLeaderboard(); }
 function setLbLocation(l){ S.lbLocation = l; loadLeaderboard(); }
+function setLbSystem(sys){ S.lbSystem = sys; loadLeaderboard(); }
 function initials(name){
   var parts = String(name||"").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "?";
@@ -1196,7 +1207,7 @@ function renderLeaderboardBody(list, stats){
     }
     h += "</div>";
   }
-  if (!list.length) { return h + "<div class=\"muted\">Belum ada game yang selesai di periode/cabang ini.</div>"; }
+  if (!list.length) { return h + "<div class=\"muted\">Belum ada game yang selesai di periode/cabang/sistem skor ini.</div>"; }
 
   var leader = list[0];
   var runners = list.slice(1,3);
@@ -1238,10 +1249,14 @@ function loadLeaderboard(){
   ["All","Surabaya","Denpasar"].forEach(function(k){ var el = qs("lbLoc"+k); if (el) el.classList.remove("selected"); });
   var locIdMap = {all:"lbLocAll", surabaya:"lbLocSurabaya", denpasar:"lbLocDenpasar"};
   if (qs(locIdMap[location])) qs(locIdMap[location]).classList.add("selected");
+  var sysIdMap = {taiwan:"lbSysTaiwan", china:"lbSysChina"};
+  ["lbSysTaiwan","lbSysChina"].forEach(function(id){ var el = qs(id); if (el) el.classList.remove("selected"); });
+  if (qs(sysIdMap[S.lbSystem])) qs(sysIdMap[S.lbSystem]).classList.add("selected");
   renderLbResetRow();
   qs("lbList").innerHTML = "<div class=\"muted\">Memuat...</div>";
   var locParam = (location && location !== "all") ? ("&location=" + location) : "";
-  apiGet("/api/mahjong/events?leaderboard=1&includeStats=1&period=" + period + locParam).then(function(res){
+  var sysParam = "&system=" + (S.lbSystem === "china" ? "china" : "taiwan");
+  apiGet("/api/mahjong/events?leaderboard=1&includeStats=1&period=" + period + locParam + sysParam).then(function(res){
     var data = res.data || {};
     var list = data.players || [];
     var stats = data.stats || null;

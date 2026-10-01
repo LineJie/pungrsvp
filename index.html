@@ -1842,11 +1842,17 @@ function closeCommunity() {
 
   let _lbPeriod = 'week';
   let _lbLocation = 'all';
+  let _lbSystem = 'taiwan';
   function openLeaderboardHome() {
     document.getElementById('moreMenu').classList.remove('open');
     _lbPeriod = 'week';
     _lbLocation = 'all';
-    let h = '<div class="lb-switch-row" id="lbLocRow">';
+    _lbSystem = 'taiwan';
+    let h = '<div class="lb-switch-row" id="lbSysRow">';
+    h += '<button class="chip-btn" id="lbSysTaiwan" onclick="setLbSystemHome(\'taiwan\')">Taiwan</button>';
+    h += '<button class="chip-btn" id="lbSysChina" onclick="setLbSystemHome(\'china\')">China</button>';
+    h += '</div>';
+    h += '<div class="lb-switch-row" id="lbLocRow">';
     h += '<button class="chip-btn" id="lbLocAll" onclick="setLbLocationHome(\'all\')">Semua</button>';
     h += '<button class="chip-btn" id="lbLocSurabaya" onclick="setLbLocationHome(\'surabaya\')">Surabaya</button>';
     h += '<button class="chip-btn" id="lbLocDenpasar" onclick="setLbLocationHome(\'denpasar\')">Bali</button>';
@@ -1861,6 +1867,7 @@ function closeCommunity() {
   }
   function setLbPeriodHome(p) { _lbPeriod = p; loadLeaderboardHome(); }
   function setLbLocationHome(l) { _lbLocation = l; loadLeaderboardHome(); }
+  function setLbSystemHome(sys) { _lbSystem = sys; loadLeaderboardHome(); }
   function lbInitials(name) {
     const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return '?';
@@ -1895,7 +1902,7 @@ function closeCommunity() {
       }
       h += '</div>';
     }
-    if (!list.length) { return h + '<div class="lb-muted">Belum ada game yang selesai di periode/cabang ini.</div>'; }
+    if (!list.length) { return h + '<div class="lb-muted">Belum ada game yang selesai di periode/cabang/sistem skor ini.</div>'; }
 
     const leader = list[0];
     const runners = list.slice(1, 3);
@@ -1936,9 +1943,12 @@ function closeCommunity() {
     ['All', 'Surabaya', 'Denpasar'].forEach((k) => { const el = document.getElementById('lbLoc' + k); if (el) el.classList.remove('selected'); });
     const locIdMap = { all: 'lbLocAll', surabaya: 'lbLocSurabaya', denpasar: 'lbLocDenpasar' };
     if (document.getElementById(locIdMap[_lbLocation])) document.getElementById(locIdMap[_lbLocation]).classList.add('selected');
+    ['Taiwan', 'China'].forEach((k) => { const el = document.getElementById('lbSys' + k); if (el) el.classList.remove('selected'); });
+    const sysEl = document.getElementById(_lbSystem === 'china' ? 'lbSysChina' : 'lbSysTaiwan');
+    if (sysEl) sysEl.classList.add('selected');
     document.getElementById('lbHomeList').innerHTML = '<div class="lb-muted">Memuat...</div>';
     const locParam = (_lbLocation && _lbLocation !== 'all') ? ('&location=' + _lbLocation) : '';
-    fetch('/api/mahjong/events?leaderboard=1&includeStats=1&period=' + _lbPeriod + locParam)
+    fetch('/api/mahjong/events?leaderboard=1&includeStats=1&period=' + _lbPeriod + locParam + '&system=' + (_lbSystem === 'china' ? 'china' : 'taiwan'))
       .then((r) => r.json())
       .then((res) => {
         const data = res.data || res || {};
