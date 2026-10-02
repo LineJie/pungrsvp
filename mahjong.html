@@ -487,15 +487,39 @@ function routeByStatus(){
 // update tanpa perlu refresh manual. Berhenti otomatis begitu status game berubah
 // (misal host sudah mulai permainan) atau saat pindah ke layar lain.
 var _lobbyPollTimer = null;
+var _lobbyPollIdle = false;       // true = berhenti sendiri karena lama tidak disentuh
+var _lobbyPollLastActive = 0;
+var LOBBY_POLL_IDLE_MS = 10 * 60 * 1000; // 10 menit tanpa sentuhan -> polling berhenti
 function startLobbyPolling(){
   stopLobbyPolling();
+  _lobbyPollLastActive = Date.now();
   _lobbyPollTimer = setInterval(pollLobbyState, 3000);
 }
 function stopLobbyPolling(){
   if (_lobbyPollTimer) { clearInterval(_lobbyPollTimer); _lobbyPollTimer = null; }
+  _lobbyPollIdle = false;
 }
+// Layar lobi yang ditinggal terbuka tanpa disentuh tidak perlu memanggil server
+// terus-menerus (itu menahan database tetap menyala). Begitu layar disentuh atau
+// tab dibuka lagi, polling lanjut otomatis dan langsung menyegarkan data.
+function lobbyUserActive(){
+  if (document.hidden) { return; }
+  if (_lobbyPollTimer) { _lobbyPollLastActive = Date.now(); return; }
+  if (!_lobbyPollIdle || !S.booking || !S.game) { return; }
+  var st = S.game.status;
+  if (st !== "waiting_for_players" && st !== "ready") { _lobbyPollIdle = false; return; }
+  startLobbyPolling();
+  pollLobbyState();
+}
+document.addEventListener("visibilitychange", lobbyUserActive);
+document.addEventListener("touchstart", lobbyUserActive, {passive:true});
+document.addEventListener("click", lobbyUserActive);
 function pollLobbyState(){
   if (!S.booking || !S.game) { return; }
+  if (_lobbyPollTimer && Date.now() - _lobbyPollLastActive > LOBBY_POLL_IDLE_MS) {
+    clearInterval(_lobbyPollTimer); _lobbyPollTimer = null; _lobbyPollIdle = true;
+    return;
+  }
   // Tab/HP sedang tidak dilihat (layar mati, pindah app) -> lewati polling.
   // Begitu dibuka lagi, tick berikutnya (maks 3 dtk) langsung menyegarkan.
   if (document.hidden) { return; }
