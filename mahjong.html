@@ -450,7 +450,7 @@ function loadBooking(code){
       var newUrl = window.location.pathname + "?code=" + encodeURIComponent(code);
       window.history.replaceState({}, "", newUrl);
     }
-    var locationName = S.booking.location === "denpasar" ? "Denpasar, Bali" : "Surabaya";
+    var locationName = S.booking.location === "tunu" ? "Tunu, Denpasar" : S.booking.location === "denpasar" ? "The Magendra, Denpasar" : "Surabaya";
     qs("headerSub").textContent = "📍 " + locationName + " · " + S.booking.tableName;
     if (S.booking.status !== "checked_in") { renderNotCheckedIn(); return; }
     qs("bottomNav").style.display = "flex";

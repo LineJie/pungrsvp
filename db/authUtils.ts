@@ -148,6 +148,11 @@ export async function ensureOperatingHoursTable(db: any) {
         ['surabaya', 3, 10, 22], ['surabaya', 4, 10, 22], ['surabaya', 5, 10, 24], ['surabaya', 6, 10, 24],
         ['denpasar', 0, 10, 22], ['denpasar', 1, 10, 21], ['denpasar', 2, 10, 21],
         ['denpasar', 3, 10, 21], ['denpasar', 4, 10, 21], ['denpasar', 5, 10, 22], ['denpasar', 6, 10, 22],
+        // Tunu (Denpasar kedua): buka setiap hari. 10:00-22:00 hanyalah nilai
+        // awal supaya grid booking langsung jalan — jam sebenarnya diatur
+        // Super Admin lewat tab "Jam Operasional" (seed tidak menimpa).
+        ['tunu', 0, 10, 22], ['tunu', 1, 10, 22], ['tunu', 2, 10, 22],
+        ['tunu', 3, 10, 22], ['tunu', 4, 10, 22], ['tunu', 5, 10, 22], ['tunu', 6, 10, 22],
     ];
     for (const [location, dayOfWeek, openHour, closeHour] of rows) {
         await db.execute(sql`

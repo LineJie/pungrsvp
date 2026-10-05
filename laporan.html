@@ -116,7 +116,8 @@
       <select id="lapLocationSwitcher" onchange="switchReportLocation()" style="display:none;font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;">
         <option value="all">Semua Cabang</option>
         <option value="surabaya">Surabaya</option>
-        <option value="denpasar">Denpasar, Bali</option>
+        <option value="denpasar">The Magendra, Denpasar</option>
+        <option value="tunu">Tunu, Denpasar</option>
       </select>
       <a href="/admin.html">← Admin</a>
     </div>
@@ -170,6 +171,7 @@ async function checkPw() {
       // dan bisa melihat data gabungan semua cabang.
       _isSuperAdmin = data.role === 'superadmin';
       _userLocation = data.location || 'surabaya';
+      _userRole = data.role;
       _reportLocation = _isSuperAdmin ? 'all' : _userLocation;
       applyLocationUI();
       document.getElementById('passwordGate').style.display = 'none';
@@ -190,23 +192,39 @@ async function checkPw() {
   // ke lokasi mereka sendiri.
   let _isSuperAdmin = false;
   let _userLocation = 'surabaya';
+  let _userRole = '';
   let _reportLocation = 'surabaya';
 
   function applyLocationUI() {
     const p = document.getElementById('locSubtitle');
     const sw = document.getElementById('lapLocationSwitcher');
+    // Admin akun Denpasar/Tunu mengurus 2 tempat di kota yang sama, jadi boleh
+    // pindah antar keduanya (tapi tidak Surabaya / Semua Cabang). Kasir terkunci.
+    const baliAdmin = !_isSuperAdmin && _userRole === 'admin' && (_userLocation === 'denpasar' || _userLocation === 'tunu');
+    const branchName = { surabaya: 'Surabaya', denpasar: 'The Magendra, Denpasar', tunu: 'Tunu, Denpasar' };
     if (_isSuperAdmin) {
-      if (sw) { sw.style.display = 'inline-block'; sw.value = _reportLocation; }
+      if (sw) {
+        Array.from(sw.options).forEach(o => { o.hidden = false; o.disabled = false; });
+        sw.style.display = 'inline-block'; sw.value = _reportLocation;
+      }
       if (p) p.textContent = 'Pung Pung Mahjong — Semua Cabang (Super Admin)';
+    } else if (baliAdmin) {
+      if (sw) {
+        Array.from(sw.options).forEach(o => { const ok = (o.value === 'denpasar' || o.value === 'tunu'); o.hidden = !ok; o.disabled = !ok; });
+        sw.style.display = 'inline-block'; sw.value = _reportLocation;
+      }
+      if (p) p.textContent = 'Pung Pung Mahjong — Cabang Denpasar (2 tempat)';
     } else {
       if (sw) sw.style.display = 'none';
-      if (p) p.textContent = 'Pung Pung Mahjong — Cabang ' + (_userLocation === 'denpasar' ? 'Denpasar, Bali' : 'Surabaya');
+      if (p) p.textContent = 'Pung Pung Mahjong — Cabang ' + (branchName[_userLocation] || 'Surabaya');
     }
   }
 
   function switchReportLocation() {
     const sw = document.getElementById('lapLocationSwitcher');
-    if (!sw || !_isSuperAdmin) return; // hanya Super Admin yang boleh ganti lokasi laporan
+    const baliAdmin = !_isSuperAdmin && _userRole === 'admin' && (_userLocation === 'denpasar' || _userLocation === 'tunu');
+    if (!sw || !(_isSuperAdmin || baliAdmin)) return; // hanya Super Admin (dan admin Denpasar, terbatas 2 cabangnya) yang boleh ganti lokasi laporan
+    if (baliAdmin && sw.value !== 'denpasar' && sw.value !== 'tunu') return;
     _reportLocation = sw.value;
     const harianVisible = document.getElementById('viewHarian').style.display !== 'none';
     if (harianVisible) loadHarian(); else loadBulanan();

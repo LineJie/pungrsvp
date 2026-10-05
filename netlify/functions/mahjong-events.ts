@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { mahjongGames, mahjongPlayers, mahjongEvents, mahjongSettings, staff } from "../../db/schema.js";
 import { eq, ne, and, gt, asc, desc, sql, inArray } from "drizzle-orm";
 import { verifyPassword } from "../../db/authUtils.js";
+import { branchCity, isValidBranch } from "../../db/branches.js";
 import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn, ensureMahjongSettingsTable } from "../../db/mahjongUtils.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -76,13 +77,23 @@ function leaderboardSeasonKey(location: string): string {
   return "leaderboard_season_start_" + location;
 }
 
+// Leaderboard digabung per KOTA, bukan per tempat: cabang "tunu" (Denpasar
+// kedua) masuk ke leaderboard Bali bersama "denpasar". Game tetap menyimpan
+// location aslinya ("tunu"), jadi riwayat per tempat tidak hilang.
+function leaderboardGameLocations(location: string): string[] {
+  if (!isValidBranch(location)) return [location];
+  return branchCity(location) === "denpasar" ? ["denpasar", "tunu"] : ["surabaya"];
+}
+
 // Per-branch season cutoff. `location` = "surabaya" | "denpasar" reads that
-// branch's own cutoff. Anything else (absent / "all") reads BOTH branch
+// branch's own cutoff ("tunu" ikut cutoff Denpasar karena leaderboard-nya
+// digabung). Anything else (absent / "all") reads BOTH branch
 // cutoffs and returns the EARLIEST (min) of the two -- so a combined "Semua"
 // view never silently drops games just because one branch was reset; the
 // combined cutoff only advances once every branch has been reset past it.
 async function getLeaderboardSeasonStart(location?: string | null): Promise<number | null> {
-  const branches = location && (LEADERBOARD_BRANCHES as readonly string[]).includes(location) ? [location] : LEADERBOARD_BRANCHES;
+  const seasonLoc = location && isValidBranch(location) ? branchCity(location) : location;
+  const branches = seasonLoc && (LEADERBOARD_BRANCHES as readonly string[]).includes(seasonLoc) ? [seasonLoc] : LEADERBOARD_BRANCHES;
   const rows = await db.select().from(mahjongSettings).where(inArray(mahjongSettings.key, branches.map(leaderboardSeasonKey)));
   const times = branches.map((b) => {
     const row = rows.find((r) => r.key === leaderboardSeasonKey(b));
@@ -332,7 +343,7 @@ export default async (req: Request) => {
       // "china" -- sama persis dengan aturan di client (data lama bisa saja
       // tersimpan sebagai "hongkong"/"taiwan", semuanya dianggap Taiwan).
       const lbConds = [inArray(mahjongGames.status, ["finished_win", "draw"])];
-      if (location && location !== "all") lbConds.push(eq(mahjongGames.location, location));
+      if (location && location !== "all") lbConds.push(inArray(mahjongGames.location, leaderboardGameLocations(location)));
       if (system === "china") lbConds.push(eq(mahjongGames.scoringSystem, "china"));
       else if (system === "taiwan") lbConds.push(ne(mahjongGames.scoringSystem, "china"));
       let games = await db.select().from(mahjongGames).where(and(...lbConds));

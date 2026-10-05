@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { venueTables } from "../../db/schema.js";
 import { eq, asc } from "drizzle-orm";
 import { ensureVenueTablesTable } from "../../db/authUtils.js";
+import { normalizeBranch, isValidBranch } from "../../db/branches.js";
 
 // Super Admin auth check — identical pattern ke payment-methods.ts / promos.ts.
 // GET tetap kebuka buat semua (index.html, admin.html, pos.html semua perlu
@@ -49,7 +50,7 @@ export default async (req: Request) => {
         const name = String(body.name || "").trim();
         const type = body.type === "manual" ? "manual" : "matic";
         const floor = String(body.floor || "").trim();
-        const location = body.location === "denpasar" ? "denpasar" : "surabaya";
+        const location = normalizeBranch(body.location);
         if (!name) return Response.json({ error: "Nama meja wajib diisi" }, { status: 400 });
         if (!floor) return Response.json({ error: "Lantai / area wajib diisi" }, { status: 400 });
 
@@ -100,7 +101,7 @@ export default async (req: Request) => {
         if (body.type === "matic" || body.type === "manual") updateData.type = body.type;
         if (typeof body.hourlyRate === "number" && body.hourlyRate >= 0) updateData.hourlyRate = Math.round(body.hourlyRate);
         if (body.floor !== undefined) updateData.floor = String(body.floor).trim();
-        if (body.location === "surabaya" || body.location === "denpasar") updateData.location = body.location;
+        if (isValidBranch(body.location)) updateData.location = body.location;
         if (body.capacity !== undefined) updateData.capacity = String(body.capacity).trim();
         if (body.emoji !== undefined) updateData.emoji = String(body.emoji).trim();
         if (body.notes !== undefined) updateData.notes = String(body.notes).trim();

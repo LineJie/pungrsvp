@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { promos } from "../../db/schema.js";
 import { eq, and, desc } from "drizzle-orm";
 import { ensurePromosTable } from "../../db/authUtils.js";
+import { BRANCHES } from "../../db/branches.js";
 
 // Super Admin auth check — identical pattern to bookings.ts / staff.ts.
 // Only Super Admin (username "tere") can create or edit promos. Staff can
@@ -18,7 +19,7 @@ function isSuperAdminReq(req: Request): boolean {
 }
 
 const VALID_TYPES = ["free_hours", "percent_off", "flat_off"];
-const VALID_LOCATIONS = ["surabaya", "denpasar"];
+const VALID_LOCATIONS: readonly string[] = BRANCHES;
 
 export default async (req: Request) => {
     await ensurePromosTable(db);

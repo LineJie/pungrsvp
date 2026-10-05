@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { operatingHours } from "../../db/schema.js";
 import { eq, and, asc } from "drizzle-orm";
 import { ensureOperatingHoursTable } from "../../db/authUtils.js";
+import { BRANCHES } from "../../db/branches.js";
 
 // Super Admin auth check — identical pattern to promos.ts / payment-methods.ts.
 // GET is public (index.html needs it to render available time slots for
@@ -16,7 +17,7 @@ function isSuperAdminReq(req: Request): boolean {
     return !!superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw;
 }
 
-const VALID_LOCATIONS = ["surabaya", "denpasar"];
+const VALID_LOCATIONS: readonly string[] = BRANCHES;
 
 export default async (req: Request) => {
     await ensureOperatingHoursTable(db);

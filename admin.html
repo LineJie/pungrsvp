@@ -587,7 +587,7 @@
     <p>Management Panel</p>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <span id="roleBadge" style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span><select id="locationSwitcher" onchange="switchLocationView()" style="display:none;font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;"><option value="all">Semua Cabang</option><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select><button onclick="logoutAdmin()" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;">Keluar</button>
+    <span id="roleBadge" style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;"></span><select id="locationSwitcher" onchange="switchLocationView()" style="display:none;font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;"><option value="all">Semua Cabang</option><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select><button onclick="logoutAdmin()" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;">Keluar</button>
     <a href="/laporan" id="laporanLink" style="display:none;background:var(--gold);color:var(--green-dark);padding:8px 14px;border-radius:10px;font-weight:600;text-decoration:none;font-size:13px;">📊 Laporan Lengkap</a>
     <a href="/">← Booking</a>
   </div>
@@ -705,7 +705,7 @@
           <label>Cabang</label>
           <select id="bl_location" onchange="renderBlockTableCheckboxes(); rebuildBlockTimeOptions()">
             <option value="surabaya">Surabaya</option>
-            <option value="denpasar">Denpasar, Bali</option>
+            <option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option>
           </select>
         </div>
         <div class="form-group">
@@ -839,7 +839,7 @@
     <button id="tabPayMethods" class="btn view-tab-btn" onclick="switchSettingsTab('paymethods')">💳 Metode Bayar</button>
     <button id="tabHours" class="btn view-tab-btn" onclick="switchSettingsTab('hours')">🕐 Jam Operasional</button>
   </div>
-<div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar"></div></div></div><div id="viewTables" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🀄 Kelola Meja</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Tambah meja baru, tentukan tipe (matic/manual — nentuin tarif default), dan kasih nama & catatan. Meja langsung muncul di halaman booking customer & semua dropdown admin.</p><div class="form-grid"><div class="form-group"><label>Nama Meja</label><input type="text" id="vt_name" placeholder="misal: Maple Table"></div><div class="form-group"><label>Tipe</label><select id="vt_type" onchange="onVenueTableTypeChange()"><option value="matic">⚙️ Matic (Otomatis) — Rp 50.000/jam</option><option value="manual">🍂 Manual — Rp 30.000/jam</option></select></div><div class="form-group"><label>Tarif per Jam (Rp)</label><input type="number" id="vt_rate" placeholder="50000" min="0"></div><div class="form-group"><label>Cabang</label><select id="vt_location"><option value="surabaya">Surabaya</option><option value="denpasar">Denpasar, Bali</option></select></div><div class="form-group"><label>Lantai / Area</label><input type="text" id="vt_floor" placeholder="misal: Lantai 2"></div><div class="form-group"><label>Kapasitas</label><input type="text" id="vt_capacity" placeholder="4 orang" value="4 orang"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="vt_emoji" placeholder="🀄" maxlength="4"></div><div class="form-group" style="grid-column:1/-1"><label>Catatan</label><input type="text" id="vt_notes" placeholder="Catatan opsional — tampil di admin & (kalau diisi) booking customer"></div></div><button class="btn btn-primary" onclick="submitVenueTable()" style="width:100%;padding:12px;font-size:14px;">Simpan Meja Baru</button></div><div class="bookings-table"><table><thead><tr><th></th><th>Nama</th><th>Tipe</th><th>Tarif/jam</th><th>Cabang</th><th>Lantai</th><th>Catatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tablesBody"><tr><td colspan="9" class="loading">Memuat data…</td></tr></tbody></table></div></div>  </div>
+<div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar" style="margin-bottom:20px;"></div><div id="hoursTunu"></div></div></div><div id="viewTables" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🀄 Kelola Meja</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Tambah meja baru, tentukan tipe (matic/manual — nentuin tarif default), dan kasih nama & catatan. Meja langsung muncul di halaman booking customer & semua dropdown admin.</p><div class="form-grid"><div class="form-group"><label>Nama Meja</label><input type="text" id="vt_name" placeholder="misal: Maple Table"></div><div class="form-group"><label>Tipe</label><select id="vt_type" onchange="onVenueTableTypeChange()"><option value="matic">⚙️ Matic (Otomatis) — Rp 50.000/jam</option><option value="manual">🍂 Manual — Rp 30.000/jam</option></select></div><div class="form-group"><label>Tarif per Jam (Rp)</label><input type="number" id="vt_rate" placeholder="50000" min="0"></div><div class="form-group"><label>Cabang</label><select id="vt_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div><div class="form-group"><label>Lantai / Area</label><input type="text" id="vt_floor" placeholder="misal: Lantai 2"></div><div class="form-group"><label>Kapasitas</label><input type="text" id="vt_capacity" placeholder="4 orang" value="4 orang"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="vt_emoji" placeholder="🀄" maxlength="4"></div><div class="form-group" style="grid-column:1/-1"><label>Catatan</label><input type="text" id="vt_notes" placeholder="Catatan opsional — tampil di admin & (kalau diisi) booking customer"></div></div><button class="btn btn-primary" onclick="submitVenueTable()" style="width:100%;padding:12px;font-size:14px;">Simpan Meja Baru</button></div><div class="bookings-table"><table><thead><tr><th></th><th>Nama</th><th>Tipe</th><th>Tarif/jam</th><th>Cabang</th><th>Lantai</th><th>Catatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tablesBody"><tr><td colspan="9" class="loading">Memuat data…</td></tr></tbody></table></div></div>  </div>
 <div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
   <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
     <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🎉 Buat Acara Main Bareng</h3>
@@ -982,12 +982,16 @@
   }
   // Dipakai buat isi ulang semua <select id="...Table"> yang tadinya
   // hardcoded 8 <option> — dikelompokkan per lokasi, urut sortOrder.
+  // Nama cabang untuk tampilan admin. Tunu = cabang kedua di Denpasar.
+  function branchLabel(loc) {
+    return loc === 'tunu' ? 'Tunu, Denpasar' : loc === 'denpasar' ? 'The Magendra, Denpasar' : loc === 'surabaya' ? 'Surabaya' : 'Semua Cabang';
+  }
   function tableOptionsHtml(selectedTableId) {
-    const groups = { surabaya: [], denpasar: [] };
+    const groups = { surabaya: [], denpasar: [], tunu: [] };
     for (const t of _activeVenueTables) (groups[t.location] || groups.surabaya).push(t);
-    const labelLoc = { surabaya: 'Surabaya', denpasar: 'Denpasar, Bali' };
+    const labelLoc = { surabaya: 'Surabaya', denpasar: 'The Magendra, Denpasar', tunu: 'Tunu, Denpasar' };
     let html = '';
-    for (const loc of ['surabaya', 'denpasar']) {
+    for (const loc of ['surabaya', 'denpasar', 'tunu']) {
       if (!groups[loc].length) continue;
       html += `<optgroup label="${labelLoc[loc]}">`;
       for (const t of groups[loc]) {
@@ -1009,7 +1013,7 @@
       const current = sel.value ? sel.value.split('|')[0] : '';
       sel.innerHTML = tableOptionsHtml(current);
     });
-    // tableOptionsHtml() di atas selalu isi SEMUA cabang (Surabaya + Denpasar).
+    // tableOptionsHtml() di atas selalu isi SEMUA cabang (Surabaya + Denpasar + Tunu).
     // Kalau dipanggil ulang (mis. setelah loadVenueTables() selesai di
     // checkPassword(), atau setelah edit meja di loadTablesManager()) tanpa
     // re-apply filter per-lokasi, dropdown meja di form Walk-in/Manual/Acara
@@ -1288,7 +1292,7 @@
   }
 
   function closingLocLabel() {
-    return _viewLocation === 'denpasar' ? 'Denpasar, Bali' : _viewLocation === 'surabaya' ? 'Surabaya' : 'Semua Cabang';
+    return branchLabel(_viewLocation);
   }
 
   function renderClosingSummary(date) {
@@ -1852,18 +1856,20 @@ async function loadStaff() {
                 <td class="name-cell">${escHtml(s.name)}</td>
                       <td>${escHtml(s.username)}</td>
                             <td>${s.role === 'admin' ? '👑 Admin' : '🧾 Kasir'}</td>
-                            <td>${s.location === 'denpasar' ? 'Denpasar' : 'Surabaya'}</td>
+                            <td>${branchLabel(s.location)}</td>
                                   <td>${s.createdAt ? formatDate(String(s.createdAt).slice(0,10)) : '—'}</td>
-                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${s.location === 'denpasar' ? 'denpasar' : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
+                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${(s.location === 'denpasar' || s.location === 'tunu') ? s.location : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
                                             </tr>`).join('');
   }
 
   // Edit lokasi staff yang salah dipilih waktu dibuat — sebelumnya cuma
   // bisa dibenerin dengan hapus + buat ulang akunnya.
   async function editStaffLocation(id, name, currentLocation) {
-      const wantSwitch = confirm(`Staff "${name}" saat ini di cabang ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'}.\n\nKlik OK untuk pindah ke ${currentLocation === 'denpasar' ? 'Surabaya' : 'Denpasar, Bali'}, atau Cancel untuk batal.`);
-      if (!wantSwitch) return;
-      const newLoc = currentLocation === 'denpasar' ? 'surabaya' : 'denpasar';
+      const answer = prompt(`Staff "${name}" saat ini di cabang ${branchLabel(currentLocation)}.\n\nKetik cabang baru: surabaya, denpasar, atau tunu\n(Cancel untuk batal)`, currentLocation);
+      if (answer === null) return;
+      const newLoc = answer.trim().toLowerCase();
+      if (!['surabaya', 'denpasar', 'tunu'].includes(newLoc)) { showToast('Cabang tidak dikenal. Ketik: surabaya, denpasar, atau tunu'); return; }
+      if (newLoc === currentLocation) return;
       showActionProcessing('Memindahkan Cabang…', 'Menyimpan perubahan.');
       try {
             const res = await fetch(`/api/staff?id=${id}`, {
@@ -1874,7 +1880,7 @@ async function loadStaff() {
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'Gagal update lokasi');
             hideActionPopup();
-            showToast(`✅ Lokasi ${name} diubah ke ${newLoc === 'denpasar' ? 'Denpasar' : 'Surabaya'}`);
+            showToast(`✅ Lokasi ${name} diubah ke ${branchLabel(newLoc)}`);
             loadStaff();
       } catch (e) {
             showActionError('Gagal Update Lokasi', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => editStaffLocation(id, name, currentLocation));
@@ -1959,7 +1965,7 @@ async function loadStaff() {
     document.getElementById('promoBody').innerHTML = data.map(p => `
       <tr>
         <td class="name-cell">${escHtml(p.name)}</td>
-        <td>${p.location === 'denpasar' ? 'Denpasar' : 'Surabaya'}</td>
+        <td>${branchLabel(p.location)}</td>
         <td>${PROMO_TYPE_LABEL[p.type] || p.type}</td>
         <td>${formatPromoValue(p)}</td>
         <td>${p.active ? '<span style="color:#1a6635;font-weight:600;">🟢 Aktif</span>' : '<span style="color:#a83232;font-weight:600;">⚪ Nonaktif</span>'}</td>
@@ -2090,7 +2096,7 @@ async function loadStaff() {
       document.getElementById('tablesBody').innerHTML = '<tr><td colspan="9" class="empty-state">Belum ada meja.</td></tr>';
       return;
     }
-    const locLabel = { surabaya: 'Surabaya', denpasar: 'Denpasar, Bali' };
+    const locLabel = { surabaya: 'Surabaya', denpasar: 'The Magendra, Denpasar', tunu: 'Tunu, Denpasar' };
     document.getElementById('tablesBody').innerHTML = _venueTables.map(t => `
       <tr>
         <td style="font-size:18px;">${t.emoji || '🀄'}</td>
@@ -2222,7 +2228,7 @@ async function loadStaff() {
     const row = _operatingHoursData.find(r => r.location === location && r.dayOfWeek === dayOfWeek);
     if (row) return { openHour: row.openHour, closeHour: row.closeHour };
     // Fallback konservatif kalau data belum sempat ke-load
-    return { openHour: 10, closeHour: location === 'denpasar' ? 22 : 23 };
+    return { openHour: 10, closeHour: (location === 'denpasar' || location === 'tunu') ? 22 : 23 };
   }
   // location null/'all' → union jam terluas dari semua cabang, biar Super
   // Admin yang lagi lihat "Semua Cabang" gak kehilangan jam manapun.
@@ -2230,7 +2236,8 @@ async function loadStaff() {
     if (location && location !== 'all') return getOperatingHoursFor(location, dayOfWeek);
     const ohS = getOperatingHoursFor('surabaya', dayOfWeek);
     const ohD = getOperatingHoursFor('denpasar', dayOfWeek);
-    return { openHour: Math.min(ohS.openHour, ohD.openHour), closeHour: Math.max(ohS.closeHour, ohD.closeHour) };
+    const ohT = getOperatingHoursFor('tunu', dayOfWeek);
+    return { openHour: Math.min(ohS.openHour, ohD.openHour, ohT.openHour), closeHour: Math.max(ohS.closeHour, ohD.closeHour, ohT.closeHour) };
   }
   function dayOfWeekFromDateStr(dateStr) {
     return dateStr ? new Date(dateStr + 'T00:00:00').getDay() : new Date().getDay();
@@ -2241,6 +2248,7 @@ async function loadStaff() {
   async function loadOperatingHoursManager() {
     document.getElementById('hoursSurabaya').innerHTML = '<div class="loading">Memuat data…</div>';
     document.getElementById('hoursDenpasar').innerHTML = '';
+    document.getElementById('hoursTunu').innerHTML = '';
     try {
       const res = await fetch('/api/operating-hours');
       _operatingHoursData = await res.json();
@@ -2251,10 +2259,10 @@ async function loadStaff() {
   }
 
   function renderOperatingHours() {
-    ['surabaya', 'denpasar'].forEach(loc => {
+    ['surabaya', 'denpasar', 'tunu'].forEach(loc => {
       const rows = _operatingHoursData.filter(r => r.location === loc).sort((a,b) => a.dayOfWeek - b.dayOfWeek);
       const html = `
-        <div style="font-size:13px;font-weight:700;color:var(--green-dark);margin-bottom:10px;">${loc === 'denpasar' ? '📍 Denpasar, Bali' : '📍 Surabaya'}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green-dark);margin-bottom:10px;">📍 ${branchLabel(loc)}</div>
         ${rows.map(r => `
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(28,58,46,0.06);">
             <div style="width:70px;font-size:13px;font-weight:600;color:var(--green-dark);">${DAY_NAMES[r.dayOfWeek]}</div>
@@ -2268,7 +2276,7 @@ async function loadStaff() {
             <button class="btn btn-sm btn-primary" onclick="saveOperatingHour(${r.id})" style="padding:6px 12px;font-size:12px;">Simpan</button>
           </div>`).join('')}
       `;
-      document.getElementById(loc === 'denpasar' ? 'hoursDenpasar' : 'hoursSurabaya').innerHTML = html;
+      document.getElementById(loc === 'tunu' ? 'hoursTunu' : loc === 'denpasar' ? 'hoursDenpasar' : 'hoursSurabaya').innerHTML = html;
     });
   }
 
@@ -2495,10 +2503,10 @@ async function loadStaff() {
   // toLocaleTimeString/toLocaleDateString langsung) supaya struk & tampilan
   // Denpasar tidak ketuker pakai WIB.
   function tzForLoc(location) {
-    return location === 'denpasar' ? 'Asia/Makassar' : 'Asia/Jakarta';
+    return (location === 'denpasar' || location === 'tunu') ? 'Asia/Makassar' : 'Asia/Jakarta';
   }
   function tzLabelForLoc(location) {
-    return location === 'denpasar' ? 'WITA' : 'WIB';
+    return (location === 'denpasar' || location === 'tunu') ? 'WITA' : 'WIB';
   }
 
   function fmtWIB(isoStr, location) {
@@ -3014,7 +3022,7 @@ async function loadStaff() {
   <label>Cabang</label>
   <select id="vtEditLocation">
   <option value="surabaya">Surabaya</option>
-  <option value="denpasar">Denpasar, Bali</option>
+  <option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option>
   </select>
   </div>
   <div class="form-group">
@@ -3498,11 +3506,15 @@ async function loadStaff() {
     const checkinTimeStr = checkin.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:receiptTz});
     // Alamat pada struk mengikuti cabang booking. Jangan menampilkan alamat
     // Banana Leaf untuk permainan yang berlangsung di Denpasar.
-    const receiptLocationLines = b.location === 'denpasar'
+    const receiptLocationLines = b.location === 'tunu'
+      ? '<div class="center" style="font-size:10px;">Raya Kedampang No.88B</div><div class="center" style="font-size:10px;">Kerobokan Kelod · Bali</div>'
+      : b.location === 'denpasar'
       ? '<div class="center" style="font-size:10px;">Lantai 2 The Magendra</div><div class="center" style="font-size:10px;">Teuku Umar Barat No.888 · Denpasar, Bali</div>'
       : '<div class="center" style="font-size:10px;">Banana Leaf, Graha Famili</div><div class="center" style="font-size:10px;">Surabaya Barat</div>';
     // Kontak footer struk mengikuti cabang booking juga — WA & IG Denpasar beda dari Surabaya.
-    const receiptContact = b.location === 'denpasar'
+    const receiptContact = b.location === 'tunu'
+      ? { phone: '0851-1934-6094', ig: '@pungpung.mahjongbali' }
+      : b.location === 'denpasar'
       ? { phone: '0882-3136-0817', ig: '@pungpung.mahjongbali' }
       : { phone: '0899-9880-707', ig: '@pungpung.mahjong' };
 
@@ -3665,7 +3677,7 @@ async function loadStaff() {
   function rebuildManualTimeOptions() {
     const sel = document.getElementById('mi_time');
     if (!sel) return;
-    const location = isSuperAdmin ? _viewLocation : _authLocation;
+    const location = _viewLocation;
     const dateStr = document.getElementById('mi_date').value;
     const dow = dayOfWeekFromDateStr(dateStr);
     const { openHour, closeHour } = getOperatingHoursRange(location, dow);
@@ -3684,7 +3696,7 @@ async function loadStaff() {
   function rebuildCommunityTimeOptions() {
     const sel = document.getElementById('cs_time');
     if (!sel) return;
-    const location = isSuperAdmin ? _viewLocation : _authLocation;
+    const location = _viewLocation;
     const dateStr = document.getElementById('cs_date').value;
     const dow = dayOfWeekFromDateStr(dateStr);
     const { openHour, closeHour } = getOperatingHoursRange(location, dow);
@@ -3773,7 +3785,7 @@ async function loadStaff() {
     // WAJIB dikirim ke /api/bookings, kalau tidak, respons berisi booking dari
     // SEMUA cabang tercampur (walau practically table ID beda per cabang jadi
     // tidak salah tabrak, ini tetap best practice + hemat payload).
-    const relevantLoc = isSuperAdmin ? (_viewLocation === 'all' ? null : _viewLocation) : _authLocation;
+    const relevantLoc = _viewLocation === 'all' ? null : _viewLocation;
     const bookingsUrl = '/api/bookings?date=' + date + (relevantLoc ? '&location=' + relevantLoc : '');
 
     let dayBookings = [];
@@ -3925,9 +3937,7 @@ async function loadStaff() {
   // meja Denpasar. Super Admin melihat semua meja saat _viewLocation = 'all',
   // atau meja lokasi yang sedang dipilih di dropdown lokasi.
   function filterWalkinTableOptions() {
-    const relevantLoc = isSuperAdmin
-      ? (_viewLocation === 'all' ? null : _viewLocation)
-      : _authLocation;
+    const relevantLoc = _viewLocation === 'all' ? null : _viewLocation;
     ['ci_table', 'mi_table'].forEach(selId => {
       const sel = document.getElementById(selId);
       if (!sel) return;
@@ -3945,9 +3955,7 @@ async function loadStaff() {
   // Sama seperti filterWalkinTableOptions() tapi buat dropdown meja di form
   // "Buat Acara Main Bareng" — staff/superadmin cuma lihat meja lokasinya.
   function filterCommunityTableOptions() {
-    const relevantLoc = isSuperAdmin
-      ? (_viewLocation === 'all' ? null : _viewLocation)
-      : _authLocation;
+    const relevantLoc = _viewLocation === 'all' ? null : _viewLocation;
     const sel = document.getElementById('cs_table');
     if (!sel) return;
     Array.from(sel.options).forEach(opt => {
@@ -3963,7 +3971,16 @@ async function loadStaff() {
   function setupLocationSwitcher() {
     const sel = document.getElementById('locationSwitcher');
     if (!sel) return;
+    const baliAdmin = !isSuperAdmin && userRole === 'admin' && (_authLocation === 'denpasar' || _authLocation === 'tunu');
     if (isSuperAdmin) {
+      Array.from(sel.options).forEach(o => { o.hidden = false; o.disabled = false; });
+      sel.style.display = 'inline-block';
+      sel.value = _viewLocation;
+    } else if (baliAdmin) {
+      // Admin akun Denpasar mengurus 2 tempat di kota yang sama (Magendra +
+      // Tunu): boleh pindah antar keduanya, tapi tidak bisa lihat Surabaya
+      // atau "Semua Cabang". Kasir tetap terkunci di 1 cabang.
+      Array.from(sel.options).forEach(o => { const ok = (o.value === 'denpasar' || o.value === 'tunu'); o.hidden = !ok; o.disabled = !ok; });
       sel.style.display = 'inline-block';
       sel.value = _viewLocation;
     } else {

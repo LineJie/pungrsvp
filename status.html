@@ -175,7 +175,9 @@
   // Harus tetap sinkron dengan REKENING di index.html — kalau salah satu diubah, ubah juga yang satunya.
   const REKENING = {
     surabaya: { bank: 'BCA', number: '8630038775', name: 'Teresa Carolina', wa: '628999880707' },
-    denpasar: { bank: 'BCA', number: '8630560170', name: 'Teresa Carolina', wa: '6288231360817' }
+    denpasar: { bank: 'BCA', number: '8630560170', name: 'Teresa Carolina', wa: '6288231360817' },
+    // Tunu: rekening sama dengan Denpasar, hanya nomor WA yang beda.
+    tunu: { bank: 'BCA', number: '8630560170', name: 'Teresa Carolina', wa: '6285119346094' }
   };
 
   // Tarif per meja — HARUS sinkron dengan TABLE_RATES di netlify/functions/bookings.ts.
@@ -236,7 +238,7 @@
     document.getElementById('detailRows').innerHTML = `
       <div class="detail-row"><span class="detail-key">Nama</span><span class="detail-val">${escHtml(b.customerName)}</span></div>
       <div class="detail-row"><span class="detail-key">Tanggal</span><span class="detail-val">${dateStr}</span></div>
-      <div class="detail-row"><span class="detail-key">Waktu</span><span class="detail-val">${b.time} WIB</span></div>
+      <div class="detail-row"><span class="detail-key">Waktu</span><span class="detail-val">${b.time} ${(b.location === 'denpasar' || b.location === 'tunu') ? 'WITA' : 'WIB'}</span></div>
       <div class="detail-row"><span class="detail-key">Meja</span><span class="detail-val">${escHtml(b.tableName)}<br><span style="font-size:11px;font-weight:400;color:var(--text-muted)">${escHtml(b.floor)}</span></span></div>
       <div class="detail-row"><span class="detail-key">Durasi</span><span class="detail-val">${b.duration} jam</span></div>
       <div class="detail-row"><span class="detail-key">Total</span><span class="detail-val" style="color:var(--gold)">Rp ${(typeof b.totalPaid === 'number' ? b.totalPaid : (getHourlyRate(b.tableId) * b.duration)).toLocaleString('id-ID')}</span></div>

@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { communitySessions, communityParticipants, staff, bookings } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ensureCommunityTables, ensureLocationColumns, verifyPassword } from "../../db/authUtils.js";
+import { normalizeBranch } from "../../db/branches.js";
 
 // Auth: TIDAK superadmin-only — tab "Acara Bareng" kelihatan buat semua staff
 // (admin & kasir), jadi siapa pun yang sudah login sah boleh buat sesi /
@@ -139,7 +140,7 @@ export default async (req: Request) => {
         }
         const dur = Math.max(1, parseInt(duration) || 2);
         const price = Math.max(0, parseInt(pricePerPerson) || 0);
-        const loc = location === "denpasar" ? "denpasar" : "surabaya";
+        const loc = normalizeBranch(location);
         const startHour = parseInt(time);
         if (!Number.isFinite(startHour)) return Response.json({ error: "Jam tidak valid" }, { status: 400 });
         const endHour = startHour + dur;

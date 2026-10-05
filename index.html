@@ -937,10 +937,19 @@
     <div class="location-row" id="locDenpasar" onclick="selectLocation('denpasar')" style="margin-top:10px;">
     <div class="loc-icon">📍</div>
     <div class="loc-text">
-    <strong>Denpasar, Bali</strong>
+    <strong>The Magendra, Denpasar</strong>
     <span>Lantai 2 The Magendra · Teuku Umar Barat No.888</span>
     <span>3 Meja — Spring &amp; Winter (Automatic), Autumn (Manual Mahjong)</span>
     <a href="https://www.google.com/maps/search/?api=1&query=The+Magendra+Jl.+Teuku+Umar+Barat+No.888+Denpasar+Bali" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="maps-link">📍 Buka di Google Maps</a>
+    </div>
+    <div class="loc-check" style="display:none;">✓</div>
+    </div>
+    <div class="location-row" id="locTunu" onclick="selectLocation('tunu')" style="margin-top:10px;">
+    <div class="loc-icon">📍</div>
+    <div class="loc-text">
+    <strong>Tunu, Denpasar, Bali</strong>
+    <span>Raya Kedampang No.88B, Kerobokan Kelod</span>
+    <a href="https://share.google/d07pGXs05Pt1NCf3R" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="maps-link">📍 Buka di Google Maps</a>
     </div>
     <div class="loc-check" style="display:none;">✓</div>
     </div>
@@ -1154,6 +1163,7 @@
     if (location === 'denpasar') {
       return (dayOfWeek >= 1 && dayOfWeek <= 4) ? 21 : 22;
     }
+    if (location === 'tunu') return 22;
     return (dayOfWeek === 5 || dayOfWeek === 6) ? 24 : 22;
   }
 
@@ -1194,7 +1204,12 @@
     { id: 'b2', name: 'Winter Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 50000, emoji: '❄️', note: 'Automatic Table', avail: true, bookedBy: null },
     { id: 'b3', name: 'Autumn Table', floor: 'Denpasar, Bali', cap: '4 orang', rate: 30000, emoji: '🍂', note: 'Manual Mahjong', avail: true, bookedBy: null },
   ];
-  let _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar };
+  // Tunu: meja dikelola Super Admin lewat "Kelola Meja" (tidak ada fallback statis).
+  let tableDataTunu = [];
+  let _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar, tunu: tableDataTunu };
+  function tablesForLoc(loc) {
+    return loc === 'tunu' ? tableDataTunu : loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+  }
   // Ambil daftar meja aktif dari server dan timpa fallback statis di atas —
   // satu tempat ini yang jadi sumber tarif/nama meja buat seluruh halaman
   // booking (grid meja, ringkasan harga, dsb).
@@ -1203,20 +1218,21 @@
       const res = await fetch('/api/tables');
       const rows = await res.json();
       if (!Array.isArray(rows) || !rows.length) return;
-      const bySurabaya = [], byDenpasar = [];
+      const bySurabaya = [], byDenpasar = [], byTunu = [];
       for (const t of rows) {
         const entry = {
           id: t.tableKey, name: t.name, floor: t.floor, cap: t.capacity || '4 orang',
           rate: t.hourlyRate, emoji: t.emoji || '🀄',
-          note: t.notes ? t.notes : (t.type === 'manual' ? 'Manual Mahjong' : (t.location === 'denpasar' ? 'Automatic Table' : undefined)),
+          note: t.notes ? t.notes : (t.type === 'manual' ? 'Manual Mahjong' : ((t.location === 'denpasar' || t.location === 'tunu') ? 'Automatic Table' : undefined)),
           avail: true, bookedBy: null,
         };
-        (t.location === 'denpasar' ? byDenpasar : bySurabaya).push(entry);
+        (t.location === 'tunu' ? byTunu : t.location === 'denpasar' ? byDenpasar : bySurabaya).push(entry);
       }
       if (bySurabaya.length) { tableDataSurabaya.length = 0; tableDataSurabaya.push(...bySurabaya); }
       if (byDenpasar.length) { tableDataDenpasar.length = 0; tableDataDenpasar.push(...byDenpasar); }
-      _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar };
-      tableData = currentLocation === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+      if (byTunu.length) { tableDataTunu.length = 0; tableDataTunu.push(...byTunu); }
+      _venueTableSets = { surabaya: tableDataSurabaya, denpasar: tableDataDenpasar, tunu: tableDataTunu };
+      tableData = tablesForLoc(currentLocation);
       TOTAL_TABLES = tableData.length;
     } catch (e) { /* fetch gagal — tetap pakai fallback statis di atas */ }
   }
@@ -1227,7 +1243,9 @@
   // Denpasar/Bali pakai Mandiri a.n. Rika A. JANGAN ditukar antar cabang.
   const REKENING = {
     surabaya: { bank: 'BCA', badgeColor: '#0066B2', number: '8630038775', name: 'Teresa Carolina', wa: '628999880707' },
-    denpasar: { bank: 'BCA', badgeColor: '#0066B2', number: '8630560170', name: 'Teresa Carolina', wa: '6288231360817' }
+    denpasar: { bank: 'BCA', badgeColor: '#0066B2', number: '8630560170', name: 'Teresa Carolina', wa: '6288231360817' },
+    // Tunu: rekening sama dengan Denpasar, hanya nomor WA yang beda.
+    tunu: { bank: 'BCA', badgeColor: '#0066B2', number: '8630560170', name: 'Teresa Carolina', wa: '6285119346094' }
   };
   let _pmRekening = REKENING.surabaya;
   let tableData = tableDataSurabaya;
@@ -1340,11 +1358,18 @@
   // (Asia/Jakarta), Denpasar = WITA (Asia/Makassar). Ini bukan cuma soal
   // label tampilan — "jam berapa sekarang" dipakai juga untuk menentukan
   // slot mana yang sudah lewat, jadi harus ikut waktu lokal cabang tsb.
+  // Nama cabang untuk teks yang tampil ke customer.
+  function branchShortName(loc) {
+    return loc === 'tunu' ? 'Tunu' : loc === 'denpasar' ? 'The Magendra' : 'Surabaya';
+  }
+  function branchHeaderName(loc) {
+    return loc === 'tunu' ? 'Tunu, Denpasar, Bali' : loc === 'denpasar' ? 'The Magendra, Denpasar' : 'Surabaya';
+  }
   function tzForLoc(location) {
-    return location === 'denpasar' ? 'Asia/Makassar' : 'Asia/Jakarta';
+    return (location === 'denpasar' || location === 'tunu') ? 'Asia/Makassar' : 'Asia/Jakarta';
   }
   function tzLabelForLoc(location) {
-    return location === 'denpasar' ? 'WITA' : 'WIB';
+    return (location === 'denpasar' || location === 'tunu') ? 'WITA' : 'WIB';
   }
   function getNowWIB(location) {
     const now = new Date();
@@ -1543,8 +1568,8 @@
       const maxDuration = closingHour - startHour;
       warnEl.style.display = 'block';
       warnEl.textContent = maxDuration > 0
-        ? `⚠️ ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'} tutup jam ${closingLabel} ${tzLabel}. Mulai jam ${t.time}, durasi maksimal ${maxDuration} jam.`
-        : `⚠️ ${currentLocation === 'denpasar' ? 'Denpasar' : 'Surabaya'} tutup jam ${closingLabel} ${tzLabel}. Jam ${t.time} sudah tidak bisa booking, coba pilih jam lebih awal.`;
+        ? `⚠️ ${branchShortName(currentLocation)} tutup jam ${closingLabel} ${tzLabel}. Mulai jam ${t.time}, durasi maksimal ${maxDuration} jam.`
+        : `⚠️ ${branchShortName(currentLocation)} tutup jam ${closingLabel} ${tzLabel}. Jam ${t.time} sudah tidak bisa booking, coba pilih jam lebih awal.`;
       if (ctaBtn) { ctaBtn.disabled = true; ctaBtn.style.opacity = '0.5'; ctaBtn.style.cursor = 'not-allowed'; }
       return false;
     }
@@ -1592,7 +1617,7 @@ function closeCommunity() {
   function refreshDurationHint(loc) {
     const hint = document.getElementById('durationHint');
     if (!hint) return;
-    const activeSet = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+    const activeSet = tablesForLoc(loc);
 
     // Kalau user sudah pilih meja, tampilkan harga meja yang DIPILIH saja —
     // bukan daftar semua meja di cabang itu.
@@ -1623,18 +1648,19 @@ function closeCommunity() {
   function selectLocation(loc) {
     if (loc === currentLocation) return;
     currentLocation = loc;
-    tableData = loc === 'denpasar' ? tableDataDenpasar : tableDataSurabaya;
+    tableData = tablesForLoc(loc);
     TOTAL_TABLES = tableData.length;
     document.getElementById('waHelpLink').href = 'https://wa.me/' + REKENING[loc].wa;
 
     // Header hanya menunjukkan cabang aktif. Nama brand tetap konsisten,
     // sedangkan alamat lengkap tersedia pada kartu pilihan lokasi di bawah.
     const headerLocation = document.getElementById('headerLocation');
-    if (headerLocation) headerLocation.textContent = loc === 'denpasar' ? 'Denpasar, Bali' : 'Surabaya';
+    if (headerLocation) headerLocation.textContent = branchHeaderName(loc);
 
     // Update kartu lokasi (checkmark & border aktif)
     const bananaRow = document.getElementById('locBanana');
     const denpasarRow = document.getElementById('locDenpasar');
+    const tunuRow = document.getElementById('locTunu');
     if (bananaRow) {
       bananaRow.classList.toggle('selected', loc === 'surabaya');
       const chk = bananaRow.querySelector('.loc-check');
@@ -1644,6 +1670,11 @@ function closeCommunity() {
       denpasarRow.classList.toggle('selected', loc === 'denpasar');
       const chk = denpasarRow.querySelector('.loc-check');
       if (chk) chk.style.display = loc === 'denpasar' ? '' : 'none';
+    }
+    if (tunuRow) {
+      tunuRow.classList.toggle('selected', loc === 'tunu');
+      const chk = tunuRow.querySelector('.loc-check');
+      if (chk) chk.style.display = loc === 'tunu' ? '' : 'none';
     }
 
     // Update keterangan tarif di kartu Durasi — dibangun dinamis dari

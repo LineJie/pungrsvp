@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { bookings, promos, communitySessions, venueTables } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables, ensureVenueTablesTable } from "../../db/authUtils.js";
+import { normalizeBranch } from "../../db/branches.js";
 
 // Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
 // to gate the admin-correction and void-transaction paths in PATCH below,
@@ -82,7 +83,7 @@ export default async (req: Request) => {
           if (!customerName || !date || !time || !tableId) {
                   return Response.json({ error: "Missing required fields" }, { status: 400 });
           }
-          const loc = location === "denpasar" ? "denpasar" : "surabaya";
+          const loc = normalizeBranch(location);
 
       // Double booking check — berlaku untuk SEMUA cara booking dibuat
       // (online/pending, input manual admin, maupun walk-in), supaya meja

@@ -3,6 +3,7 @@ import { db } from "../../db/index.js";
 import { staff } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import { hashPassword, ensureStaffTable, ensureLocationColumns } from "../../db/authUtils.js";
+import { normalizeBranch, isValidBranch } from "../../db/branches.js";
 
 const SUPERADMIN_USERNAME = "tere";
 
@@ -35,7 +36,7 @@ export default async (req: Request) => {
               if (!name || !username || !password || !role) {
                         return Response.json({ error: "Semua field wajib diisi" }, { status: 400 });
               }
-              const loc = location === "denpasar" ? "denpasar" : "surabaya";
+              const loc = normalizeBranch(location);
               const existing = await db.select().from(staff).where(eq(staff.username, username));
               if (existing.length) {
                         return Response.json({ error: "Username sudah dipakai" }, { status: 409 });
@@ -53,7 +54,7 @@ export default async (req: Request) => {
               const updateData: any = {};
               if (body.name) updateData.name = body.name;
               if (body.role === "admin" || body.role === "kasir") updateData.role = body.role;
-              if (body.location === "denpasar" || body.location === "surabaya") updateData.location = body.location;
+              if (isValidBranch(body.location)) updateData.location = body.location;
               if (body.password) updateData.passwordHash = hashPassword(body.password);
               if (!Object.keys(updateData).length) {
                         return Response.json({ error: "Tidak ada field yang diupdate" }, { status: 400 });
