@@ -2097,7 +2097,15 @@ async function loadStaff() {
       return;
     }
     const locLabel = { surabaya: 'Surabaya', denpasar: 'The Magendra, Denpasar', tunu: 'Tunu, Denpasar' };
-    document.getElementById('tablesBody').innerHTML = _venueTables.map(t => `
+    document.getElementById('tablesBody').innerHTML = _venueTables.map(t => {
+      // Posisi meja di dalam cabangnya sendiri — tombol ↑/↓ hanya geser urutan
+      // antar meja di cabang yang sama (urutan ini yang dipakai halaman booking).
+      const group = _venueTables.filter(x => x.location === t.location);
+      const gi = group.findIndex(x => x.id === t.id);
+      const upDisabled = !isSuperAdmin || gi <= 0;
+      const downDisabled = !isSuperAdmin || gi >= group.length - 1;
+      const arrowStyle = 'background:#f3efe4;color:#5a4a1a;border:1.5px solid #c9a84c;font-weight:700;padding:4px 9px;';
+      return `
       <tr>
         <td style="font-size:18px;">${t.emoji || '🀄'}</td>
         <td class="name-cell">${escHtml(t.name)}</td>
@@ -2108,10 +2116,51 @@ async function loadStaff() {
         <td style="max-width:160px;font-size:12px;color:var(--text-muted);">${escHtml(t.notes || '—')}</td>
         <td>${t.active ? '<span style="color:#1a6635;font-weight:600;">🟢 Aktif</span>' : '<span style="color:#a83232;font-weight:600;">⚪ Nonaktif</span>'}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-sm" style="${arrowStyle}${upDisabled ? 'opacity:.35;cursor:not-allowed;' : ''}" ${upDisabled ? 'disabled' : ''} title="Naikkan urutan" onclick="moveVenueTable(${t.id}, -1)">↑</button>
+          <button class="btn btn-sm" style="${arrowStyle}${downDisabled ? 'opacity:.35;cursor:not-allowed;' : ''}" ${downDisabled ? 'disabled' : ''} title="Turunkan urutan" onclick="moveVenueTable(${t.id}, 1)">↓</button>
           <button class="btn btn-sm" style="background:#fff3d6;color:#8a6a1a;border:1.5px solid #c9a84c;font-weight:600;" onclick="openTableEditModal(${t.id})">✏️ Edit</button>
           <button class="btn btn-sm" style="background:${t.active ? '#fde8e8' : '#e8f4fd'};color:${t.active ? '#a83232' : '#1a6635'};border:1.5px solid ${t.active ? '#a83232' : '#1a6635'};font-weight:600;" onclick="toggleTableActive(${t.id}, ${t.active})">${t.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
+  }
+
+  // Geser urutan meja (dir: -1 = naik, +1 = turun) di dalam cabangnya.
+  // Cuma Super Admin (server juga menolak selain itu). Seluruh daftar dinomori
+  // ulang 1..N lalu hanya yang berubah yang dikirim — karena meja lama bisa
+  // punya sortOrder sama (0), menukar dua angka saja tidak akan mengubah apa-apa.
+  async function moveVenueTable(id, dir) {
+    if (!isSuperAdmin) { showToast('Hanya Super Admin yang bisa mengatur urutan meja'); return; }
+    const t = _venueTables.find(x => x.id === id);
+    if (!t) return;
+    const group = _venueTables.filter(x => x.location === t.location);
+    const gi = group.findIndex(x => x.id === id);
+    const neighbor = group[gi + dir];
+    if (!neighbor) return;
+    const order = _venueTables.slice();
+    const a = order.findIndex(x => x.id === t.id);
+    const b = order.findIndex(x => x.id === neighbor.id);
+    [order[a], order[b]] = [order[b], order[a]];
+    const changes = order
+      .map((x, i) => ({ id: x.id, sortOrder: i + 1, old: x.sortOrder }))
+      .filter(c => c.sortOrder !== c.old);
+    showActionProcessing('Mengatur Urutan Meja…', 'Menyimpan urutan baru.');
+    try {
+      for (const c of changes) {
+        const res = await fetch(`/api/tables?id=${c.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+          body: JSON.stringify({ sortOrder: c.sortOrder })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Gagal menyimpan urutan');
+      }
+      hideActionPopup();
+      showToast('✅ Urutan meja diperbarui');
+      loadTablesManager();
+    } catch (e) {
+      showActionError('Gagal Mengatur Urutan', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => moveVenueTable(id, dir));
+    }
   }
 
   async function submitVenueTable() {
