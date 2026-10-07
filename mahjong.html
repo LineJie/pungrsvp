@@ -422,9 +422,9 @@ function init(){
 }
 function renderCodeScreen(err){
   var h = "";
-  h += "<div class=\"card\"><div class=\"card-title\">Masukkan Kode Booking</div>";
-  h += "<div class=\"label\">Kode Booking</div>";
-  h += "<input class=\"field\" id=\"codeInput\" placeholder=\"PP-XXXXXX\" maxlength=\"9\" style=\"text-transform:uppercase;letter-spacing:1.5px;\">";
+  h += "<div class=\"card\"><div class=\"card-title\">Masukkan Kode Booking / Acara</div>";
+  h += "<div class=\"label\">Kode Booking (PP-…) atau Kode Acara Bareng (OP-…)</div>";
+  h += "<input class=\"field\" id=\"codeInput\" placeholder=\"PP-XXXXXX / OP-XXXXXX\" maxlength=\"9\" style=\"text-transform:uppercase;letter-spacing:1.5px;\">";
   if (err) h += "<div class=\"error-msg\">" + esc(err) + "</div>";
   h += "<button class=\"btn btn-primary\" onclick=\"submitCode()\">Lanjut &#8594;</button>";
     h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; Lihat Peringkat</button>";
@@ -439,10 +439,28 @@ function submitCode(){
   if (!v) { return; }
   loadBooking(v);
 }
+// Kode "OP-XXXXXX" = Acara Main Bareng (open play); kode "PP-XXXXXX" = booking biasa.
+// Sesi acara dinormalisasi jadi bentuk yang sama dengan booking (id, tableName,
+// location, status) supaya lobi, skor, dan leaderboard dipakai apa adanya.
+// "open" dianggap setara "checked_in". isCommunity menentukan apakah game
+// di-anchor ke communitySessionId atau bookingId (lihat gameRefQuery/gameAnchor).
+function gameRefQuery(){ return (S.booking.isCommunity ? "communitySessionId=" : "bookingId=") + S.booking.id; }
+function gameAnchor(extra){
+  var o = S.booking.isCommunity ? {communitySessionId:S.booking.id} : {bookingId:S.booking.id};
+  for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) o[k] = extra[k]; }
+  return o;
+}
 function loadBooking(code){
-  apiGet("/api/bookings?code=" + encodeURIComponent(code)).then(function(res){
+  var isCommunity = /^OP-/i.test(code);
+  var lookupUrl = (isCommunity ? "/api/community-sessions?code=" : "/api/bookings?code=") + encodeURIComponent(code);
+  apiGet(lookupUrl).then(function(res){
     if (!res.ok || res.data.error) { renderCodeScreen("Kode booking tidak ditemukan. Periksa lalu coba lagi."); return; }
-    S.booking = res.data; S.code = code;
+    if (isCommunity) {
+      S.booking = { id: res.data.id, tableName: res.data.tableName, location: res.data.location, status: res.data.status === "open" ? "checked_in" : res.data.status, isCommunity: true };
+    } else {
+      S.booking = res.data;
+    }
+    S.code = code;
     // Simpan kode booking ke URL (kalau belum ada) supaya kalau halaman di-refresh,
     // tidak balik ke layar "masukkan kode booking" — langsung lanjut ke state yang sama.
     var urlParams = new URLSearchParams(window.location.search);
@@ -458,9 +476,15 @@ function loadBooking(code){
   });
 }
 function renderNotCheckedIn(){
-  var h = "<div class=\"card\"><div class=\"card-title\">Belum Check-in</div>";
-  h += "<div class=\"muted\">Pencatatan skor tersedia setelah meja kamu di-check-in oleh staff. Silakan check-in terlebih dahulu, lalu kembali ke sini.</div>";
-  h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Cek Status Booking</a>";
+  var h;
+  if (S.booking.isCommunity) {
+    h = "<div class=\"card\"><div class=\"card-title\">Acara Sudah Ditutup</div>";
+    h += "<div class=\"muted\">Acara main bareng ini sudah selesai atau dibatalkan, jadi permainan baru tidak bisa dimulai. Skor yang sudah tercatat tetap ada di peringkat dan riwayat.</div>";
+  } else {
+    h = "<div class=\"card\"><div class=\"card-title\">Belum Check-in</div>";
+    h += "<div class=\"muted\">Pencatatan skor tersedia setelah meja kamu di-check-in oleh staff. Silakan check-in terlebih dahulu, lalu kembali ke sini.</div>";
+    h += "<a class=\"btn btn-outline\" href=\"/status.html?code=" + encodeURIComponent(S.code) + "\">Cek Status Booking</a>";
+  }
   h += "<button class=\"btn btn-outline\" onclick=\"openLeaderboard()\">&#x1F3C6; Lihat Peringkat</button>";
   h += "<button class=\"btn btn-outline\" onclick=\"openHistory()\">&#x1F4DC; Riwayat Saya</button>";
   h += "<button class=\"btn btn-outline\" onclick=\"openStats()\">&#x1F4CA; Statistik Saya</button>";
@@ -469,7 +493,7 @@ function renderNotCheckedIn(){
   qs("bottomNav").style.display = "none";
 }
 function loadGameForBooking(){
-  apiGet("/api/mahjong/games?bookingId=" + S.booking.id).then(function(res){
+  apiGet("/api/mahjong/games?" + gameRefQuery()).then(function(res){
     if (!res.ok) { S.game = null; S.players = []; renderLobbyNoGame(); return; }
     S.game = res.data.game; S.players = res.data.players;
     routeByStatus();
@@ -523,7 +547,7 @@ function pollLobbyState(){
   // Tab/HP sedang tidak dilihat (layar mati, pindah app) -> lewati polling.
   // Begitu dibuka lagi, tick berikutnya (maks 3 dtk) langsung menyegarkan.
   if (document.hidden) { return; }
-  apiGet("/api/mahjong/games?bookingId=" + S.booking.id).then(function(res){
+  apiGet("/api/mahjong/games?" + gameRefQuery()).then(function(res){
     if (!res.ok || !res.data.game) return;
     var newGame = res.data.game, newPlayers = res.data.players || [];
     var statusChanged = newGame.status !== S.game.status;
@@ -565,7 +589,7 @@ function createGame(){
   var name = qs("hostName").value.trim();
   var wa = qs("hostWa").value.trim();
   if (!name) { alert("Masukkan nama kamu terlebih dahulu"); return; }
-  apiSend("/api/mahjong/games", "POST", {bookingId:S.booking.id, hostName:name, hostWaNumber:wa, scoringSystem:S.pickedScoringSystem}).then(function(res){
+  apiSend("/api/mahjong/games", "POST", gameAnchor({hostName:name, hostWaNumber:wa, scoringSystem:S.pickedScoringSystem})).then(function(res){
     if (!res.ok) {
       alert(res.data.error || "Permainan tidak dapat dibuat");
       loadGameForBooking();
@@ -599,7 +623,7 @@ function createGame(){
     var list = S.lastPlayers;
     var hostIdx = (S.lastMyIndex >= 0 && S.lastMyIndex < list.length) ? S.lastMyIndex : 0;
     var host = list[hostIdx];
-        apiSend("/api/mahjong/games", "POST", {bookingId:S.booking.id, hostName:host.name, hostWaNumber:host.waNumber, sessionId:S.lastSessionId, scoringSystem:S.lastScoringSystem || "hongkong"}).then(function(res){
+        apiSend("/api/mahjong/games", "POST", gameAnchor({hostName:host.name, hostWaNumber:host.waNumber, sessionId:S.lastSessionId, scoringSystem:S.lastScoringSystem || "hongkong"})).then(function(res){
       if (!res.ok) { alert(res.data.error || "Could not create game"); S.lastPlayers = []; loadGameForBooking(); return; }
       S.game = res.data.game; S.players = res.data.players;
       localStorage.setItem("mj_player_" + S.game.id, res.data.players[0].id);

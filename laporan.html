@@ -89,6 +89,20 @@
   .rank-sub { font-size:11px; color:var(--text-muted); }
   .rank-val { font-size:14px; font-weight:700; color:var(--gold); }
 
+  /* EXPORT DATA */
+  .picker-row label { font-size:12px; color:var(--text-muted); font-weight:600; display:flex; align-items:center; gap:6px; }
+  .picker-row button.ghost { background:var(--warm-white); color:var(--green-dark); border:1.5px solid rgba(28,58,46,0.15); }
+  .dl-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+  .dl-btn { padding:12px 18px; background:var(--gold); color:var(--green-dark); border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:13px; }
+  .dl-btn.alt { background:var(--warm-white); border:1.5px solid var(--gold); }
+  .hint { font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.5; }
+  .data-table-wrap { max-height:380px; overflow:auto; border-radius:10px; border:1px solid rgba(28,58,46,0.08); }
+  .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .data-table th { position:sticky; top:0; background:var(--green-dark); color:var(--gold-light); text-align:left; padding:8px 10px; font-weight:600; white-space:nowrap; }
+  .data-table td { padding:7px 10px; border-bottom:1px solid rgba(28,58,46,0.06); white-space:nowrap; }
+  .data-table th.num, .data-table td.num { text-align:right; }
+  .data-table tr.zero td { color:var(--text-muted); }
+
   .loading-state { text-align:center; padding:40px; color:var(--text-muted); }
   .empty-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px; }
 </style>
@@ -127,6 +141,7 @@
     <div class="tabs">
       <button class="tab-btn active" id="tabHarian" onclick="switchView('harian')">📅 Harian</button>
       <button class="tab-btn" id="tabBulanan" onclick="switchView('bulanan')">🗓️ Bulanan</button>
+      <button class="tab-btn" id="tabExport" onclick="switchView('export')">📥 Export Data</button>
     </div>
 
     <!-- HARIAN -->
@@ -146,6 +161,29 @@
         <button onclick="loadBulanan()">Tampilkan</button>
       </div>
       <div id="bulananContent" class="loading-state">Pilih bulan lalu tap Tampilkan</div>
+    </div>
+
+    <!-- EXPORT DATA -->
+    <div id="viewExport" style="display:none">
+      <div class="section">
+        <div class="section-title">📥 Tarik Data Penggunaan Meja</div>
+        <div class="hint">Pilih periode dan meja, lalu Tampilkan. Hasilnya berisi jam terpakai per meja per hari beserta detail tiap sesi (tanggal, jam, nama, kode, pembayaran). Yang dihitung: booking yang sudah selesai + Acara Main Bareng yang tidak dibatalkan. Cabang mengikuti pilihan cabang di atas.</div>
+        <div class="picker-row">
+          <label>Dari <input type="date" id="xFrom"></label>
+          <label>Sampai <input type="date" id="xTo"></label>
+          <button type="button" class="ghost" onclick="setExportRange('this')">Bulan ini</button>
+          <button type="button" class="ghost" onclick="setExportRange('last')">Bulan lalu</button>
+        </div>
+        <div class="picker-row" style="margin-bottom:0">
+          <select id="xTable"><option value="">Semua meja</option></select>
+          <button type="button" onclick="loadExport()">Tampilkan</button>
+        </div>
+      </div>
+      <div class="dl-row" id="exportActions" style="display:none">
+        <button type="button" class="dl-btn" onclick="downloadExportXLSX()">⬇️ Download Excel (.xlsx)</button>
+        <button type="button" class="dl-btn alt" onclick="downloadExportCSV()">⬇️ Download CSV (detail)</button>
+      </div>
+      <div id="exportContent" class="loading-state">Pilih periode &amp; meja lalu tap Tampilkan</div>
     </div>
   </div>
 
@@ -227,7 +265,10 @@ async function checkPw() {
     if (baliAdmin && sw.value !== 'denpasar' && sw.value !== 'tunu') return;
     _reportLocation = sw.value;
     const harianVisible = document.getElementById('viewHarian').style.display !== 'none';
-    if (harianVisible) loadHarian(); else loadBulanan();
+    const exportVisible = document.getElementById('viewExport').style.display !== 'none';
+    if (exportVisible) resetExportForLocation();
+    else if (harianVisible) loadHarian();
+    else loadBulanan();
   }
 
   const TABLE_NAMES = {
@@ -239,8 +280,11 @@ async function checkPw() {
   function switchView(v) {
     document.getElementById('viewHarian').style.display = v === 'harian' ? 'block' : 'none';
     document.getElementById('viewBulanan').style.display = v === 'bulanan' ? 'block' : 'none';
+    document.getElementById('viewExport').style.display = v === 'export' ? 'block' : 'none';
     document.getElementById('tabHarian').classList.toggle('active', v === 'harian');
     document.getElementById('tabBulanan').classList.toggle('active', v === 'bulanan');
+    document.getElementById('tabExport').classList.toggle('active', v === 'export');
+    if (v === 'export') loadExportTables();
   }
 
   function initDefaults() {
@@ -257,6 +301,7 @@ async function checkPw() {
       yearSel.innerHTML += `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`;
     }
 
+    setExportRange('this');
     loadHarian();
   }
 
@@ -509,6 +554,352 @@ async function checkPw() {
         ${mejaRows || '<div class="empty-state">Tidak ada data</div>'}
       </div>
     `;
+  }
+
+  // ── EXPORT DATA ───────────────────────────────────────────
+  // Tarik data penggunaan meja per periode: ringkasan per meja, rekap harian
+  // (jam terpakai per meja per hari), dan detail tiap sesi. Dihitung dari
+  // booking yang sudah selesai + Acara Main Bareng yang tidak dibatalkan —
+  // sama seperti laporan revenue, jadi angkanya konsisten.
+  const DAY_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const BRANCH_LABEL = { surabaya: 'Surabaya', denpasar: 'The Magendra, Denpasar', tunu: 'Tunu, Denpasar' };
+  let _exportTables = [];        // daftar meja untuk dropdown (sesuai cabang laporan)
+  let _exportTablesFor = null;   // cabang yang daftarnya sedang dimuat (hindari fetch ulang)
+  let _exportData = null;        // hasil terakhir — dipakai tombol download
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function isoDate(d) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+  function fmtDateID(iso) { const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+  function dayNameOf(iso) { const [y,m,d] = iso.split('-').map(Number); return DAY_ID[new Date(Date.UTC(y, m-1, d)).getUTCDay()]; }
+  // Serial tanggal Excel dihitung manual (hari sejak 1899-12-30) supaya tidak
+  // bergantung pada konversi Date milik library yang bisa meleset karena zona waktu.
+  function excelSerial(iso) { const [y,m,d] = iso.split('-').map(Number); return Math.round(Date.UTC(y, m-1, d) / 86400000) + 25569; }
+  function hm(mins) { const t = ((Math.round(mins) % 1440) + 1440) % 1440; return `${pad2(Math.floor(t/60))}:${pad2(t%60)}`; }
+  function parseHM(s) { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : null; }
+  function hoursNum(mins) { return Math.round(mins / 60 * 100) / 100; }
+  function durText(mins) { const h = Math.floor(mins / 60), m = Math.round(mins % 60); return h && m ? `${h}j ${m}m` : h ? `${h}j` : `${m}m`; }
+  function clockIn(iso, loc) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: (loc === 'denpasar' || loc === 'tunu') ? 'Asia/Makassar' : 'Asia/Jakarta' });
+  }
+
+  // Gabungkan booking selesai + sesi Acara Bareng jadi satu daftar baris
+  // seragam, lalu hitung ringkasan per meja & rekap harian. Dipisah dari
+  // fetch supaya mudah dicek. `tbl` = meja terpilih (atau null = semua).
+  function buildExportData(bookings, sessions, tables, from, to, tbl) {
+    const inRange = d => !!d && d >= from && d <= to;
+    const locOf = x => x.location || 'surabaya';
+    const matchTable = x => !tbl || ((x.tableId === tbl.tableKey || (x.tableName || '') === tbl.name) && locOf(x) === tbl.location);
+    // Nama & lantai ikut data meja saat ini (kalau meja pernah di-rename,
+    // booking lama tetap tergabung ke meja yang sama).
+    const meta = x => {
+      const t = tables.find(t => t.location === locOf(x) && t.tableKey === x.tableId);
+      return { name: t ? t.name : (x.tableName || TABLE_NAMES[x.tableId] || x.tableId || '?'), floor: t ? (t.floor || '') : (x.floor || '') };
+    };
+    const rows = [];
+
+    bookings.filter(b => b.status === 'completed' && inRange(b.date) && matchTable(b)).forEach(b => {
+      const loc = locOf(b), m = meta(b);
+      const startMin = parseHM(b.time);
+      const bookedMin = Math.round((b.duration || 0) * 60);
+      const usedMin = b.actualDuration > 0 ? b.actualDuration : bookedMin;
+      rows.push({
+        date: b.date, location: loc, tableName: m.name, floor: m.floor, type: 'Booking',
+        code: b.bookingCode || '', name: b.customerName || '',
+        start: startMin == null ? (b.time || '') : hm(startMin),
+        end: startMin == null ? '' : hm(startMin + bookedMin),
+        bookedMin, usedMin,
+        checkin: clockIn(b.checkinAt, loc), checkout: clockIn(b.checkoutAt, loc),
+        payment: b.paymentMethod || '', people: '', revenue: b.totalPaid || 0, notes: b.notes || '',
+      });
+    });
+
+    sessions.filter(s => s.status !== 'cancelled' && inRange(s.date) && matchTable(s)).forEach(s => {
+      const loc = locOf(s), m = meta(s);
+      const parts = s.participants || [];
+      const people = parts.reduce((a, p) => a + (p.numPeople || 1), 0);
+      const revenue = parts.filter(p => p.paid).reduce((a, p) => a + (p.numPeople || 1) * s.pricePerPerson * s.duration, 0);
+      const startMin = parseHM(s.time);
+      const bookedMin = Math.round((s.duration || 0) * 60);
+      rows.push({
+        date: s.date, location: loc, tableName: m.name, floor: m.floor, type: 'Acara Bareng',
+        code: s.bookingCode || '', name: 'Acara Main Bareng',
+        start: startMin == null ? (s.time || '') : hm(startMin),
+        end: startMin == null ? '' : hm(startMin + bookedMin),
+        bookedMin, usedMin: bookedMin, checkin: '', checkout: '',
+        payment: 'Per peserta', people, revenue, notes: s.notes || '',
+      });
+    });
+
+    rows.sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start) || a.tableName.localeCompare(b.tableName));
+
+    const perTable = new Map(), perDay = new Map();
+    rows.forEach(r => {
+      const tk = `${r.location}|${r.tableName}`;
+      const t = perTable.get(tk) || { location: r.location, tableName: r.tableName, sesi: 0, usedMin: 0, revenue: 0 };
+      t.sesi += 1; t.usedMin += r.usedMin; t.revenue += r.revenue; perTable.set(tk, t);
+      const dk = `${r.date}|${tk}`;
+      const d = perDay.get(dk) || { date: r.date, location: r.location, tableName: r.tableName, sesi: 0, usedMin: 0, revenue: 0 };
+      d.sesi += 1; d.usedMin += r.usedMin; d.revenue += r.revenue; perDay.set(dk, d);
+    });
+
+    const dayRows = [...perDay.values()];
+    const tableSummary = [...perTable.values()];
+    if (tbl) {
+      // Satu meja dipilih: tampilkan SEMUA tanggal di periode (hari tanpa sesi = 0 jam),
+      // supaya jelas hari mana saja meja itu tidak laku.
+      const have = new Set(dayRows.map(d => d.date));
+      for (let t = Date.parse(from); t <= Date.parse(to); t += 86400000) {
+        const iso = new Date(t).toISOString().slice(0, 10);
+        if (!have.has(iso)) dayRows.push({ date: iso, location: tbl.location, tableName: tbl.name, sesi: 0, usedMin: 0, revenue: 0 });
+      }
+      if (!tableSummary.length) tableSummary.push({ location: tbl.location, tableName: tbl.name, sesi: 0, usedMin: 0, revenue: 0 });
+    }
+    dayRows.sort((a, b) => a.date.localeCompare(b.date) || a.tableName.localeCompare(b.tableName));
+    tableSummary.sort((a, b) => b.usedMin - a.usedMin || a.tableName.localeCompare(b.tableName));
+
+    const totals = {
+      sesi: rows.length,
+      usedMin: rows.reduce((a, r) => a + r.usedMin, 0),
+      revenue: rows.reduce((a, r) => a + r.revenue, 0),
+      activeDays: new Set(rows.map(r => r.date)).size,
+    };
+    return { rows, tableSummary, dayRows, totals };
+  }
+
+  function setExportRange(kind) {
+    const now = new Date();
+    const first = kind === 'last' ? new Date(now.getFullYear(), now.getMonth() - 1, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const last = kind === 'last' ? new Date(first.getFullYear(), first.getMonth() + 1, 0) : now; // bulan ini: sampai hari ini
+    document.getElementById('xFrom').value = isoDate(first);
+    document.getElementById('xTo').value = isoDate(last);
+  }
+
+  async function loadExportTables() {
+    if (_exportTablesFor === _reportLocation) return;
+    try {
+      const res = await fetch('/api/tables?includeInactive=1');
+      const rows = await res.json();
+      _exportTables = (Array.isArray(rows) ? rows : []).filter(t => _reportLocation === 'all' || t.location === _reportLocation);
+      _exportTablesFor = _reportLocation;
+    } catch (e) { _exportTables = []; _exportTablesFor = null; }
+    const sel = document.getElementById('xTable');
+    sel.innerHTML = '<option value="">Semua meja</option>' + _exportTables.map((t, i) =>
+      `<option value="${i}">${esc(t.name)}${t.floor ? ' (' + esc(t.floor) + ')' : ''}${_reportLocation === 'all' ? ' — ' + esc(BRANCH_LABEL[t.location] || t.location) : ''}${t.active ? '' : ' [nonaktif]'}</option>`).join('');
+    sel.value = '';
+  }
+
+  // Ganti cabang laporan: daftar meja & hasil sebelumnya tidak berlaku lagi.
+  function resetExportForLocation() {
+    _exportData = null;
+    _exportTablesFor = null;
+    document.getElementById('exportActions').style.display = 'none';
+    const out = document.getElementById('exportContent');
+    out.className = 'loading-state';
+    out.innerHTML = 'Pilih periode &amp; meja lalu tap Tampilkan';
+    loadExportTables();
+  }
+
+  async function fetchCommunityForExport(from, to) {
+    const locParam = (_reportLocation && _reportLocation !== 'all') ? `?location=${_reportLocation}` : '';
+    const res = await fetch('/api/community-sessions' + locParam);
+    if (!res.ok) throw new Error('Gagal memuat Acara Bareng');
+    const sessions = await res.json();
+    if (!Array.isArray(sessions)) throw new Error('Gagal memuat Acara Bareng');
+    const inScope = sessions.filter(s => s.date >= from && s.date <= to && s.status !== 'cancelled');
+    await Promise.all(inScope.map(async s => {
+      const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+      if (!r.ok) throw new Error('Gagal memuat peserta Acara Bareng');
+      s.participants = await r.json();
+    }));
+    return inScope;
+  }
+
+  async function loadExport() {
+    const from = document.getElementById('xFrom').value;
+    const to = document.getElementById('xTo').value;
+    if (!from || !to) { alert('Isi tanggal "Dari" dan "Sampai" dulu ya.'); return; }
+    if (from > to) { alert('Tanggal "Dari" tidak boleh setelah "Sampai".'); return; }
+    if ((Date.parse(to) - Date.parse(from)) / 86400000 + 1 > 366) { alert('Rentang maksimal 1 tahun (366 hari).'); return; }
+    await loadExportTables();
+    const selVal = document.getElementById('xTable').value;
+    const tbl = selVal === '' ? null : _exportTables[parseInt(selVal)];
+    const out = document.getElementById('exportContent');
+    document.getElementById('exportActions').style.display = 'none';
+    out.className = 'loading-state';
+    out.innerHTML = 'Memuat…';
+    try {
+      const [all, sessions] = await Promise.all([fetchAllBookings(), fetchCommunityForExport(from, to)]);
+      if (!Array.isArray(all)) throw new Error('Gagal memuat booking');
+      const data = buildExportData(all, sessions, _exportTables, from, to, tbl);
+      const meta = {
+        from, to, tbl,
+        locationLabel: _reportLocation === 'all' ? 'Semua Cabang' : (BRANCH_LABEL[_reportLocation] || _reportLocation),
+        tableLabel: tbl ? tbl.name : 'Semua meja',
+      };
+      _exportData = { ...data, meta };
+      renderExportPreview(_exportData);
+      document.getElementById('exportActions').style.display = (data.rows.length || tbl) ? 'flex' : 'none';
+    } catch (e) {
+      _exportData = null;
+      out.className = 'empty-state';
+      out.textContent = 'Gagal memuat data. Cek koneksi lalu coba lagi.';
+    }
+  }
+
+  function renderExportPreview(d) {
+    const out = document.getElementById('exportContent');
+    const m = d.meta;
+    const multi = !m.tbl;
+    const showBranch = _reportLocation === 'all';
+    const rp = n => 'Rp ' + n.toLocaleString('id-ID');
+    const jam = mins => hoursNum(mins).toLocaleString('id-ID');
+    if (!d.rows.length && !m.tbl) {
+      out.className = '';
+      out.innerHTML = '<div class="section"><div class="empty-state">Tidak ada sesi selesai pada periode ini.</div></div>';
+      return;
+    }
+    const tableRows = d.tableSummary.map(t => `
+      <div class="rank-row">
+        <div><div class="rank-name">${esc(t.tableName)}${showBranch ? ' — ' + esc(BRANCH_LABEL[t.location] || t.location) : ''}</div>
+        <div class="rank-sub">${t.sesi} sesi · ${durText(t.usedMin)} terpakai · ${rp(t.revenue)}</div></div>
+        <div class="rank-val">${jam(t.usedMin)} jam</div>
+      </div>`).join('');
+    const dayTr = d.dayRows.map(r => `
+      <tr class="${r.sesi ? '' : 'zero'}"><td>${fmtDateID(r.date)}</td><td>${dayNameOf(r.date)}</td>${multi ? `<td>${esc(r.tableName)}</td>` : ''}
+      <td class="num">${r.sesi}</td><td class="num">${jam(r.usedMin)}</td><td class="num">${rp(r.revenue)}</td></tr>`).join('');
+    const PREVIEW_MAX = 300;
+    const detTr = d.rows.slice(0, PREVIEW_MAX).map(r => `
+      <tr><td>${fmtDateID(r.date)}</td>${multi ? `<td>${esc(r.tableName)}</td>` : ''}<td>${esc(r.type)}</td><td>${esc(r.name)}</td>
+      <td>${esc(r.start)}${r.end ? '–' + esc(r.end) : ''}</td><td class="num">${jam(r.usedMin)}</td><td class="num">${rp(r.revenue)}</td></tr>`).join('');
+    out.className = '';
+    out.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card highlight"><div class="lbl">Total Jam Terpakai</div><div class="val">${jam(d.totals.usedMin)} jam</div></div>
+        <div class="stat-card"><div class="lbl">Total Sesi</div><div class="val">${d.totals.sesi}</div></div>
+        <div class="stat-card"><div class="lbl">Hari Ada Sesi</div><div class="val">${d.totals.activeDays}</div></div>
+        <div class="stat-card"><div class="lbl">Total Revenue</div><div class="val" style="font-size:20px">${rp(d.totals.revenue)}</div></div>
+      </div>
+      <div class="section"><div class="section-title">🀄 Ringkasan per Meja</div>${tableRows}</div>
+      <div class="section">
+        <div class="section-title">📅 Rekap Harian — jam terpakai per hari (${d.dayRows.length} baris)</div>
+        <div class="data-table-wrap"><table class="data-table"><thead><tr><th>Tanggal</th><th>Hari</th>${multi ? '<th>Meja</th>' : ''}<th class="num">Sesi</th><th class="num">Jam</th><th class="num">Revenue</th></tr></thead><tbody>${dayTr}</tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🧾 Detail Sesi (${d.rows.length})</div>
+        ${d.rows.length ? `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>Tanggal</th>${multi ? '<th>Meja</th>' : ''}<th>Jenis</th><th>Nama</th><th>Jam</th><th class="num">Terpakai</th><th class="num">Revenue</th></tr></thead><tbody>${detTr}</tbody></table></div>` : '<div class="empty-state">Tidak ada sesi.</div>'}
+        <div class="hint" style="margin:10px 0 0">${d.rows.length > PREVIEW_MAX ? `Menampilkan ${PREVIEW_MAX} pertama. ` : ''}Detail lengkap (kode booking, check-in/out, metode bayar, catatan) ada di file download.</div>
+      </div>`;
+  }
+
+  // ── Download ──
+  const DETAIL_HEADERS = ['Tanggal','Hari','Cabang','Meja','Lantai/Area','Jenis','Kode','Nama','Jam Mulai (jadwal)','Jam Selesai (jadwal)','Durasi Booking (jam)','Jam Terpakai (jam)','Durasi Aktual','Check-in','Check-out','Metode Bayar','Peserta (orang)','Revenue (Rp)','Catatan'];
+
+  function exportFileBase(d) {
+    const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `laporan-meja_${d.meta.from}_sd_${d.meta.to}` + (d.meta.tbl ? '_' + slug(d.meta.tbl.name) : '') + (_reportLocation !== 'all' ? '_' + _reportLocation : '');
+  }
+
+  function saveBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  // CSV: pemisah titik-koma + BOM supaya Excel versi Indonesia langsung
+  // memisah kolom dengan benar (koma di sana dipakai sebagai desimal) dan
+  // karakter UTF-8 tampil normal. Sel teks yang diawali = + - @ diberi
+  // tanda petik agar tidak dieksekusi sebagai rumus saat dibuka di Excel.
+  function csvCell(v) {
+    let s = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function detailArray(r) {
+    return [fmtDateID(r.date), dayNameOf(r.date), BRANCH_LABEL[r.location] || r.location, r.tableName, r.floor, r.type, r.code, r.name,
+      r.start, r.end, hoursNum(r.bookedMin), hoursNum(r.usedMin), durText(r.usedMin), r.checkin, r.checkout, r.payment, r.people, r.revenue, r.notes];
+  }
+  function downloadExportCSV() {
+    const d = _exportData;
+    if (!d) return;
+    const dec = v => typeof v === 'number' && !Number.isInteger(v) ? String(v).replace('.', ',') : v;
+    const lines = [DETAIL_HEADERS, ...d.rows.map(detailArray)].map(row => row.map(dec).map(csvCell).join(';'));
+    saveBlob(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), exportFileBase(d) + '.csv');
+  }
+
+  // Workbook 3 sheet: Ringkasan, Rekap Harian, Detail Sesi. Tanggal, jam, dan
+  // revenue ditulis sebagai angka bertipe (bukan teks) supaya bisa di-filter,
+  // diurutkan, dan dijumlah langsung di Excel.
+  function buildWorkbook(X, d) {
+    const T = v => ({ t: 's', v: String(v == null ? '' : v) });
+    const N = (v, z) => ({ t: 'n', v: Number(v) || 0, z });
+    const D = iso => ({ t: 'n', v: excelSerial(iso), z: 'dd/mm/yyyy' });
+    const H = mins => N(hoursNum(mins), '0.00');
+    const R = v => N(v, '#,##0');
+    const m = d.meta;
+    const sheet = (aoa, widths) => { const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = widths.map(w => ({ wch: w })); return ws; };
+
+    const sum = [
+      [T('Laporan Penggunaan Meja — Pung Pung Mahjong')],
+      [T('Periode'), T(`${fmtDateID(m.from)} s/d ${fmtDateID(m.to)}`)],
+      [T('Cabang'), T(m.locationLabel)],
+      [T('Meja'), T(m.tableLabel)],
+      [T('Catatan'), T('Dihitung dari booking selesai + Acara Main Bareng (tidak dibatalkan). Jam terpakai = durasi aktual (booking) / durasi sesi (acara). Revenue = total dibayar (booking) + peserta lunas (acara).')],
+      [],
+      ['Cabang','Meja','Jumlah Sesi','Total Jam Terpakai','Revenue (Rp)'].map(T),
+      ...d.tableSummary.map(t => [T(BRANCH_LABEL[t.location] || t.location), T(t.tableName), N(t.sesi, '0'), H(t.usedMin), R(t.revenue)]),
+      [T('TOTAL'), T(''), N(d.totals.sesi, '0'), H(d.totals.usedMin), R(d.totals.revenue)],
+    ];
+    const day = [
+      ['Tanggal','Hari','Cabang','Meja','Jumlah Sesi','Jam Terpakai','Revenue (Rp)'].map(T),
+      ...d.dayRows.map(r => [D(r.date), T(dayNameOf(r.date)), T(BRANCH_LABEL[r.location] || r.location), T(r.tableName), N(r.sesi, '0'), H(r.usedMin), R(r.revenue)]),
+    ];
+    const det = [
+      DETAIL_HEADERS.map(T),
+      ...d.rows.map(r => [D(r.date), T(dayNameOf(r.date)), T(BRANCH_LABEL[r.location] || r.location), T(r.tableName), T(r.floor), T(r.type), T(r.code), T(r.name),
+        T(r.start), T(r.end), N(hoursNum(r.bookedMin), '0.00'), H(r.usedMin), T(durText(r.usedMin)), T(r.checkin), T(r.checkout), T(r.payment),
+        r.people === '' ? T('') : N(r.people, '0'), R(r.revenue), T(r.notes)]),
+    ];
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, sheet(sum, [18, 26, 14, 18, 16]), 'Ringkasan');
+    X.utils.book_append_sheet(wb, sheet(day, [12, 10, 22, 24, 13, 13, 15]), 'Rekap Harian');
+    X.utils.book_append_sheet(wb, sheet(det, [12, 10, 22, 24, 14, 14, 12, 26, 12, 12, 12, 12, 12, 10, 10, 14, 10, 14, 30]), 'Detail Sesi');
+    return wb;
+  }
+
+  // Library Excel (SheetJS) disajikan dari situs sendiri (/xlsx.full.min.js) dan
+  // baru dimuat saat tombol Excel ditekan, jadi halaman laporan tetap ringan.
+  let _xlsxPromise = null;
+  function ensureSheetJS() {
+    if (window.XLSX) return Promise.resolve();
+    if (_xlsxPromise) return _xlsxPromise;
+    _xlsxPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = '/xlsx.full.min.js';
+      s.onload = () => window.XLSX ? resolve() : reject(new Error('XLSX tidak tersedia'));
+      s.onerror = () => reject(new Error('Gagal memuat library Excel'));
+      document.head.appendChild(s);
+    }).catch(e => { _xlsxPromise = null; throw e; });
+    return _xlsxPromise;
+  }
+
+  async function downloadExportXLSX() {
+    const d = _exportData;
+    if (!d) return;
+    try {
+      await ensureSheetJS();
+      const wb = buildWorkbook(window.XLSX, d);
+      const buf = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      saveBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), exportFileBase(d) + '.xlsx');
+    } catch (e) {
+      alert('File Excel gagal dibuat. Pastikan file xlsx.full.min.js sudah ikut di-upload ke repo, atau pakai tombol CSV dulu.');
+    }
   }
 </script>
 </body>

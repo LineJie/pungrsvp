@@ -1,12 +1,14 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings, members, mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
+import { bookings, communitySessions, members, mahjongGames, mahjongPlayers, mahjongEvents } from "../../db/schema.js";
 import { eq, and, inArray, ne } from "drizzle-orm";
-import { ensureMahjongTables, ensureMembersTable, ensureSessionIdColumn, ensureScoringSystemColumn } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureMembersTable, ensureSessionIdColumn, ensureScoringSystemColumn, ensureCommunityGameColumns } from "../../db/mahjongUtils.js";
+import { ensureCommunityTables } from "../../db/authUtils.js";
 
 // Game lifecycle for Pung Pung Mahjong Score.
 // A game is always anchored to an existing booking (the checked-in table
-// session) — we never invent a separate "table" or "customer" concept here.
+// session) OR to an open Acara Main Bareng session (community_sessions) —
+// we never invent a separate "table" or "customer" concept here.
 //
 // Statuses: waiting_for_players -> ready -> active -> finished_win | draw
 //           (or -> cancelled at any point before finished)
@@ -44,12 +46,14 @@ export default async (req: Request) => {
   await ensureMembersTable(db);
     await ensureSessionIdColumn(db);
     await ensureScoringSystemColumn(db);
+    await ensureCommunityGameColumns(db);
   const url = new URL(req.url);
 
   // ── GET ──────────────────────────────────────────────────────────────
   if (req.method === "GET") {
     const id = url.searchParams.get("id");
     const bookingId = url.searchParams.get("bookingId");
+    const communitySessionId = url.searchParams.get("communitySessionId");
     const tableId = url.searchParams.get("tableId");
     const location = url.searchParams.get("location");
     const status = url.searchParams.get("status"); // e.g. "active" for admin monitoring
@@ -60,9 +64,12 @@ export default async (req: Request) => {
       return Response.json(data);
     }
 
-    if (bookingId) {
+    if (bookingId || communitySessionId) {
+            const anchorCond = communitySessionId
+              ? eq(mahjongGames.communitySessionId, parseInt(communitySessionId))
+              : eq(mahjongGames.bookingId, parseInt(bookingId as string));
             const rows = await db.select().from(mahjongGames)
-              .where(and(eq(mahjongGames.bookingId, parseInt(bookingId)), inArray(mahjongGames.status, OPEN_STATUSES)));
+              .where(and(anchorCond, inArray(mahjongGames.status, OPEN_STATUSES)));
             if (!rows.length) return Response.json({ error: "No active game for this booking" }, { status: 404 });
             const data = await withPlayers(rows[0]);
             // Defensive cleanup: a "ghost" game (host row insert failed after the
@@ -108,30 +115,51 @@ export default async (req: Request) => {
   // ── POST: create a new game ─────────────────────────────────────────
   if (req.method === "POST") {
     const body = await req.json();
-    const { bookingId, hostName, hostWaNumber, sessionId, scoringSystem } = body;
-    if (!bookingId || !hostName) {
-      return Response.json({ error: "bookingId and hostName are required" }, { status: 400 });
+    const { bookingId, communitySessionId, hostName, hostWaNumber, sessionId, scoringSystem } = body;
+    if ((!bookingId && !communitySessionId) || !hostName) {
+      return Response.json({ error: "bookingId (atau communitySessionId) and hostName are required" }, { status: 400 });
     }
     const resolvedScoringSystem = scoringSystem === "china" ? "china" : "taiwan";
 
-    const [booking] = await db.select().from(bookings).where(eq(bookings.id, parseInt(bookingId)));
-    if (!booking) return Response.json({ error: "Booking not found" }, { status: 404 });
-    if (booking.status !== "checked_in") {
-      return Response.json({ error: "Table must be checked in before starting a Mahjong game" }, { status: 409 });
+    // Anchor game: booking biasa yang sudah check-in, ATAU sesi Acara Main
+    // Bareng yang masih "open". Keduanya menghasilkan meja + cabang yang sama
+    // untuk game, jadi leaderboard (yang hanya membaca mahjong_games/players/
+    // events) otomatis ikut menghitung game acara bareng.
+    let anchor: { bookingId: number | null; communitySessionId: number | null; tableId: string; tableName: string; location: string };
+    if (communitySessionId) {
+      await ensureCommunityTables(db);
+      const [cs] = await db.select().from(communitySessions).where(eq(communitySessions.id, parseInt(communitySessionId)));
+      if (!cs) return Response.json({ error: "Acara tidak ditemukan" }, { status: 404 });
+      if (cs.status !== "open") {
+        return Response.json({ error: "Acara ini sudah ditutup/dibatalkan, tidak bisa mulai permainan baru" }, { status: 409 });
+      }
+      anchor = { bookingId: null, communitySessionId: cs.id, tableId: cs.tableId, tableName: cs.tableName, location: cs.location || "surabaya" };
+    } else {
+      const [booking] = await db.select().from(bookings).where(eq(bookings.id, parseInt(bookingId)));
+      if (!booking) return Response.json({ error: "Booking not found" }, { status: 404 });
+      if (booking.status !== "checked_in") {
+        return Response.json({ error: "Table must be checked in before starting a Mahjong game" }, { status: 409 });
+      }
+      anchor = { bookingId: booking.id, communitySessionId: null, tableId: booking.tableId, tableName: booking.tableName, location: booking.location || "surabaya" };
     }
 
     const existingOpen = await db.select().from(mahjongGames)
-      .where(and(eq(mahjongGames.bookingId, booking.id), inArray(mahjongGames.status, OPEN_STATUSES)));
+      .where(and(
+        anchor.communitySessionId !== null
+          ? eq(mahjongGames.communitySessionId, anchor.communitySessionId)
+          : eq(mahjongGames.bookingId, anchor.bookingId as number),
+        inArray(mahjongGames.status, OPEN_STATUSES)));
     if (existingOpen.length) {
       const data = await getGameWithPlayers(existingOpen[0].id);
       return Response.json({ error: "A game already exists for this table", game: data }, { status: 409 });
     }
 
     const [game] = await db.insert(mahjongGames).values({
-      bookingId: booking.id,
-      tableId: booking.tableId,
-      tableName: booking.tableName,
-      location: booking.location || "surabaya",
+      bookingId: anchor.bookingId,
+      communitySessionId: anchor.communitySessionId,
+      tableId: anchor.tableId,
+      tableName: anchor.tableName,
+      location: anchor.location,
       scoringSystem: resolvedScoringSystem,
       status: "waiting_for_players",
         sessionId: sessionId || null,

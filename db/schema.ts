@@ -110,7 +110,8 @@ export const staff = pgTable("staff", {
 
 export const mahjongGames = pgTable("mahjong_games", {
   id: serial().primaryKey(),
-  bookingId: integer("booking_id").notNull(), // FK -> bookings.id (the checked-in table/session this game belongs to)
+  bookingId: integer("booking_id"), // FK -> bookings.id (the checked-in table/session this game belongs to). NULL untuk game di Acara Main Bareng — lihat communitySessionId
+  communitySessionId: integer("community_session_id"), // FK -> community_sessions.id; terisi (dan bookingId NULL) kalau game dimainkan di Acara Main Bareng
     sessionId: integer("session_id"), // groups consecutive games at the same table with the same 4 players ("same players" continuation flow) into one running point total; self-referencing (defaults to this game's own id when not continuing a previous session)
   tableId: text("table_id").notNull(),
   tableName: text("table_name").notNull(),
@@ -178,6 +179,7 @@ export const communitySessions = pgTable("community_sessions", {
   pricePerPerson: integer("price_per_person").notNull(),
   maxSeats: integer("max_seats").notNull().default(4),
   notes: text().default(""),
+  bookingCode: text("booking_code"), // "OP-XXXXXX" — dipakai di mahjong.html agar game acara bareng ikut leaderboard
   status: text().notNull().default("open"), // open | completed | cancelled
   createdBy: text("created_by").default(""), // staff username who created it, for audit trail
   createdAt: timestamp("created_at").defaultNow(),

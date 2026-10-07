@@ -97,6 +97,19 @@ export async function ensureScoringSystemColumn(db: any) {
   _ensureScoringSystemColumnReady = true;
 }
 
+// Additive safety net: game di "Acara Main Bareng" tidak punya booking biasa,
+// jadi mahjong_games perlu kolom community_session_id dan booking_id harus
+// boleh NULL. Game lama tidak berubah sama sekali (booking_id tetap terisi).
+// Dipanggil oleh SEMUA fungsi yang membaca mahjong_games (mahjong-games.ts &
+// mahjong-events.ts), karena drizzle select() ikut membaca kolom baru ini.
+let _ensureCommunityGameColumnsReady = false;
+export async function ensureCommunityGameColumns(db: any) {
+  if (_ensureCommunityGameColumnsReady) return;
+    await db.execute(sql`ALTER TABLE mahjong_games ADD COLUMN IF NOT EXISTS community_session_id integer`);
+    await db.execute(sql`ALTER TABLE mahjong_games ALTER COLUMN booking_id DROP NOT NULL`);
+  _ensureCommunityGameColumnsReady = true;
+}
+
 // Additive safety net: groups every event inserted by a single scoring
 // action (recordWin can insert many rows -- fan breakdown + one payment per
 // loser -- recordKong/correction insert 1+ too) under one shared id, so

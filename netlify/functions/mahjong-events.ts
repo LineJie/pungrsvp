@@ -4,7 +4,7 @@ import { mahjongGames, mahjongPlayers, mahjongEvents, mahjongSettings, staff } f
 import { eq, ne, and, gt, asc, desc, sql, inArray } from "drizzle-orm";
 import { verifyPassword } from "../../db/authUtils.js";
 import { branchCity, isValidBranch } from "../../db/branches.js";
-import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn, ensureMahjongSettingsTable } from "../../db/mahjongUtils.js";
+import { ensureMahjongTables, ensureSessionIdColumn, ensureScoringSystemColumn, ensureActionGroupColumn, ensureMahjongSettingsTable, ensureCommunityGameColumns } from "../../db/mahjongUtils.js";
 import { randomUUID } from "node:crypto";
 import {
   calculateWinScore,
@@ -162,6 +162,7 @@ export default async (req: Request) => {
   await ensureMahjongTables(db);
     await ensureSessionIdColumn(db);
     await ensureScoringSystemColumn(db);
+    await ensureCommunityGameColumns(db);
     await ensureActionGroupColumn(db);
     await ensureMahjongSettingsTable(db);
   const url = new URL(req.url);

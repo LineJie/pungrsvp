@@ -207,5 +207,15 @@ export async function ensureCommunityTables(db: any) {
             created_at timestamp DEFAULT now()
         )
     `);
+    // Kode booking per sesi acara ("OP-XXXXXX") — dipakai di mahjong.html supaya
+    // permainan di acara bareng juga tercatat ke leaderboard, sama seperti
+    // booking biasa ("PP-XXXXXX"). Sesi lama yang belum punya kode otomatis
+    // dibuatkan di sini (sekali per cold start, sama seperti ensure lainnya).
+    await db.execute(sql`ALTER TABLE community_sessions ADD COLUMN IF NOT EXISTS booking_code text`);
+    await db.execute(sql`
+        UPDATE community_sessions
+        SET booking_code = 'OP-' || upper(substr(md5(random()::text || id::text), 1, 6))
+        WHERE booking_code IS NULL OR booking_code = ''
+    `);
     _ensureCommunityTablesReady = true;
 }

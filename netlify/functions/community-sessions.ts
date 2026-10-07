@@ -20,6 +20,20 @@ async function isAuthedStaffReq(req: Request): Promise<boolean> {
     return verifyPassword(p, rows[0].passwordHash);
 }
 
+// Kode sesi acara: "OP-" + 6 karakter (alfabet sama dengan kode booking biasa
+// "PP-XXXXXX", tanpa karakter yang mirip). Awalan OP- membedakannya dari
+// booking biasa di mahjong.html (OP = open play). Dicek unik ke DB.
+async function generateSessionCode(): Promise<string> {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let attempt = 0; attempt < 8; attempt++) {
+        let code = "OP-";
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        const dup = await db.select({ id: communitySessions.id }).from(communitySessions).where(eq(communitySessions.bookingCode, code));
+        if (!dup.length) return code;
+    }
+    throw new Error("Gagal membuat kode acara, coba lagi");
+}
+
 // Cek bentrok jadwal terhadap booking MEJA BIASA (tabel bookings) untuk
 // tableId/location/date yang sama — supaya sesi Acara Main Bareng tidak bisa
 // dibuat di meja yang sudah dipakai booking biasa di jam yang sama, dan
@@ -118,6 +132,13 @@ export default async (req: Request) => {
 
     // ─── SESSIONS ───────────────────────────────────────────────────────
     if (req.method === "GET") {
+        // Lookup by kode acara (dipakai mahjong.html, sama seperti /api/bookings?code=).
+        const code = url.searchParams.get("code");
+        if (code) {
+            const rows = await db.select().from(communitySessions).where(eq(communitySessions.bookingCode, code.trim().toUpperCase()));
+            if (!rows.length) return Response.json({ error: "Kode acara tidak ditemukan" }, { status: 404 });
+            return Response.json(rows[0]);
+        }
         const date = url.searchParams.get("date");
         const location = url.searchParams.get("location");
         const conditions = [];
@@ -154,9 +175,15 @@ export default async (req: Request) => {
             return Response.json({ error: "Sudah ada sesi Acara Main Bareng lain di meja & jam itu" }, { status: 409 });
         }
 
+        let bookingCode: string;
+        try {
+            bookingCode = await generateSessionCode();
+        } catch (e: any) {
+            return Response.json({ error: e.message || "Gagal membuat kode acara" }, { status: 500 });
+        }
         const [row] = await db.insert(communitySessions).values({
             date, time, duration: dur, tableId, tableName, floor, location: loc,
-            pricePerPerson: price, notes: notes || "",
+            pricePerPerson: price, notes: notes || "", bookingCode,
             createdBy: req.headers.get("x-auth-username") || "",
         }).returning();
         return Response.json(row, { status: 201 });
