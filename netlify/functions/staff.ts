@@ -36,6 +36,9 @@ export default async (req: Request) => {
               if (!name || !username || !password || !role) {
                         return Response.json({ error: "Semua field wajib diisi" }, { status: 400 });
               }
+              if (!["admin", "kasir", "viewer"].includes(role)) {
+                        return Response.json({ error: "Role tidak valid" }, { status: 400 });
+              }
               const loc = normalizeBranch(location);
               const existing = await db.select().from(staff).where(eq(staff.username, username));
               if (existing.length) {
@@ -53,7 +56,7 @@ export default async (req: Request) => {
               const body = await req.json();
               const updateData: any = {};
               if (body.name) updateData.name = body.name;
-              if (body.role === "admin" || body.role === "kasir") updateData.role = body.role;
+              if (body.role === "admin" || body.role === "kasir" || body.role === "viewer") updateData.role = body.role;
               if (isValidBranch(body.location)) updateData.location = body.location;
               if (body.password) updateData.passwordHash = hashPassword(body.password);
               if (!Object.keys(updateData).length) {
