@@ -203,6 +203,9 @@ async function checkPw() {
     });
     const data = await res.json();
     if (res.ok) {
+      // Akun viewer tidak punya akses laporan — arahkan ke halaman timeline.
+      if (data.role === 'viewer') { window.location.href = 'timeline.html'; return; }
+      _authUser = username; _authPass = pw;
       // Simpan lokasi & role dari hasil login — dipakai untuk membatasi
       // laporan supaya owner Denpasar TIDAK bisa melihat data Surabaya
       // dan sebaliknya. Hanya Super Admin (tere) yang lokasinya "all"
@@ -229,6 +232,7 @@ async function checkPw() {
   // gabungan semua cabang ("all"); owner/admin cabang lain selalu terkunci
   // ke lokasi mereka sendiri.
   let _isSuperAdmin = false;
+  let _authUser = '', _authPass = '';
   let _userLocation = 'surabaya';
   let _userRole = '';
   let _reportLocation = 'surabaya';
@@ -310,7 +314,7 @@ async function checkPw() {
     // Admin hanya melihat gabungan semua cabang kalau eksplisit memilih
     // "Semua Cabang" di dropdown lokasi laporan.
     const locParam = (_reportLocation && _reportLocation !== 'all') ? `?location=${_reportLocation}` : '';
-    const res = await fetch('/api/admin/bookings' + locParam);
+    const res = await fetch('/api/admin/bookings' + locParam, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
     return await res.json();
   }
 
@@ -327,7 +331,7 @@ async function checkPw() {
       if (!Array.isArray(sessions) || !sessions.length) return [];
       const rows = [];
       await Promise.all(sessions.map(async s => {
-        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
         const participants = await r.json().catch(() => []);
         (participants || []).filter(p => p.paid).forEach(p => {
           rows.push({
@@ -711,7 +715,7 @@ async function checkPw() {
     if (!Array.isArray(sessions)) throw new Error('Gagal memuat Acara Bareng');
     const inScope = sessions.filter(s => s.date >= from && s.date <= to && s.status !== 'cancelled');
     await Promise.all(inScope.map(async s => {
-      const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+      const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       if (!r.ok) throw new Error('Gagal memuat peserta Acara Bareng');
       s.participants = await r.json();
     }));

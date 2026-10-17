@@ -208,7 +208,11 @@
   async function loadBooking() {
     if (!bookingId) { showError('ID sesi tidak ditemukan.'); return; }
     try {
-      const res = await fetch(`/api/admin/bookings?id=${bookingId}`);
+      // Login diambil dari sesi admin.html (disimpan di perangkat yang sama).
+      let _a = null; try { _a = JSON.parse(localStorage.getItem('pungrsvp_admin_auth') || 'null'); } catch (e) {}
+      if (!_a || !_a.user || !_a.pw) { showError('Sesi login tidak ditemukan. Buka lewat halaman Admin setelah login.'); return; }
+      const res = await fetch(`/api/admin/bookings?id=${bookingId}`, { headers: { 'x-auth-username': _a.user, 'x-auth-password': _a.pw } });
+      if (res.status === 401) { showError('Sesi login habis. Login ulang di halaman Admin.'); return; }
       const data = await res.json();
       booking = Array.isArray(data) ? data.find(b => b.id == bookingId) : data;
       if (!booking) { showError('Data sesi tidak ditemukan.'); return; }

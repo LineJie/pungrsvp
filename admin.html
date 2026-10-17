@@ -839,7 +839,7 @@
     <button id="tabPayMethods" class="btn view-tab-btn" onclick="switchSettingsTab('paymethods')">💳 Metode Bayar</button>
     <button id="tabHours" class="btn view-tab-btn" onclick="switchSettingsTab('hours')">🕐 Jam Operasional</button>
   </div>
-<div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar" style="margin-bottom:20px;"></div><div id="hoursTunu"></div></div></div><div id="viewTables" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🀄 Kelola Meja</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Tambah meja baru, tentukan tipe (matic/manual — nentuin tarif default), dan kasih nama & catatan. Meja langsung muncul di halaman booking customer & semua dropdown admin.</p><div class="form-grid"><div class="form-group"><label>Nama Meja</label><input type="text" id="vt_name" placeholder="misal: Maple Table"></div><div class="form-group"><label>Tipe</label><select id="vt_type" onchange="onVenueTableTypeChange()"><option value="matic">⚙️ Matic (Otomatis) — Rp 50.000/jam</option><option value="manual">🍂 Manual — Rp 30.000/jam</option></select></div><div class="form-group"><label>Tarif per Jam (Rp)</label><input type="number" id="vt_rate" placeholder="50000" min="0"></div><div class="form-group"><label>Cabang</label><select id="vt_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div><div class="form-group"><label>Lantai / Area</label><input type="text" id="vt_floor" placeholder="misal: Lantai 2"></div><div class="form-group"><label>Kapasitas</label><input type="text" id="vt_capacity" placeholder="4 orang" value="4 orang"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="vt_emoji" placeholder="🀄" maxlength="4"></div><div class="form-group" style="grid-column:1/-1"><label>Catatan</label><input type="text" id="vt_notes" placeholder="Catatan opsional — tampil di admin & (kalau diisi) booking customer"></div></div><button class="btn btn-primary" onclick="submitVenueTable()" style="width:100%;padding:12px;font-size:14px;">Simpan Meja Baru</button></div><div class="bookings-table"><table><thead><tr><th></th><th>Nama</th><th>Tipe</th><th>Tarif/jam</th><th>Cabang</th><th>Lantai</th><th>Catatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tablesBody"><tr><td colspan="9" class="loading">Memuat data…</td></tr></tbody></table></div></div>  </div>
+<div id="viewStaff" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Staff Baru</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="st_name" placeholder="Nama staff"></div><div class="form-group"><label>Username</label><input type="text" id="st_username" placeholder="Username login"></div><div class="form-group"><label>Password</label><input type="password" id="st_password" placeholder="Password"></div><div class="form-group"><label>Role</label><select id="st_role"><option value="admin">Admin</option><option value="kasir">Kasir</option><option value="viewer">Viewer (lihat timeline saja)</option></select></div><div class="form-group"><label>Lokasi</label><select id="st_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div></div><button class="btn btn-primary" onclick="submitStaff()" style="width:100%;padding:12px;font-size:14px;">Simpan Staff</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Lokasi</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="staffBody"><tr><td colspan="6" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPromo" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Buat Promo Baru</h3><div class="form-grid"><div class="form-group"><label>Nama Promo</label><input type="text" id="pr_name" placeholder="misal: Buy 2 Free 1"></div><div class="form-group"><label>Cabang</label><select id="pr_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div><div class="form-group"><label>Tipe</label><select id="pr_type" onchange="updatePromoValueHint()"><option value="free_hours">Gratis N Jam</option><option value="percent_off">Potongan Persen (%)</option><option value="flat_off">Potongan Nominal (Rp)</option></select></div><div class="form-group"><label id="pr_value_label">Nilai (jam)</label><input type="number" id="pr_value" placeholder="1" min="1"></div></div><button class="btn btn-primary" onclick="submitPromo()" style="width:100%;padding:12px;font-size:14px;">Simpan Promo</button></div><div class="bookings-table"><table><thead><tr><th>Nama</th><th>Cabang</th><th>Tipe</th><th>Nilai</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="promoBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewPayMethods" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:14px;">➕ Tambah Metode Pembayaran</h3><div class="form-grid"><div class="form-group"><label>Nama</label><input type="text" id="pm_label" placeholder="misal: Transfer Bank"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="pm_emoji" placeholder="🏦" maxlength="4"></div></div><button class="btn btn-primary" onclick="submitPaymentMethod()" style="width:100%;padding:12px;font-size:14px;">Simpan Metode Pembayaran</button></div><div class="bookings-table"><table><thead><tr><th>Emoji</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="paymethodsBody"><tr><td colspan="4" class="loading">Memuat data…</td></tr></tbody></table></div></div><div id="viewHours" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🕐 Jam Operasional</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Ubah jam buka/tutup per cabang per hari. Perubahan langsung berlaku di halaman booking customer.</p><div id="hoursSurabaya" style="margin-bottom:20px;"></div><div id="hoursDenpasar" style="margin-bottom:20px;"></div><div id="hoursTunu"></div></div></div><div id="viewTables" style="display:none;max-width:1000px;margin:0 auto;padding:0 16px 24px;"><div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);"><h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🀄 Kelola Meja</h3><p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Tambah meja baru, tentukan tipe (matic/manual — nentuin tarif default), dan kasih nama & catatan. Meja langsung muncul di halaman booking customer & semua dropdown admin.</p><div class="form-grid"><div class="form-group"><label>Nama Meja</label><input type="text" id="vt_name" placeholder="misal: Maple Table"></div><div class="form-group"><label>Tipe</label><select id="vt_type" onchange="onVenueTableTypeChange()"><option value="matic">⚙️ Matic (Otomatis) — Rp 50.000/jam</option><option value="manual">🍂 Manual — Rp 30.000/jam</option></select></div><div class="form-group"><label>Tarif per Jam (Rp)</label><input type="number" id="vt_rate" placeholder="50000" min="0"></div><div class="form-group"><label>Cabang</label><select id="vt_location"><option value="surabaya">Surabaya</option><option value="denpasar">The Magendra, Denpasar</option><option value="tunu">Tunu, Denpasar</option></select></div><div class="form-group"><label>Lantai / Area</label><input type="text" id="vt_floor" placeholder="misal: Lantai 2"></div><div class="form-group"><label>Kapasitas</label><input type="text" id="vt_capacity" placeholder="4 orang" value="4 orang"></div><div class="form-group"><label>Emoji (opsional)</label><input type="text" id="vt_emoji" placeholder="🀄" maxlength="4"></div><div class="form-group" style="grid-column:1/-1"><label>Catatan</label><input type="text" id="vt_notes" placeholder="Catatan opsional — tampil di admin & (kalau diisi) booking customer"></div></div><button class="btn btn-primary" onclick="submitVenueTable()" style="width:100%;padding:12px;font-size:14px;">Simpan Meja Baru</button></div><div class="bookings-table"><table><thead><tr><th></th><th>Nama</th><th>Tipe</th><th>Tarif/jam</th><th>Cabang</th><th>Lantai</th><th>Catatan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tablesBody"><tr><td colspan="9" class="loading">Memuat data…</td></tr></tbody></table></div></div>  </div>
 <div id="viewCommunity" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
   <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
     <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🎉 Buat Acara Main Bareng</h3>
@@ -1068,7 +1068,7 @@
       const sessions = await res.json();
       if (!Array.isArray(sessions) || !sessions.length) { _communityForBookingsView = []; return; }
       await Promise.all(sessions.map(async s => {
-        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
         s.participants = await r.json().catch(() => []);
       }));
       _communityForBookingsView = sessions;
@@ -1094,7 +1094,7 @@
     document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="loading">Memuat data…</td></tr>';
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       allBookings = await res.json();
       _bookingsCache[cacheKey] = allBookings;
       _bookingsCacheTime[cacheKey] = now;
@@ -1243,7 +1243,7 @@
     document.getElementById('closingSummary').innerHTML = '<div class="loading" style="text-align:center;padding:30px;color:var(--text-muted);">Memuat data…</div>';
     const locParam = (_viewLocation && _viewLocation !== 'all') ? `&location=${_viewLocation}` : '';
     try {
-      const res = await fetch(`/api/admin/bookings?date=${date}${locParam}`);
+      const res = await fetch(`/api/admin/bookings?date=${date}${locParam}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       const data = await res.json();
       // Cuma sesi yang sudah checkout & lunas yang dihitung sebagai omset closing —
       // booking pending/cancelled/confirmed belum ada uang masuk, jadi tidak relevan buat laporan kas.
@@ -1798,7 +1798,7 @@
       async function loadCustomers() {
               document.getElementById('customersBody').innerHTML = '<tr><td colspan="4" class="loading">Memuat data…</td></tr>';
               try {
-                        const custLoc = (_viewLocation && _viewLocation !== 'all') ? `?location=${_viewLocation}` : ''; const res = await fetch('/api/admin/bookings' + custLoc);
+                        const custLoc = (_viewLocation && _viewLocation !== 'all') ? `?location=${_viewLocation}` : ''; const res = await fetch('/api/admin/bookings' + custLoc, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
                         const rows = await res.json();
                         renderCustomers(rows);
               } catch (e) {
@@ -1855,10 +1855,10 @@ async function loadStaff() {
           <tr>
                 <td class="name-cell">${escHtml(s.name)}</td>
                       <td>${escHtml(s.username)}</td>
-                            <td>${s.role === 'admin' ? '👑 Admin' : '🧾 Kasir'}</td>
+                            <td>${s.role === 'admin' ? '👑 Admin' : (s.role === 'viewer' ? '👁️ Viewer' : '🧾 Kasir')}</td>
                             <td>${branchLabel(s.location)}</td>
                                   <td>${s.createdAt ? formatDate(String(s.createdAt).slice(0,10)) : '—'}</td>
-                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${(s.location === 'denpasar' || s.location === 'tunu') ? s.location : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
+                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${(s.location === 'denpasar' || s.location === 'tunu') ? s.location : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-outline btn-sm" onclick="changeStaffPassword(${s.id}, '${escHtml(s.name)}')" style="margin-right:6px;">🔑 Ganti Password</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
                                             </tr>`).join('');
   }
 
@@ -1887,6 +1887,29 @@ async function loadStaff() {
       }
   }
   
+  async function changeStaffPassword(id, name) {
+      const pw1 = prompt(`Password baru untuk "${name}" (minimal 6 karakter).\n(Cancel untuk batal)`);
+      if (pw1 === null) return;
+      if (pw1.length < 6) { showToast('Password minimal 6 karakter.'); return; }
+      const pw2 = prompt('Ketik ulang password baru untuk konfirmasi:');
+      if (pw2 === null) return;
+      if (pw1 !== pw2) { showToast('Konfirmasi password tidak sama. Tidak ada yang diubah.'); return; }
+      showActionProcessing('Mengganti Password…', 'Menyimpan password baru.');
+      try {
+            const res = await fetch(`/api/staff?id=${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+                    body: JSON.stringify({ password: pw1 })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Gagal mengganti password');
+            hideActionPopup();
+            showToast(`✅ Password ${name} berhasil diganti. Staff harus login ulang.`);
+      } catch (e) {
+            showActionError('Gagal Ganti Password', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => changeStaffPassword(id, name));
+      }
+  }
+
   async function submitStaff() {
       const name = document.getElementById('st_name').value.trim();
       const username = document.getElementById('st_username').value.trim();
@@ -2392,7 +2415,7 @@ async function loadStaff() {
       _communitySessions = await res.json();
       // Muat peserta tiap sesi sekalian, biar total & daftar langsung kelihatan
       await Promise.all(_communitySessions.map(async s => {
-        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
         s.participants = await r.json().catch(() => []);
       }));
       renderCommunitySessions();
@@ -3856,7 +3879,7 @@ async function loadStaff() {
 
     let dayBookings = [];
     try {
-      const res = await fetch(bookingsUrl);
+      const res = await fetch(bookingsUrl, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       dayBookings = await res.json();
       if (!Array.isArray(dayBookings)) dayBookings = [];
     } catch (e) { return; } // gagal fetch booking utama: jangan blokir semua meja, biarkan seperti semula
@@ -4087,6 +4110,13 @@ async function loadStaff() {
                     hideActionPopup();
                     err.textContent = data.error || 'Username atau password salah.';
                     document.getElementById('pwInput').value = '';
+                    return;
+            }
+            // Akun viewer (mis. pemilik tempat) tidak punya akses ke panel admin —
+            // arahkan ke halaman timeline khusus. Kredensial tidak disimpan di sini.
+            if (data.role === 'viewer') {
+                    hideActionPopup();
+                    window.location.href = 'timeline.html';
                     return;
             }
             _authUser = user;

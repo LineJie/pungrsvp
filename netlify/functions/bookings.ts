@@ -1,8 +1,8 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings, promos, communitySessions, venueTables } from "../../db/schema.js";
+import { bookings, promos, communitySessions, venueTables, staff } from "../../db/schema.js";
 import { eq, and } from "drizzle-orm";
-import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables, ensureVenueTablesTable } from "../../db/authUtils.js";
+import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables, ensureVenueTablesTable, verifyPassword } from "../../db/authUtils.js";
 import { normalizeBranch } from "../../db/branches.js";
 
 // Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
@@ -14,6 +14,20 @@ function isSuperAdminReq(req: Request): boolean {
     const p = req.headers.get("x-auth-password");
     const superadminPw = process.env.SUPERADMIN_PASSWORD;
     return !!superadminPw && u === SUPERADMIN_USERNAME && p === superadminPw;
+}
+
+// Staff login yang sah (superadmin, admin, atau kasir) boleh melihat data
+// booking lengkap. Akun "viewer" TIDAK termasuk — viewer hanya lewat
+// /api/timeline-viewer. Dipakai untuk GET daftar booking per tanggal, yang
+// juga dipanggil halaman booking publik (tanpa login) buat cek meja kosong.
+async function isFullAccessReq(req: Request): Promise<boolean> {
+    const u = req.headers.get("x-auth-username");
+    const p = req.headers.get("x-auth-password");
+    if (!u || !p) return false;
+    if (isSuperAdminReq(req)) return true;
+    const rows = await db.select().from(staff).where(eq(staff.username, u));
+    if (!rows.length || rows[0].role === "viewer") return false;
+    return verifyPassword(p, rows[0].passwordHash);
 }
 
 // Tarif per jam per meja SEKARANG DIBACA DARI DATABASE (tabel venue_tables,
@@ -74,7 +88,15 @@ export default async (req: Request) => {
           const whereClause = location ? and(eq(bookings.date, date), eq(bookings.location, location)) : eq(bookings.date, date);
           const rows = await db.select().from(bookings).where(whereClause);
           const active = rows.filter(r => r.status !== "cancelled");
-          return Response.json(active);
+          if (await isFullAccessReq(req)) return Response.json(active);
+          // Publik / tanpa login: hanya info jadwal yang dibutuhkan grid
+          // ketersediaan meja. Nama, kontak, catatan, kode booking, dan data
+          // pembayaran SENGAJA tidak ikut (whitelist, bukan blacklist).
+          return Response.json(active.map(r => ({
+              tableId: r.tableId, tableName: r.tableName, floor: r.floor,
+              date: r.date, time: r.time, duration: r.duration,
+              status: r.status, location: r.location,
+          })));
     }
 
     if (req.method === "POST") {

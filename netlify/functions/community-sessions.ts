@@ -71,6 +71,10 @@ export default async (req: Request) => {
     // ─── PARTICIPANTS ───────────────────────────────────────────────────
     if (resource === "participants") {
         if (req.method === "GET") {
+            // Daftar peserta berisi nama + kontak orang — hanya untuk staff login.
+            if (!(await isAuthedStaffReq(req))) {
+                return Response.json({ error: "Login staff diperlukan" }, { status: 401 });
+            }
             const sessionId = parseInt(url.searchParams.get("sessionId") || "");
             if (!sessionId) return Response.json({ error: "sessionId required" }, { status: 400 });
             const rows = await db.select().from(communityParticipants).where(eq(communityParticipants.sessionId, sessionId));

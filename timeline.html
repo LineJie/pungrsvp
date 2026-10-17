@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Timeline Meja — Pung Pung Mahjong</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-dark: #1C3A2E;
+    --green-mid: #2D5A45;
+    --green-light: #4A8C68;
+    --gold: #C9A24B;
+    --bg: #F5F3EC;
+    --text: #1f2a24;
+    --muted: #6b766f;
+    --line: #e2dfd3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: var(--green-dark); color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; }
+  header small { display: block; font-size: 12px; opacity: .7; margin-top: 2px; font-family: 'Inter', sans-serif; }
+  .btn { font: inherit; font-size: 13px; font-weight: 600; border-radius: 10px; border: 1.5px solid var(--green-dark); background: var(--green-dark); color: #fff; padding: 9px 14px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.3); padding: 5px 12px; font-size: 12px; border-radius: 20px; }
+  .btn.outline { background: #fff; color: var(--green-dark); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  #loginView { max-width: 360px; margin: 12vh auto 0; padding: 0 16px; }
+  .card { background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 2px 12px rgba(28,58,46,.08); }
+  .card h2 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--green-dark); margin-bottom: 4px; }
+  .card p { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--green-dark); margin-bottom: 5px; }
+  input { width: 100%; font: inherit; font-size: 14px; padding: 11px 12px; border: 1.5px solid var(--line); border-radius: 10px; margin-bottom: 12px; background: #fff; }
+  input:focus { outline: none; border-color: var(--green-mid); }
+  .err { color: #b3261e; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+
+  #appView { display: none; max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar .date { font-weight: 600; color: var(--green-dark); flex: 1; min-width: 160px; text-align: center; font-size: 14px; }
+  .toolbar input[type=date] { width: auto; margin: 0; padding: 8px 10px; font-size: 13px; }
+
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+
+  .scroll { overflow-x: auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 12px rgba(28,58,46,.08); }
+  .grid { min-width: 640px; padding: 12px 14px 14px; position: relative; }
+  .row { display: grid; grid-template-columns: 130px 1fr; align-items: center; margin-bottom: 8px; }
+  .row .name { font-size: 13px; font-weight: 600; color: var(--green-dark); padding-right: 8px; line-height: 1.25; }
+  .row .name span { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+  .track { position: relative; height: 44px; border-radius: 8px; background:
+      repeating-linear-gradient(to right, transparent 0, transparent calc(var(--hw) - 1px), var(--line) calc(var(--hw) - 1px), var(--line) var(--hw)), #faf9f4; }
+  .block { position: absolute; top: 4px; bottom: 4px; border-radius: 6px; background: var(--green-mid); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; padding: 0 4px; }
+  .block.event { background: repeating-linear-gradient(135deg, #d8b15a, #d8b15a 6px, #c9a24b 6px, #c9a24b 12px); color: #3a2c05; border: 1.5px dashed #8a6d1f; }
+  .axis { display: grid; grid-template-columns: 130px 1fr; margin-bottom: 6px; }
+  .axis .ticks { position: relative; height: 16px; }
+  .axis .ticks span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--muted); }
+  .nowline { position: absolute; top: 0; bottom: 0; width: 2px; background: #d64545; opacity: .8; pointer-events: none; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); font-size: 14px; }
+  .foot { font-size: 11.5px; color: var(--muted); margin-top: 10px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Pung Pung Mahjong</h1>
+    <small id="branchName">Timeline meja</small>
+  </div>
+  <button class="btn ghost" id="logoutBtn" style="display:none" onclick="logout()">Keluar</button>
+</header>
+
+<div id="loginView">
+  <form class="card" onsubmit="login(event)">
+    <h2>Masuk</h2>
+    <p>Lihat jadwal meja terisi dan kosong.</p>
+    <label for="u">Username</label>
+    <input id="u" autocomplete="username" autocapitalize="none" required>
+    <label for="p">Password</label>
+    <input id="p" type="password" autocomplete="current-password" required>
+    <div class="err" id="loginErr"></div>
+    <button class="btn" id="loginBtn" style="width:100%;padding:12px;">Masuk</button>
+  </form>
+</div>
+
+<div id="appView">
+  <div class="toolbar">
+    <button class="btn outline" onclick="shiftDay(-1)" aria-label="Hari sebelumnya">‹</button>
+    <div class="date" id="dateLabel"></div>
+    <button class="btn outline" onclick="shiftDay(1)" aria-label="Hari berikutnya">›</button>
+    <input type="date" id="datePick" onchange="pickDate()">
+    <button class="btn outline" onclick="goToday()">Hari ini</button>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--green-mid)"></i>Terisi</span>
+    <span><i style="background:#d8b15a;border:1px dashed #8a6d1f"></i>Acara bareng</span>
+    <span><i style="background:#faf9f4;border:1px solid var(--line)"></i>Kosong</span>
+  </div>
+  <div class="scroll"><div class="grid" id="grid"><div class="empty">Memuat…</div></div></div>
+  <div class="foot">Tampilan hanya-baca. Diperbarui otomatis tiap 60 detik.</div>
+</div>
+
+<script>
+  var KEY = 'pungrsvp_viewer_auth';
+  var auth = null, curDate = null, timer = null;
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  // Tanggal "hari ini" dihitung di zona WITA (Bali) supaya tidak melompat sesuai zona perangkat.
+  function todayWita() {
+    var parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return parts;
+  }
+  function nowWitaHours() {
+    var f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).split(':');
+    return parseInt(f[0], 10) + parseInt(f[1], 10) / 60;
+  }
+  function parseTime(t) {
+    var m = String(t || '').match(/^(\d{1,2})(?::(\d{2}))?/);
+    return m ? parseInt(m[1], 10) + (m[2] ? parseInt(m[2], 10) / 60 : 0) : 0;
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+
+  function show(logged) {
+    document.getElementById('loginView').style.display = logged ? 'none' : 'block';
+    document.getElementById('appView').style.display = logged ? 'block' : 'none';
+    document.getElementById('logoutBtn').style.display = logged ? 'inline-block' : 'none';
+  }
+
+  async function login(e) {
+    e.preventDefault();
+    var u = document.getElementById('u').value.trim(), p = document.getElementById('p').value;
+    var btn = document.getElementById('loginBtn'), err = document.getElementById('loginErr');
+    err.textContent = ''; btn.disabled = true;
+    try {
+      auth = { u: u, p: p };
+      curDate = todayWita();
+      await load(true);
+      try { localStorage.setItem(KEY, JSON.stringify(auth)); } catch (x) {}
+      show(true);
+      startTimer();
+    } catch (x) {
+      auth = null;
+      err.textContent = x.message || 'Gagal masuk.';
+    } finally { btn.disabled = false; }
+  }
+
+  function logout() {
+    try { localStorage.removeItem(KEY); } catch (x) {}
+    auth = null; clearInterval(timer);
+    document.getElementById('p').value = '';
+    document.getElementById('branchName').textContent = 'Timeline meja';
+    show(false);
+  }
+
+  async function load(throwOnError) {
+    var res = await fetch('/api/timeline-viewer?date=' + encodeURIComponent(curDate), {
+      headers: { 'x-auth-username': auth.u, 'x-auth-password': auth.p }
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        if (!throwOnError) logout();
+      }
+      throw new Error(data.error || 'Gagal memuat data.');
+    }
+    render(data);
+  }
+
+  function render(d) {
+    document.getElementById('branchName').textContent = d.locationName + ' · timeline meja';
+    var dt = new Date(d.date + 'T00:00:00');
+    document.getElementById('dateLabel').textContent = dt.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('datePick').value = d.date;
+
+    var grid = document.getElementById('grid');
+    if (!d.tables.length) { grid.innerHTML = '<div class="empty">Belum ada meja aktif di cabang ini.</div>'; return; }
+
+    var start = d.openHour, end = d.closeHour;
+    d.blocks.forEach(function (b) {
+      var s = parseTime(b.time), e = s + b.duration;
+      if (s < start) start = Math.floor(s);
+      if (e > end) end = Math.ceil(e);
+    });
+    if (end <= start) end = start + 1;
+    var span = end - start;
+    var hw = (100 / span) + '%';
+
+    var ticks = '';
+    for (var h = start; h <= end; h++) {
+      ticks += '<span style="left:' + ((h - start) / span * 100) + '%">' + pad(h % 24) + '</span>';
+    }
+    var html = '<div class="axis"><div></div><div class="ticks">' + ticks + '</div></div>';
+
+    d.tables.forEach(function (t) {
+      var mine = d.blocks.filter(function (b) { return b.tableKey === t.key; });
+      var blocks = mine.map(function (b) {
+        var s = parseTime(b.time), left = (s - start) / span * 100, width = b.duration / span * 100;
+        var label = b.kind === 'event' ? 'Acara' : 'Terisi';
+        return '<div class="block ' + b.kind + '" style="left:' + left + '%;width:' + width + '%" title="' + esc(b.time) + ' · ' + b.duration + ' jam">' + label + '</div>';
+      }).join('');
+      html += '<div class="row"><div class="name">' + esc(t.emoji) + ' ' + esc(t.name) + '<span>' + esc(t.floor) + '</span></div>' +
+              '<div class="track" style="--hw:' + hw + '">' + blocks + '</div></div>';
+    });
+
+    if (d.date === todayWita()) {
+      var nh = nowWitaHours();
+      if (nh >= start && nh <= end) {
+        html += '<div class="nowline" style="left:calc(130px + 14px + (100% - 130px - 28px) * ' + ((nh - start) / span) + ')"></div>';
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  function reload() { load(false).catch(function () {}); }
+  function shiftDay(n) {
+    var d = new Date(curDate + 'T00:00:00'); d.setDate(d.getDate() + n);
+    curDate = ymd(d); reload();
+  }
+  function pickDate() { var v = document.getElementById('datePick').value; if (v) { curDate = v; reload(); } }
+  function goToday() { curDate = todayWita(); reload(); }
+  function startTimer() { clearInterval(timer); timer = setInterval(function () { if (!document.hidden) reload(); }, 60000); }
+
+  (function init() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (x) {}
+    if (saved && saved.u && saved.p) {
+      auth = saved; curDate = todayWita();
+      load(true).then(function () { show(true); startTimer(); }).catch(function () {
+        try { localStorage.removeItem(KEY); } catch (x) {}
+        auth = null; show(false);
+      });
+    } else { show(false); }
+  })();
+</script>
+</body>
+</html>
