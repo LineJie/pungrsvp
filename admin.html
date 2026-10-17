@@ -1068,7 +1068,7 @@
       const sessions = await res.json();
       if (!Array.isArray(sessions) || !sessions.length) { _communityForBookingsView = []; return; }
       await Promise.all(sessions.map(async s => {
-        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
         s.participants = await r.json().catch(() => []);
       }));
       _communityForBookingsView = sessions;
@@ -1094,7 +1094,7 @@
     document.getElementById('bookingsBody').innerHTML = '<tr><td colspan="7" class="loading">Memuat data…</td></tr>';
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       allBookings = await res.json();
       _bookingsCache[cacheKey] = allBookings;
       _bookingsCacheTime[cacheKey] = now;
@@ -1243,7 +1243,7 @@
     document.getElementById('closingSummary').innerHTML = '<div class="loading" style="text-align:center;padding:30px;color:var(--text-muted);">Memuat data…</div>';
     const locParam = (_viewLocation && _viewLocation !== 'all') ? `&location=${_viewLocation}` : '';
     try {
-      const res = await fetch(`/api/admin/bookings?date=${date}${locParam}`);
+      const res = await fetch(`/api/admin/bookings?date=${date}${locParam}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       const data = await res.json();
       // Cuma sesi yang sudah checkout & lunas yang dihitung sebagai omset closing —
       // booking pending/cancelled/confirmed belum ada uang masuk, jadi tidak relevan buat laporan kas.
@@ -1798,7 +1798,7 @@
       async function loadCustomers() {
               document.getElementById('customersBody').innerHTML = '<tr><td colspan="4" class="loading">Memuat data…</td></tr>';
               try {
-                        const custLoc = (_viewLocation && _viewLocation !== 'all') ? `?location=${_viewLocation}` : ''; const res = await fetch('/api/admin/bookings' + custLoc);
+                        const custLoc = (_viewLocation && _viewLocation !== 'all') ? `?location=${_viewLocation}` : ''; const res = await fetch('/api/admin/bookings' + custLoc, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
                         const rows = await res.json();
                         renderCustomers(rows);
               } catch (e) {
@@ -2415,7 +2415,7 @@ async function loadStaff() {
       _communitySessions = await res.json();
       // Muat peserta tiap sesi sekalian, biar total & daftar langsung kelihatan
       await Promise.all(_communitySessions.map(async s => {
-        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`);
+        const r = await fetch(`/api/community-sessions?resource=participants&sessionId=${s.id}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
         s.participants = await r.json().catch(() => []);
       }));
       renderCommunitySessions();

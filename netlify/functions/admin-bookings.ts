@@ -1,13 +1,30 @@
 import type { Config } from "@netlify/functions";
 import { db } from "../../db/index.js";
-import { bookings } from "../../db/schema.js";
+import { bookings, staff } from "../../db/schema.js";
 import { eq, desc, and } from "drizzle-orm";
-import { ensureLocationColumns } from "../../db/authUtils.js";
+import { ensureLocationColumns, verifyPassword } from "../../db/authUtils.js";
+
+// Data booking lengkap (nama, kontak, pembayaran) hanya untuk staff yang sudah
+// login: superadmin, admin, atau kasir. Akun "viewer" sengaja tidak termasuk.
+const SUPERADMIN_USERNAME = "tere";
+async function isFullAccessReq(req: Request): Promise<boolean> {
+    const u = req.headers.get("x-auth-username");
+    const p = req.headers.get("x-auth-password");
+    if (!u || !p) return false;
+    const superadminPw = process.env.SUPERADMIN_PASSWORD;
+    if (u === SUPERADMIN_USERNAME && superadminPw && p === superadminPw) return true;
+    const rows = await db.select().from(staff).where(eq(staff.username, u));
+    if (!rows.length || rows[0].role === "viewer") return false;
+    return verifyPassword(p, rows[0].passwordHash);
+}
 
 export default async (req: Request) => {
     await ensureLocationColumns(db);
 
     if (req.method === "GET") {
+          if (!(await isFullAccessReq(req))) {
+                return Response.json({ error: "Login staff diperlukan" }, { status: 401 });
+          }
           const url = new URL(req.url);
           const date = url.searchParams.get("date");
           const id = url.searchParams.get("id");
