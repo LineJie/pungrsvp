@@ -1309,7 +1309,7 @@
         if (startHour === null) return;
         if (!byTable[b.tableId]) byTable[b.tableId] = [];
         byTable[b.tableId].push({
-          customerName: b.customerName,
+          customerName: '__booked__', // nama pelanggan tidak lagi dikirim server; penanda saja supaya meja terkunci
           startHour,
           duration: b.duration || 1,
           status: b.status
@@ -1495,7 +1495,7 @@
       const isDisabled = !t.avail || crossFloor || maxReached;
       const emoji = t.emoji || '🀄';
       const tagLabel = !t.avail
-        ? `Terisi · ${typeof t.bookedBy === 'object' ? t.bookedBy?.customerName : t.bookedBy || '—'}`
+        ? (t.bookedBy && t.bookedBy !== '__booked__' ? `Terisi · ${t.bookedBy}` : 'Terisi')
         : crossFloor ? 'Beda lantai'
         : maxReached ? 'Maks 4 meja'
         : isSelected ? '✓ Dipilih'

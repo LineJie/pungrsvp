@@ -1858,7 +1858,7 @@ async function loadStaff() {
                             <td>${s.role === 'admin' ? '👑 Admin' : (s.role === 'viewer' ? '👁️ Viewer' : '🧾 Kasir')}</td>
                             <td>${branchLabel(s.location)}</td>
                                   <td>${s.createdAt ? formatDate(String(s.createdAt).slice(0,10)) : '—'}</td>
-                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${(s.location === 'denpasar' || s.location === 'tunu') ? s.location : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
+                                        <td><button class="btn btn-outline btn-sm" onclick="editStaffLocation(${s.id}, '${escHtml(s.name)}', '${(s.location === 'denpasar' || s.location === 'tunu') ? s.location : 'surabaya'}')" style="margin-right:6px;">✏️ Edit</button><button class="btn btn-outline btn-sm" onclick="changeStaffPassword(${s.id}, '${escHtml(s.name)}')" style="margin-right:6px;">🔑 Ganti Password</button><button class="btn btn-danger btn-sm" onclick="deleteStaff(${s.id}, '${escHtml(s.name)}')">Hapus</button></td>
                                             </tr>`).join('');
   }
 
@@ -1887,6 +1887,29 @@ async function loadStaff() {
       }
   }
   
+  async function changeStaffPassword(id, name) {
+      const pw1 = prompt(`Password baru untuk "${name}" (minimal 6 karakter).\n(Cancel untuk batal)`);
+      if (pw1 === null) return;
+      if (pw1.length < 6) { showToast('Password minimal 6 karakter.'); return; }
+      const pw2 = prompt('Ketik ulang password baru untuk konfirmasi:');
+      if (pw2 === null) return;
+      if (pw1 !== pw2) { showToast('Konfirmasi password tidak sama. Tidak ada yang diubah.'); return; }
+      showActionProcessing('Mengganti Password…', 'Menyimpan password baru.');
+      try {
+            const res = await fetch(`/api/staff?id=${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass },
+                    body: JSON.stringify({ password: pw1 })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Gagal mengganti password');
+            hideActionPopup();
+            showToast(`✅ Password ${name} berhasil diganti. Staff harus login ulang.`);
+      } catch (e) {
+            showActionError('Gagal Ganti Password', e.message === 'Failed to fetch' ? 'Koneksi terputus. Coba lagi?' : (e.message || 'Terjadi kesalahan.'), () => changeStaffPassword(id, name));
+      }
+  }
+
   async function submitStaff() {
       const name = document.getElementById('st_name').value.trim();
       const username = document.getElementById('st_username').value.trim();
@@ -3856,7 +3879,7 @@ async function loadStaff() {
 
     let dayBookings = [];
     try {
-      const res = await fetch(bookingsUrl);
+      const res = await fetch(bookingsUrl, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
       dayBookings = await res.json();
       if (!Array.isArray(dayBookings)) dayBookings = [];
     } catch (e) { return; } // gagal fetch booking utama: jangan blokir semua meja, biarkan seperti semula

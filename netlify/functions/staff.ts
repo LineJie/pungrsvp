@@ -58,7 +58,12 @@ export default async (req: Request) => {
               if (body.name) updateData.name = body.name;
               if (body.role === "admin" || body.role === "kasir" || body.role === "viewer") updateData.role = body.role;
               if (isValidBranch(body.location)) updateData.location = body.location;
-              if (body.password) updateData.passwordHash = hashPassword(body.password);
+              if (body.password) {
+                        if (typeof body.password !== "string" || body.password.length < 6) {
+                                  return Response.json({ error: "Password minimal 6 karakter" }, { status: 400 });
+                        }
+                        updateData.passwordHash = hashPassword(body.password);
+              }
               if (!Object.keys(updateData).length) {
                         return Response.json({ error: "Tidak ada field yang diupdate" }, { status: 400 });
               }
