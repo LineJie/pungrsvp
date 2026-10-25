@@ -273,6 +273,14 @@ export default async (req: Request) => {
               }
       }
 
+      // Blokir meja (acara) bukan tamu — tidak boleh di-check-in / checkout.
+      if (existing && existing.notes && existing.notes.includes("[EVENT BLOCK]") &&
+          (body.status === "checked_in" || body.status === "completed" || body.checkoutAt)) {
+              return Response.json({
+                          error: "Blokir meja tidak bisa di-check-in. Gunakan Buka Blokir jika ingin membuka meja."
+              }, { status: 400 });
+      }
+
       // Cegah bentrok jadwal saat MENGEDIT booking (bukan cuma saat bikin baru).
       if (isReschedule && existing) {
               const newDate = body.date || existing.date;
