@@ -680,7 +680,7 @@
           <select id="mi_duration" onchange="updateTableAvailability('mi')">
             <option value="1">1 jam</option><option value="2" selected>2 jam</option>
             <option value="3">3 jam</option><option value="4">4 jam</option>
-            <option value="5">5 jam</option><option value="6">6 jam</option>
+            <option value="5">5 jam</option><option value="6">6 jam</option><option value="7">7 jam</option><option value="8">8 jam</option><option value="9">9 jam</option><option value="10">10 jam</option><option value="11">11 jam</option><option value="12">12 jam</option><option value="13">13 jam</option><option value="14">14 jam</option><option value="15">15 jam</option>
           </select>
         </div>
         <div class="form-group">
@@ -1185,6 +1185,8 @@
     const playing = [];
     allBookings.forEach(b => {
       if (!b.time) return;
+      // Blokir meja (acara) bukan tamu — tidak perlu check-in/checkout.
+      if (b.notes && b.notes.includes('[EVENT BLOCK]')) return;
       const startHour = parseInt(b.time.substring(0,2));
       const tz = tzForLoc(b.location);
       const nowInTz = new Date(now.toLocaleString('en-US', { timeZone: tz }));
@@ -1376,11 +1378,13 @@
 
   function renderTable(data) {
     // Stats
-    const confirmed = data.filter(b => b.status === 'confirmed').length;
-    const pending = data.filter(b => b.status === 'pending').length;
-    const checkin = data.filter(b => b.status === 'checked_in').length;
-    const completed = data.filter(b => b.status === 'completed').length;
-    const cancelled = data.filter(b => b.status === 'cancelled').length;
+    // Blokir meja (acara) bukan booking tamu — jangan ikut dihitung.
+    const realData = data.filter(b => !(b.notes && b.notes.includes('[EVENT BLOCK]')));
+    const confirmed = realData.filter(b => b.status === 'confirmed').length;
+    const pending = realData.filter(b => b.status === 'pending').length;
+    const checkin = realData.filter(b => b.status === 'checked_in').length;
+    const completed = realData.filter(b => b.status === 'completed').length;
+    const cancelled = realData.filter(b => b.status === 'cancelled').length;
 
     // Hitung sesi yang sudah main >5 jam tapi belum checkout (lupa checkout)
     const longPlaySessions = data.filter(b => {
@@ -1407,7 +1411,7 @@
     const totalRevenue = bookingRevenue + communityRevenue;
     document.getElementById('statRevenue').textContent = 'Rp ' + totalRevenue.toLocaleString('id-ID');
 
-    document.getElementById('statTotal').textContent = data.length;
+    document.getElementById('statTotal').textContent = realData.length;
     document.getElementById('statConfirmed').textContent = confirmed;
     document.getElementById('statPending').textContent = pending;
     document.getElementById('statCheckin').textContent = checkin;
@@ -2952,6 +2956,19 @@ async function loadStaff() {
     }
   }
 
+  // Kalau durasi booking (mis. blokir meja 16 jam) tidak ada di pilihan
+  // dropdown, tambahkan — supaya nilainya tidak kosong/berubah diam-diam
+  // saat disimpan.
+  function ensureDurationOption(selectId, dur) {
+    const sel = document.getElementById(selectId);
+    if (!sel || !dur) return;
+    if (![...sel.options].some(o => parseInt(o.value) === dur)) {
+      const o = document.createElement('option');
+      o.value = dur; o.textContent = dur + ' jam';
+      sel.appendChild(o);
+    }
+  }
+
   function openEditModal(id) {
     const b = allBookings.find(x => x.id === id);
     if (!b) return;
@@ -2959,6 +2976,7 @@ async function loadStaff() {
     document.getElementById('editCode').textContent = b.bookingCode || '';
     document.getElementById('editDate').value = b.date;
     document.getElementById('editTime').value = b.time;
+    ensureDurationOption('editDuration', b.duration);
     document.getElementById('editDuration').value = b.duration;
     document.getElementById('editNotes').value = b.notes || '';
     // Set table select — sembunyikan meja dari lokasi lain, tampilkan cuma
@@ -2998,6 +3016,7 @@ async function loadStaff() {
       document.getElementById('corrContact').value = b.customerContact || '';
       document.getElementById('corrDate').value = b.date || '';
       document.getElementById('corrTime').value = b.time || '';
+      ensureDurationOption('corrDuration', b.duration || 2);
       document.getElementById('corrDuration').value = b.duration || 2;
       document.getElementById('corrStatus').value = b.status || 'pending';
       const tableSelect = document.getElementById('corrTable');
@@ -3164,7 +3183,7 @@ async function loadStaff() {
   <select id="corrDuration">
   <option value="1">1 jam</option><option value="2">2 jam</option>
   <option value="3">3 jam</option><option value="4">4 jam</option>
-  <option value="5">5 jam</option><option value="6">6 jam</option>
+  <option value="5">5 jam</option><option value="6">6 jam</option><option value="7">7 jam</option><option value="8">8 jam</option><option value="9">9 jam</option><option value="10">10 jam</option><option value="11">11 jam</option><option value="12">12 jam</option><option value="13">13 jam</option><option value="14">14 jam</option><option value="15">15 jam</option>
   </select>
   </div>
   <div class="form-group">
@@ -4215,7 +4234,7 @@ async function loadStaff() {
           <select id="editDuration">
             <option value="1">1 jam</option><option value="2">2 jam</option>
             <option value="3">3 jam</option><option value="4">4 jam</option>
-            <option value="5">5 jam</option><option value="6">6 jam</option>
+            <option value="5">5 jam</option><option value="6">6 jam</option><option value="7">7 jam</option><option value="8">8 jam</option><option value="9">9 jam</option><option value="10">10 jam</option><option value="11">11 jam</option><option value="12">12 jam</option><option value="13">13 jam</option><option value="14">14 jam</option><option value="15">15 jam</option>
           </select>
         </div>
         <div class="form-group" style="grid-column:1/-1">
