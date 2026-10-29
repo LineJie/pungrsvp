@@ -4,6 +4,7 @@ import { bookings, promos, communitySessions, venueTables, staff } from "../../d
 import { eq, and } from "drizzle-orm";
 import { ensureLocationColumns, ensurePromosTable, ensureCommunityTables, ensureVenueTablesTable, verifyPassword } from "../../db/authUtils.js";
 import { normalizeBranch } from "../../db/branches.js";
+import { ensureMemberPackageTables, deductMemberHours, refundParts, isBaliBranch, todayWita } from "../../db/memberPackages.js";
 
 // Super Admin auth check (same pattern as netlify/functions/staff.ts) — used
 // to gate the admin-correction and void-transaction paths in PATCH below,
@@ -335,6 +336,10 @@ export default async (req: Request) => {
       // Total & durasi aktual saat checkout DIHITUNG ULANG DI SERVER, bukan
       // dipercaya mentah dari klien — supaya totalPaid tidak bisa dimanipulasi
       // lewat request yang diedit/di-tamper (mis. dari console browser).
+      // Jam member yang terpotong di checkout ini — disimpan supaya bisa
+      // dikembalikan kalau update booking di bawah gagal.
+      let memberDeduction: { memberPackageId: number; hours: number }[] | null = null;
+      const actorName = req.headers.get("x-auth-username") || "";
       if (body.status === "completed" || body.checkoutAt) {
               const checkoutAt = body.checkoutAt ? new Date(body.checkoutAt) : new Date();
               const checkinAt = existing?.checkinAt ? new Date(existing.checkinAt) : checkoutAt;
@@ -373,10 +378,41 @@ export default async (req: Request) => {
                   }
           }
 
+      // ── Bayar pakai jam paket member ────────────────────────────────────
+      // Paket sudah dibayar di depan (tercatat sebagai penjualan paket), jadi
+      // checkout ini totalPaid = 0 supaya pendapatan tidak terhitung dua kali.
+      // Jam dipotong per jam penuh = billableHours yang sama dengan tagihan
+      // normal; paket yang expired-nya paling dekat dipotong lebih dulu.
+      // Kalau sisa jam kurang, checkout DITOLAK (kasir pilih metode lain).
+      let memberTag = "";
+      if (!isOwnerFree && body.paymentMethod === "member") {
+              if (!existing || !isBaliBranch(existing.location)) {
+                        return Response.json({ error: "Pembayaran dengan jam member hanya untuk cabang Bali" }, { status: 400 });
+              }
+              if (appliedPromo) {
+                        return Response.json({ error: "Promo tidak bisa digabung dengan pembayaran jam member" }, { status: 400 });
+              }
+              const memberId = parseInt(body.memberId);
+              if (!memberId) return Response.json({ error: "Pilih member untuk pembayaran jam paket" }, { status: 400 });
+              await ensureMemberPackageTables(db);
+              const res = await deductMemberHours(db, {
+                        memberId, hours: billableHours, bookingId: id,
+                        atDate: todayWita(checkoutAt), by: actorName,
+              });
+              if (!res.ok) return Response.json({ error: res.error, availableHours: res.available }, { status: 409 });
+              memberDeduction = res.parts;
+              totalRp = 0;
+              memberTag = `[MEMBER:${memberId}|${billableHours}jam]`;
+      }
+
       updateData.checkoutAt = checkoutAt;
           updateData.actualDuration = diffMins; // durasi ASLI, bukan yang sudah dibulatkan
             updateData.totalPaid = totalRp;
             if (isOwnerFree) updateData.paymentMethod = "gratis";
+            if (memberTag) {
+                    const baseNotes = updateData.notes ?? existing?.notes ?? "";
+                    updateData.notes = baseNotes.includes("[MEMBER:") ? baseNotes : (baseNotes ? baseNotes + " " + memberTag : memberTag);
+            }
             // Tag [PROMO:nama] ditempel SERVER ke notes yang sudah tersimpan di DB
             // (bukan notes kiriman klien), biar ke-track konsisten dan tidak bisa
             // dipalsukan/dihapus lewat request yang di-tamper.
@@ -387,7 +423,14 @@ export default async (req: Request) => {
             }
       }
 
-      const [row] = await db.update(bookings).set(updateData).where(eq(bookings.id, id)).returning();
+      let row: any;
+      try {
+              [row] = await db.update(bookings).set(updateData).where(eq(bookings.id, id)).returning();
+      } catch (err) {
+              // Booking gagal tersimpan setelah jam terlanjur dipotong → kembalikan jamnya.
+              if (memberDeduction) await refundParts(db, memberDeduction, id, actorName, "rollback: update booking gagal");
+              throw err;
+      }
           return Response.json(row);
     }
 

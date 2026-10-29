@@ -348,6 +348,29 @@ async function checkPw() {
     }
   }
 
+  // Penjualan paket member (cabang Bali). Uang masuk saat paket DIBELI, bukan
+  // saat jamnya dipakai — checkout yang dibayar jam member totalPaid = 0, jadi
+  // tanpa baris ini omset paket tidak akan muncul di laporan sama sekali.
+  // Baris: {date (WITA), amount, name}. Surabaya tidak punya paket → kosong.
+  async function fetchMemberSalesRows(from, to) {
+    if (_reportLocation === 'surabaya') return [];
+    const locParam = (_reportLocation && _reportLocation !== 'all') ? `&location=${_reportLocation}` : '';
+    try {
+      const res = await fetch(`/api/member-packages?view=sales&from=${from}&to=${to}${locParam}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
+      if (!res.ok) return [];
+      const rows = await res.json();
+      const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' });
+      return (Array.isArray(rows) ? rows : []).map(r => ({ date: fmt.format(new Date(r.purchased_at)), amount: r.price_paid || 0, name: r.plan_name }));
+    } catch (e) { return []; }
+  }
+
+  // Jam yang dibayar dengan paket member, dibaca dari tag [MEMBER:id|Njam]
+  // yang ditempel server di notes saat checkout.
+  function memberHoursOf(b) {
+    const m = /\[MEMBER:\d+\|(\d+)jam\]/.exec(b.notes || '');
+    return m ? parseInt(m[1]) : 0;
+  }
+
   function calcRevenue(bookings) {
     // Hanya hitung yang completed (sudah checkout & bayar)
     return bookings.filter(b => b.status === 'completed');
@@ -359,12 +382,13 @@ async function checkPw() {
     if (!date) return;
     document.getElementById('harianContent').innerHTML = '<div class="loading-state">Memuat…</div>';
 
-    const [all, communityRows] = await Promise.all([fetchAllBookings(), fetchCommunityPaidRows()]);
+    const [all, communityRows, salesRows] = await Promise.all([fetchAllBookings(), fetchCommunityPaidRows(), fetchMemberSalesRows(date, date)]);
     const dayBookings = all.filter(b => b.date === date);
     const completed = calcRevenue(dayBookings);
     const dayCommunity = communityRows.filter(r => r.date === date);
+    const daySales = salesRows.filter(r => r.date === date);
 
-    if (!completed.length && !dayCommunity.length) {
+    if (!completed.length && !dayCommunity.length && !daySales.length) {
       document.getElementById('harianContent').innerHTML = `
         <div class="stats-grid">
           <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp 0</div></div>
@@ -377,9 +401,12 @@ async function checkPw() {
 
     const bookingRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
     const communityRevenue = dayCommunity.reduce((sum,r) => sum + r.amount, 0);
-    const totalRevenue = bookingRevenue + communityRevenue;
+    const packageRevenue = daySales.reduce((sum,r) => sum + r.amount, 0);
+    const memberHours = completed.reduce((sum,b) => sum + memberHoursOf(b), 0);
+    const totalRevenue = bookingRevenue + communityRevenue + packageRevenue;
     const totalSesi = completed.length + dayCommunity.length;
-    const avgPerSesi = Math.round(totalRevenue / totalSesi);
+    // Rata-rata per sesi TIDAK memasukkan penjualan paket (itu bukan hasil satu sesi).
+    const avgPerSesi = totalSesi ? Math.round((bookingRevenue + communityRevenue) / totalSesi) : 0;
 
     // Per jam (jam mulai booking)
     const perJam = {};
@@ -417,6 +444,7 @@ async function checkPw() {
     // Peserta Acara Main Bareng tidak tercatat metode bayarnya per-orang,
     // jadi masuk sebagai satu baris ringkasan tersendiri.
     if (communityRevenue > 0) perPayment.acara_bareng = (perPayment.acara_bareng || 0) + communityRevenue;
+    if (packageRevenue > 0) perPayment.paket_member = packageRevenue;
 
     const jamRows = Object.entries(perJam).sort((a,b) => a[0].localeCompare(b[0]))
       .map(([jam, rev]) => `
@@ -435,7 +463,7 @@ async function checkPw() {
         </div>
       `).join('');
 
-    const payLabels = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit BCA', lainnya: '❓ Lainnya', acara_bareng: '🎉 Acara Bareng (peserta)' };
+    const payLabels = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit BCA', lainnya: '❓ Lainnya', acara_bareng: '🎉 Acara Bareng (peserta)', paket_member: '🎫 Penjualan Paket Member', member: '🎫 Jam Member (potong paket, Rp 0)' };
     const payRows = Object.entries(perPayment).sort((a,b) => b[1]-a[1])
       .map(([m, rev]) => `
         <div class="rank-row">
@@ -449,7 +477,11 @@ async function checkPw() {
         <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp ${totalRevenue.toLocaleString('id-ID')}</div></div>
         <div class="stat-card"><div class="lbl">Sesi Selesai</div><div class="val">${totalSesi}</div></div>
         <div class="stat-card"><div class="lbl">Rata-rata/Sesi</div><div class="val">Rp ${avgPerSesi.toLocaleString('id-ID')}</div></div>
+        ${(packageRevenue > 0 || memberHours > 0) ? `
+        <div class="stat-card"><div class="lbl">Penjualan Paket (${daySales.length})</div><div class="val">Rp ${packageRevenue.toLocaleString('id-ID')}</div></div>
+        <div class="stat-card"><div class="lbl">Jam Member Terpakai</div><div class="val">${memberHours} jam</div></div>` : ''}
       </div>
+      ${packageRevenue > 0 ? '<div style="font-size:12px;color:#7A7060;margin:-4px 0 12px;">Penjualan paket dihitung di Total Revenue tapi tidak ikut “per jam” dan “per meja” (paket tidak terikat satu meja/jam).</div>' : ''}
       <div class="section">
         <div class="section-title">⏰ Revenue per Jam Mulai</div>
         ${jamRows || '<div class="empty-state">Tidak ada data</div>'}
@@ -471,14 +503,16 @@ async function checkPw() {
     const year = parseInt(document.getElementById('bYear').value);
     document.getElementById('bulananContent').innerHTML = '<div class="loading-state">Memuat…</div>';
 
-    const [all, communityRows] = await Promise.all([fetchAllBookings(), fetchCommunityPaidRows()]);
     const monthStr = String(month).padStart(2,'0');
     const prefix = `${year}-${monthStr}`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const [all, communityRows, salesRows] = await Promise.all([fetchAllBookings(), fetchCommunityPaidRows(), fetchMemberSalesRows(`${prefix}-01`, `${prefix}-${String(lastDay).padStart(2,'0')}`)]);
     const monthBookings = all.filter(b => b.date && b.date.startsWith(prefix));
     const completed = calcRevenue(monthBookings);
     const monthCommunity = communityRows.filter(r => r.date && r.date.startsWith(prefix));
+    const monthSales = salesRows.filter(r => r.date && r.date.startsWith(prefix));
 
-    if (!completed.length && !monthCommunity.length) {
+    if (!completed.length && !monthCommunity.length && !monthSales.length) {
       document.getElementById('bulananContent').innerHTML = `
         <div class="stats-grid">
           <div class="stat-card highlight"><div class="lbl">Total Revenue</div><div class="val">Rp 0</div></div>
@@ -490,7 +524,9 @@ async function checkPw() {
 
     const bookingRevenue = completed.reduce((sum,b) => sum + (b.totalPaid || 0), 0);
     const communityRevenue = monthCommunity.reduce((sum,r) => sum + r.amount, 0);
-    const totalRevenue = bookingRevenue + communityRevenue;
+    const packageRevenue = monthSales.reduce((sum,r) => sum + r.amount, 0);
+    const memberHours = completed.reduce((sum,b) => sum + memberHoursOf(b), 0);
+    const totalRevenue = bookingRevenue + communityRevenue + packageRevenue;
     const totalSesi = completed.length + monthCommunity.length;
     const daysInMonth = new Date(year, month, 0).getDate();
     const avgPerDay = Math.round(totalRevenue / daysInMonth);
@@ -502,6 +538,11 @@ async function checkPw() {
       perHari[day] = (perHari[day] || 0) + (b.totalPaid || 0);
     });
     monthCommunity.forEach(r => {
+      const day = r.date.split('-')[2];
+      perHari[day] = (perHari[day] || 0) + r.amount;
+    });
+    // Penjualan paket masuk ke hari paket DIBELI.
+    monthSales.forEach(r => {
       const day = r.date.split('-')[2];
       perHari[day] = (perHari[day] || 0) + r.amount;
     });
@@ -548,7 +589,11 @@ async function checkPw() {
         <div class="stat-card"><div class="lbl">Total Sesi</div><div class="val">${totalSesi}</div></div>
         <div class="stat-card"><div class="lbl">Rata-rata/Hari</div><div class="val">Rp ${avgPerDay.toLocaleString('id-ID')}</div></div>
         <div class="stat-card"><div class="lbl">Hari Tersibuk</div><div class="val" style="font-size:18px">Tgl ${busiestDay[0]}</div></div>
+        ${(packageRevenue > 0 || memberHours > 0) ? `
+        <div class="stat-card"><div class="lbl">Penjualan Paket (${monthSales.length})</div><div class="val">Rp ${packageRevenue.toLocaleString('id-ID')}</div></div>
+        <div class="stat-card"><div class="lbl">Jam Member Terpakai</div><div class="val">${memberHours} jam</div></div>` : ''}
       </div>
+      ${packageRevenue > 0 ? '<div style="font-size:12px;color:#7A7060;margin:-4px 0 12px;">Penjualan paket dihitung di Total Revenue dan di hari pembelian, tapi tidak ikut “per meja”.</div>' : ''}
       <div class="section">
         <div class="section-title">📈 Revenue per Hari</div>
         ${hariRows || '<div class="empty-state">Tidak ada data</div>'}

@@ -786,6 +786,7 @@
     <button id="tabCustomers" class="btn view-tab-btn" onclick="switchTab('customers')">👤 Data Customer</button>
     <button id="tabCommunity" class="btn view-tab-btn" onclick="switchTab('community')">🎉 Acara Bareng</button>
     <button id="tabClosing" class="btn view-tab-btn" onclick="switchTab('closing')">🌙 Tutup Kasir</button>
+    <button id="tabMembers" class="btn view-tab-btn" onclick="switchTab('members')" style="display:none;">🎫 Paket Member</button>
     <button id="tabSettings" class="btn view-tab-btn" onclick="switchTab('settings')" style="display:none;margin-left:auto;">⚙️ Pengaturan</button>
   </div>
 
@@ -914,6 +915,44 @@
     </div>
   </div>
 </div>
+<div id="viewMembers" style="display:none;max-width:900px;margin:0 auto;padding:0 16px 24px;">
+  <!-- Katalog paket bulanan — Super Admin saja -->
+  <div id="mpCatalogCard" style="display:none;background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+    <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">📦 Katalog Paket Bulanan</h3>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Buat 4 paket untuk bulan ini. Mengubah katalog TIDAK mengubah paket yang sudah dibeli member (isinya sudah disalin saat dibeli).</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Nama Paket</label><input type="text" id="mp_plan_name" placeholder="misal: Paket A"></div>
+      <div class="form-group"><label>Periode (bulan)</label><input type="month" id="mp_plan_period"></div>
+      <div class="form-group"><label>Jumlah Jam</label><input type="number" id="mp_plan_hours" min="1" placeholder="10"></div>
+      <div class="form-group"><label>Harga (Rp)</label><input type="number" id="mp_plan_price" min="0" placeholder="400000"></div>
+      <div class="form-group"><label>Expired (sampai akhir hari)</label><input type="date" id="mp_plan_expires"></div>
+    </div>
+    <button class="btn btn-primary" onclick="submitMemberPlan()" style="width:100%;padding:12px;font-size:14px;">Simpan Paket</button>
+    <div class="bookings-table" style="margin-top:14px;"><table><thead><tr><th>Periode</th><th>Paket</th><th>Jam</th><th>Harga</th><th>Expired</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="mpPlansBody"><tr><td colspan="7" class="loading">Memuat data…</td></tr></tbody></table></div>
+  </div>
+
+  <!-- Jual paket ke member — admin -->
+  <div style="background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+    <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:6px;">🎫 Jual Paket ke Member</h3>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Member bayar paket di depan. Jam dipotong otomatis saat checkout dengan metode "Member". Paket hanya berlaku di cabang Bali.</p>
+    <div class="form-grid">
+      <div class="form-group"><label>No. WhatsApp</label><input type="text" id="mp_wa" placeholder="08xxxxxxxxxx" oninput="mpLookupWa()"></div>
+      <div class="form-group"><label>Nama</label><input type="text" id="mp_name" placeholder="Nama member"><div id="mpWaHint" style="font-size:11.5px;color:var(--text-muted);margin-top:4px;"></div></div>
+      <div class="form-group"><label>Paket</label><select id="mp_plan_select"></select></div>
+      <div class="form-group"><label>Metode Bayar</label><select id="mp_pay_select"></select></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Catatan (opsional)</label><input type="text" id="mp_notes" placeholder="mis. transfer BCA, bukti sudah dicek"></div>
+    </div>
+    <button class="btn btn-primary" id="mpSellBtn" onclick="submitMemberPurchase()" style="width:100%;padding:12px;font-size:14px;">Catat Pembelian Paket</button>
+  </div>
+
+  <!-- Cek member / riwayat jam -->
+  <div style="background:white;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(28,58,46,0.07);">
+    <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--green-dark);margin-bottom:12px;">🔎 Cek Member & Sisa Jam</h3>
+    <input type="text" id="mp_search" placeholder="Cari nama atau no. WA (min. 2 huruf)…" oninput="mpSearchDebounced()" style="width:100%;padding:11px 14px;border:1.5px solid rgba(28,58,46,0.15);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:12px;">
+    <div id="mpSearchResults"></div>
+    <div id="mpMemberDetail" style="margin-top:14px;"></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- Popup status aksi: Memproses… / Gagal (Coba Lagi) — lihat showActionProcessing() -->
@@ -1025,6 +1064,200 @@
   let _paymentMethods = []; // semua metode (termasuk nonaktif), untuk layar pengaturan
   let _activePaymentMethods = []; // hanya yang aktif, dipakai render tombol POS & dropdown koreksi
 
+  // ══ PAKET MEMBER ══════════════════════════════════════════════════════
+  // Katalog bulanan (Super Admin) → jual paket (admin Bali) → jam dipotong
+  // otomatis di checkout dengan metode "Member" (server: bookings.ts).
+  const _mpHeaders = () => ({ 'Content-Type': 'application/json', 'x-auth-username': _authUser, 'x-auth-password': _authPass });
+  const _rp = n => 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
+  const _mpDate = s => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); };
+
+  async function mpApi(query, method, body) {
+    const res = await fetch('/api/member-packages?' + query, { method: method || 'GET', headers: _mpHeaders(), body: body ? JSON.stringify(body) : undefined });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Permintaan gagal');
+    return data;
+  }
+
+  async function loadMembersTab() {
+    document.getElementById('mpCatalogCard').style.display = isSuperAdmin ? 'block' : 'none';
+    if (!document.getElementById('mp_plan_period').value) {
+      const n = new Date(); document.getElementById('mp_plan_period').value = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+    }
+    await loadPaymentMethods();
+    document.getElementById('mp_pay_select').innerHTML = _activePaymentMethods.map(m => `<option value="${m.key}">${m.emoji} ${escHtml(m.label)}</option>`).join('');
+    await loadMemberPlans();
+  }
+
+  async function loadMemberPlans() {
+    try {
+      _mpPlans = await mpApi('view=plans' + (isSuperAdmin ? '&all=1' : ''));
+    } catch (e) { _mpPlans = []; showToast(e.message); }
+    const active = _mpPlans.filter(p => p.active);
+    document.getElementById('mp_plan_select').innerHTML = active.length
+      ? active.map(p => `<option value="${p.id}">${escHtml(p.name)} · ${p.total_hours} jam · ${_rp(p.price)} · exp ${_mpDate(p.expires_at)}</option>`).join('')
+      : '<option value="">— Belum ada paket aktif —</option>';
+    if (isSuperAdmin) {
+      document.getElementById('mpPlansBody').innerHTML = _mpPlans.length ? _mpPlans.map(p => `
+        <tr><td>${escHtml(p.period)}</td><td><b>${escHtml(p.name)}</b></td><td>${p.total_hours} jam</td><td>${_rp(p.price)}</td><td>${_mpDate(p.expires_at)}</td>
+        <td>${p.active ? '✅ Aktif' : '⛔ Nonaktif'}</td>
+        <td><button class="btn" onclick="toggleMemberPlan(${p.id}, ${!p.active})">${p.active ? 'Nonaktifkan' : 'Aktifkan'}</button></td></tr>`).join('')
+        : '<tr><td colspan="7" class="empty-state">Belum ada paket. Buat paket bulan ini di atas.</td></tr>';
+    }
+  }
+
+  async function submitMemberPlan() {
+    const body = {
+      name: document.getElementById('mp_plan_name').value.trim(),
+      period: document.getElementById('mp_plan_period').value,
+      totalHours: document.getElementById('mp_plan_hours').value,
+      price: document.getElementById('mp_plan_price').value,
+      expiresAt: document.getElementById('mp_plan_expires').value,
+    };
+    try {
+      await mpApi('view=plans', 'POST', body);
+      ['mp_plan_name', 'mp_plan_hours', 'mp_plan_price'].forEach(id => document.getElementById(id).value = '');
+      showToast('✅ Paket tersimpan');
+      loadMemberPlans();
+    } catch (e) { showToast(e.message); }
+  }
+
+  async function toggleMemberPlan(id, active) {
+    try { await mpApi('view=plans&id=' + id, 'PATCH', { active }); loadMemberPlans(); } catch (e) { showToast(e.message); }
+  }
+
+  let _mpWaTimer = null;
+  function mpLookupWa() {
+    clearTimeout(_mpWaTimer);
+    _mpWaTimer = setTimeout(async () => {
+      const wa = document.getElementById('mp_wa').value.trim();
+      const hint = document.getElementById('mpWaHint');
+      if (wa.replace(/\D/g, '').length < 8) { hint.textContent = ''; return; }
+      try {
+        const found = await mpApi('view=member&q=' + encodeURIComponent(wa));
+        if (found.length) {
+          document.getElementById('mp_name').value = found[0].name || document.getElementById('mp_name').value;
+          hint.textContent = `✅ Member lama · sisa ${found[0].remainingHours} jam aktif`;
+        } else { hint.textContent = '🆕 Member baru — isi nama'; }
+      } catch (e) { hint.textContent = ''; }
+    }, 400);
+  }
+
+  async function submitMemberPurchase() {
+    const planId = document.getElementById('mp_plan_select').value;
+    const plan = _mpPlans.find(p => String(p.id) === String(planId));
+    if (!plan) { showToast('Pilih paket dulu'); return; }
+    const wa = document.getElementById('mp_wa').value.trim();
+    const name = document.getElementById('mp_name').value.trim();
+    if (!wa) { showToast('Isi nomor WhatsApp member'); return; }
+    // Konfirmasi dulu — ini mencatat uang masuk & tidak bisa di-undo selain void Super Admin.
+    if (!confirm(`Catat pembelian?\n\n${name || wa}\n${plan.name} · ${plan.total_hours} jam · ${_rp(plan.price)}\nExpired ${_mpDate(plan.expires_at)}`)) return;
+    showActionProcessing('Mencatat Paket…', 'Menyimpan pembelian paket member.');
+    try {
+      const loc = (_viewLocation === 'denpasar' || _viewLocation === 'tunu') ? _viewLocation : (_authLocation === 'tunu' ? 'tunu' : 'denpasar');
+      const row = await mpApi('view=purchase', 'POST', {
+        waNumber: wa, name, planId: parseInt(planId),
+        paymentMethod: document.getElementById('mp_pay_select').value,
+        notes: document.getElementById('mp_notes').value, location: loc,
+      });
+      hideActionPopup();
+      showToast(`✅ ${row.memberName || name}: ${row.plan_name} (${row.total_hours} jam) tercatat`);
+      ['mp_wa', 'mp_name', 'mp_notes'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('mpWaHint').textContent = '';
+    } catch (e) {
+      showActionError('Gagal Mencatat Paket', e.message, null);
+    }
+  }
+
+  let _mpSearchTimer = null;
+  const _mpNames = {};
+  function mpSearchDebounced() { clearTimeout(_mpSearchTimer); _mpSearchTimer = setTimeout(mpSearchMembers, 350); }
+  async function mpSearchMembers() {
+    const q = document.getElementById('mp_search').value.trim();
+    const box = document.getElementById('mpSearchResults');
+    document.getElementById('mpMemberDetail').innerHTML = '';
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    try {
+      const list = await mpApi('view=member&q=' + encodeURIComponent(q));
+      list.forEach(m => { _mpNames[m.id] = m.name || ''; });
+      box.innerHTML = list.length ? list.map(m => `
+        <div onclick="mpShowMember(${m.id})" style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(28,58,46,0.1);border-radius:10px;margin-bottom:6px;cursor:pointer;">
+          <span><b>${escHtml(m.name || '(tanpa nama)')}</b><br><span style="font-size:12px;color:var(--text-muted);">${escHtml(m.waNumber)}</span></span>
+          <span style="text-align:right;font-weight:700;color:var(--green-dark);">${m.remainingHours} jam<br><span style="font-size:11px;font-weight:500;color:var(--text-muted);">${m.packages.length} paket aktif</span></span>
+        </div>`).join('') : '<div class="empty-state" style="padding:12px;">Member tidak ditemukan.</div>';
+    } catch (e) { box.innerHTML = `<div class="empty-state">${escHtml(e.message)}</div>`; }
+  }
+
+  async function mpShowMember(id) {
+    const name = _mpNames[id] || '';
+    const box = document.getElementById('mpMemberDetail');
+    box.innerHTML = '<div class="loading">Memuat…</div>';
+    try {
+      const d = await mpApi('view=packages&memberId=' + id);
+      const pk = d.packages.map(p => {
+        const status = p.status === 'void' ? '🚫 Void' : (p.expired ? (p.forfeitedHours ? `⌛ Expired (hangus ${p.forfeitedHours} jam)` : '⌛ Expired') : '✅ Aktif');
+        const adminBtns = isSuperAdmin && p.status === 'active' ? `<div style="margin-top:6px;display:flex;gap:6px;"><button class="btn" onclick="mpAdjust(${p.id}, ${id})">± Koreksi Jam</button><button class="btn" onclick="mpVoid(${p.id}, ${id})">Void</button></div>` : '';
+        return `<div style="padding:10px 12px;border:1px solid rgba(28,58,46,0.1);border-radius:10px;margin-bottom:6px;font-size:13px;">
+          <b>${escHtml(p.plan_name)}</b> <span style="color:var(--text-muted);">(${escHtml(p.period)})</span> · ${status}<br>
+          Sisa <b>${p.remaining_hours}</b> / ${p.total_hours} jam · dibayar ${_rp(p.price_paid)} · exp ${_mpDate(p.expires_at)}${adminBtns}</div>`;
+      }).join('') || '<div class="empty-state" style="padding:12px;">Belum pernah beli paket.</div>';
+      const kindLabel = { deduct: '➖ Potong', refund: '↩️ Kembali', adjust: '✏️ Koreksi', void: '🚫 Void' };
+      const usage = d.usage.length ? d.usage.map(u => `<tr><td>${new Date(u.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td><td>${kindLabel[u.kind] || u.kind}</td><td>${u.hours} jam</td><td>${u.booking_id ? '#' + u.booking_id : '—'}</td><td>${escHtml(u.notes || '')}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Belum ada pemakaian.</td></tr>';
+      box.innerHTML = `<h4 style="margin:6px 0 8px;font-family:'Playfair Display',serif;">${escHtml(name)}</h4>${pk}
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin:12px 0 6px;">Riwayat Jam</div>
+        <div class="bookings-table"><table><thead><tr><th>Waktu</th><th>Jenis</th><th>Jam</th><th>Booking</th><th>Catatan</th></tr></thead><tbody>${usage}</tbody></table></div>`;
+    } catch (e) { box.innerHTML = `<div class="empty-state">${escHtml(e.message)}</div>`; }
+  }
+
+  async function mpVoid(pkgId, memberId) {
+    const note = prompt('Void paket ini? Sisa jam jadi 0. Tulis alasannya:');
+    if (!note) return;
+    try { await mpApi('view=package&id=' + pkgId, 'PATCH', { action: 'void', note }); showToast('Paket di-void'); mpShowMember(memberId); } catch (e) { showToast(e.message); }
+  }
+  async function mpAdjust(pkgId, memberId) {
+    const hours = prompt('Koreksi jam (angka positif = tambah, negatif = kurangi), mis. 2 atau -1:');
+    if (!hours) return;
+    const note = prompt('Alasan koreksi:');
+    if (!note) return;
+    try { await mpApi('view=package&id=' + pkgId, 'PATCH', { action: 'adjust', hours: parseInt(hours), note }); showToast('Jam dikoreksi'); mpShowMember(memberId); } catch (e) { showToast(e.message); }
+  }
+
+  // ── Bayar pakai jam member di layar checkout (POS) ──────────────────────
+  function posMemberReady() {
+    return !!(_posMember && _posBooking && _posMember.remainingHours >= (_posBooking._billable || 1));
+  }
+  let _posMemberTimer = null;
+  function posMemberSearchDebounced() { clearTimeout(_posMemberTimer); _posMemberTimer = setTimeout(posMemberSearch, 350); }
+  async function posMemberSearch() {
+    const q = document.getElementById('posMemberSearch').value.trim();
+    const box = document.getElementById('posMemberResults');
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    try {
+      const list = await mpApi('view=member&q=' + encodeURIComponent(q));
+      window._posMemberList = list;
+      box.innerHTML = list.length ? list.map((m, i) => `
+        <div onclick="posMemberPick(${i})" style="display:flex;justify-content:space-between;padding:9px 12px;border:1px solid rgba(28,58,46,0.12);border-radius:10px;margin-bottom:6px;cursor:pointer;background:#F5F0E8;">
+          <span><b>${escHtml(m.name || '(tanpa nama)')}</b> <span style="font-size:11px;color:#7A7060;">${escHtml(m.waNumber)}</span></span>
+          <b>${m.remainingHours} jam</b></div>`).join('') : '<div style="font-size:12.5px;color:#7A7060;padding:6px 2px;">Member tidak ditemukan / belum punya paket aktif.</div>';
+    } catch (e) { box.innerHTML = `<div style="font-size:12.5px;color:#C0392B;">${escHtml(e.message)}</div>`; }
+  }
+  function posMemberPick(i) {
+    _posMember = (window._posMemberList || [])[i] || null;
+    document.getElementById('posMemberResults').innerHTML = '';
+    renderPosMemberChosen();
+    selectPayment('member');
+  }
+  function renderPosMemberChosen() {
+    const el = document.getElementById('posMemberChosen');
+    if (!el) return;
+    if (!_posMember) { el.innerHTML = ''; return; }
+    const need = (_posBooking && _posBooking._billable) || 1;
+    const ok = _posMember.remainingHours >= need;
+    el.innerHTML = `<div style="padding:10px 12px;border-radius:10px;font-size:13px;${ok ? 'background:rgba(39,174,96,0.1);border:1.5px solid rgba(39,174,96,0.35);color:#1e7a46;' : 'background:rgba(192,57,43,0.08);border:1.5px solid rgba(192,57,43,0.3);color:#C0392B;'}">
+      <b>${escHtml(_posMember.name)}</b> · sisa ${_posMember.remainingHours} jam<br>
+      ${ok ? `Checkout ini memotong <b>${need} jam</b> → sisa ${_posMember.remainingHours - need} jam (paket yang expired lebih dulu dipotong duluan).`
+           : `Sisa jam tidak cukup (butuh ${need} jam). Pilih metode bayar lain, atau jual paket baru dulu di tab Paket Member.`}</div>`;
+  }
+
   async function loadPaymentMethods() {
     try {
       const res = await fetch('/api/payment-methods');
@@ -1043,13 +1276,18 @@
       <button class="pay-btn" data-key="${m.key}" onclick="selectPayment('${m.key}')"
         style="padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
         ${m.emoji} ${escHtml(m.label)}
-      </button>`).join('');
+      </button>`).join('') + `
+      <button class="pay-btn" id="payBtnMember" data-key="member" onclick="selectPayment('member')"
+        style="display:none;padding:10px 6px;border-radius:12px;border:1.5px solid rgba(28,58,46,0.15);background:#F5F0E8;font-size:12px;font-weight:600;color:#1C3A2E;cursor:pointer;">
+        🎫 Member
+      </button>`;
   }
 
   function payMethodLabel(key) {
     const m = _paymentMethods.find(x => x.key === key);
     if (m) return `${m.emoji} ${m.label}`;
     if (key === 'gratis') return '🎁 Gratis (Owner)';
+    if (key === 'member') return '🎫 Jam Member';
     return key || '—';
   }
 
@@ -1133,6 +1371,9 @@
       document.getElementById('viewClosing').style.display = tab === 'closing' ? 'block' : 'none';
       document.getElementById('tabClosing').classList.toggle('active', tab === 'closing');
       if (tab === 'closing') loadClosingReport();
+      document.getElementById('viewMembers').style.display = tab === 'members' ? 'block' : 'none';
+      document.getElementById('tabMembers').classList.toggle('active', tab === 'members');
+      if (tab === 'members') loadMembersTab();
       // Panel "Butuh Tindakan" cuma masuk akal di Timeline/Daftar (yang lain
       // bukan tentang jadwal hari ini), dan cuma kalau filter tanggal lagi
       // di hari ini — lihat renderActionNeeded().
@@ -1237,6 +1478,7 @@
 
   // === TUTUP KASIR (LAPORAN CLOSING HARIAN) ===
   let _closingData = [];
+  let _closingMemberSales = [];
   const PAY_LABELS_CLOSING = { tunai: '💵 Tunai', qris: '📱 QRIS', debit: '💳 Debit', gratis: '🎁 Gratis (Owner)' };
 
   async function loadClosingReport() {
@@ -1254,6 +1496,16 @@
       // uang masuk — sebelumnya luput sama sekali dari laporan closing
       // karena datanya bukan di tabel bookings.
       await loadCommunityForBookingsView(date);
+      // Penjualan paket member hari itu (cabang Bali) — uang masuk saat paket
+      // DIBELI, bukan saat jamnya dipakai (checkout member totalPaid = 0).
+      _closingMemberSales = [];
+      if (_viewLocation === 'denpasar' || _viewLocation === 'tunu' || _viewLocation === 'all') {
+        try {
+          const sr = await fetch(`/api/member-packages?view=sales&from=${date}&to=${date}${_viewLocation !== 'all' ? '&location=' + _viewLocation : ''}`, { headers: { 'x-auth-username': _authUser, 'x-auth-password': _authPass } });
+          const sd = sr.ok ? await sr.json() : [];
+          _closingMemberSales = Array.isArray(sd) ? sd : [];
+        } catch (e) { _closingMemberSales = []; }
+      }
       renderClosingSummary(date);
     } catch (e) {
       document.getElementById('closingSummary').innerHTML = '<div class="empty-state">Gagal memuat data.</div>';
@@ -1267,6 +1519,8 @@
     const breakdown = {};
     _paymentMethods.forEach(m => { breakdown[m.key] = { label: `${m.emoji} ${m.label}`, count: 0, total: 0 }; });
     breakdown.gratis = breakdown.gratis || { label: '🎁 Gratis (Owner)', count: 0, total: 0 };
+    // Checkout dengan jam paket member: totalPaid 0 (sudah dibayar saat paket dibeli).
+    breakdown.member = { label: '🎫 Jam Member (potong paket)', count: 0, total: 0 };
     let totalOmset = 0;
     _closingData.forEach(b => {
       const key = b.paymentMethod || 'lainnya';
@@ -1289,6 +1543,11 @@
     if (communityCount > 0) {
       breakdown.acara_bareng = { label: '🎉 Acara Bareng (peserta)', count: communityCount, total: communityPaid };
       totalOmset += communityPaid;
+    }
+    if (_closingMemberSales.length > 0) {
+      const paketTotal = _closingMemberSales.reduce((s, p) => s + (p.price_paid || 0), 0);
+      breakdown.paket_member = { label: '🎫 Penjualan Paket Member', count: _closingMemberSales.length, total: paketTotal };
+      totalOmset += paketTotal;
     }
     return { breakdown, totalOmset, totalSesi: _closingData.length + communityCount };
   }
@@ -3244,6 +3503,7 @@ async function loadStaff() {
   // === POS ===
   let _posBooking = null;
   let _posPayment = null;
+  let _posMember = null; // member terpilih untuk bayar pakai jam paket
   let _posCheckoutTime = null;
   // Daftar promo aktif untuk cabang booking ini (dimuat dari /api/promos di
   // initPOS), dan promo yang lagi dipilih staff di dropdown (null = tanpa promo).
@@ -3253,6 +3513,10 @@ async function loadStaff() {
   function initPOS(b) {
     _posBooking = b;
     _posPayment = null;
+    _posMember = null;
+    { const ms = document.getElementById('posMemberSearch'); if (ms) ms.value = ''; }
+    { const mr = document.getElementById('posMemberResults'); if (mr) mr.innerHTML = ''; }
+    { const mc = document.getElementById('posMemberChosen'); if (mc) mc.innerHTML = ''; }
     _posSelectedPromo = null;
     _posPromoList = [];
     const promoSelect = document.getElementById('posPromoSelect');
@@ -3447,6 +3711,12 @@ async function loadStaff() {
     _posBooking._diffMins = diffMins;
     _posBooking._totalRp = totalRp;
     _posBooking._promoId = promo ? promo.id : null;
+    _posBooking._billable = billableHours;
+    // Tombol "Member" hanya di cabang Bali & bukan booking gratis Owner.
+    { const mb = document.getElementById('payBtnMember');
+      if (mb) mb.style.display = ((b.location === 'denpasar' || b.location === 'tunu') && !isOwnerFree) ? '' : 'none'; }
+    // Jam checkout diedit → jumlah jam berubah → cek ulang kecukupan sisa jam member.
+    if (_posPayment === 'member') { renderPosMemberChosen(); selectPayment('member'); }
 
     document.getElementById('posInfo').innerHTML =
       `<b>👤</b> ${escHtml(b.customerName.replace(' (walk-in)',''))}<br>` +
@@ -3529,15 +3799,18 @@ async function loadStaff() {
       btn.style.borderColor = m === method ? '#1C3A2E' : 'rgba(28,58,46,0.15)';
     });
     document.getElementById('tunaiSection').style.display = method === 'tunai' ? 'block' : 'none';
+    { const ms = document.getElementById('memberPaySection'); if (ms) ms.style.display = method === 'member' ? 'block' : 'none'; }
+    // Metode "member" baru boleh diselesaikan kalau member sudah dipilih & sisa jamnya cukup.
+    const ready = !!method && (method !== 'member' || posMemberReady());
     const btn = document.getElementById('posCompleteBtn');
     const skipBtn = document.getElementById('posSkipBtn');
-    btn.disabled = !method;
-    btn.style.opacity = method ? '1' : '0.5';
-    btn.style.cursor = method ? 'pointer' : 'default';
+    btn.disabled = !ready;
+    btn.style.opacity = ready ? '1' : '0.5';
+    btn.style.cursor = ready ? 'pointer' : 'default';
     if (skipBtn) {
-      skipBtn.disabled = !method;
-      skipBtn.style.opacity = method ? '1' : '0.5';
-      skipBtn.style.cursor = method ? 'pointer' : 'default';
+      skipBtn.disabled = !ready;
+      skipBtn.style.opacity = ready ? '1' : '0.5';
+      skipBtn.style.cursor = ready ? 'pointer' : 'default';
     }
   }
 
@@ -3574,7 +3847,9 @@ async function loadStaff() {
           checkoutAt: _posCheckoutTime.toISOString(),
           actualDuration: b._actualMins,
           paymentMethod: _posPayment,
-          promoId: b._promoId || null
+          // Jam member tidak bisa digabung promo (server menolak), jadi promoId dikosongkan.
+          promoId: _posPayment === 'member' ? null : (b._promoId || null),
+          memberId: _posPayment === 'member' && _posMember ? _posMember.id : undefined
         })
       });
       const updated = await res.json().catch(() => ({}));
@@ -3605,7 +3880,7 @@ async function loadStaff() {
     const actualM = (b._diffMins || 0) % 60;
     const actualStr = actualH > 0 ? `${actualH}j ${actualM}m` : `${actualM} mnt`;
     const durStr = `${billedHours} jam (aktual ${actualStr})`;
-    const payLabel = payMethod === 'gratis' ? 'Gratis (Owner)' : (_paymentMethods.find(m => m.key === payMethod)?.label || payMethod || '—');
+    const payLabel = payMethod === 'gratis' ? 'Gratis (Owner)' : payMethod === 'member' ? 'Jam Member (' + billedHours + ' jam)' : (_paymentMethods.find(m => m.key === payMethod)?.label || payMethod || '—');
     const cashIn = receivedOverride != null ? receivedOverride : (parseInt(document.getElementById('cashReceived').value) || 0);
     const change = payMethod === 'tunai' ? cashIn - totalRp : 0;
     const receiptTz = tzForLoc(b.location), receiptTzLabel = tzLabelForLoc(b.location);
@@ -3681,6 +3956,7 @@ async function loadStaff() {
     document.getElementById('posModal').style.display = 'none';
     _posBooking = null;
     _posPayment = null;
+    _posMember = null;
   }
 
   async function saveEdit() {
@@ -4035,6 +4311,9 @@ async function loadStaff() {
       }
       const laporanLink = document.getElementById('laporanLink');
       if (laporanLink) laporanLink.style.display = userRole === 'admin' ? 'inline' : 'none';
+      // Tab Paket Member: Super Admin, atau admin akun Bali (Denpasar/Tunu).
+      const tabMembersBtn = document.getElementById('tabMembers');
+      if (tabMembersBtn) tabMembersBtn.style.display = (isSuperAdmin || (userRole === 'admin' && (_authLocation === 'denpasar' || _authLocation === 'tunu'))) ? '' : 'none';
     setupLocationSwitcher();
     filterWalkinTableOptions();
     filterCommunityTableOptions();
@@ -4315,6 +4594,15 @@ async function loadStaff() {
         <div id="payMethodButtons" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
           <!-- diisi renderPayMethodButtons() dari /api/payment-methods -->
         </div>
+      </div>
+
+      <!-- Bayar pakai jam paket member (cabang Bali) -->
+      <div id="memberPaySection" style="display:none;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:#7A7060;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Cari Member</div>
+        <input id="posMemberSearch" type="text" placeholder="Nama atau no. WA member…" oninput="posMemberSearchDebounced()"
+          style="width:100%;padding:11px 14px;border:1.5px solid rgba(28,58,46,0.15);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:#1C3A2E;background:var(--cream);outline:none;margin-bottom:8px;">
+        <div id="posMemberResults"></div>
+        <div id="posMemberChosen"></div>
       </div>
 
       <!-- Tunai change calculator -->
